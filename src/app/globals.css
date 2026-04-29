@@ -1,0 +1,255 @@
+/* Fonts loaded via layout.tsx <head> — Barlow + Satoshi */
+
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-display);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  /* Brand palette — bone / charcoal editorial */
+  --bone: #F5F3EF;
+  --bone-dark: #EAE7E1;
+  --parchment: #F8F7F4;
+  --charcoal: #1A1916;
+  --charcoal-mid: #2C2A27;
+  --slate: #6B6760;
+  --slate-light: #9B9894;
+  --rule: #D8D5D0;
+  --rule-light: #ECEAE6;
+
+  /* Accent gradient — coral to amber */
+  --accent-coral: #E8524A;
+  --accent-amber: #F5A623;
+
+  /* Signal colors */
+  --signal-up: #2D6A4F;
+  --signal-up-bg: #EAF4EE;
+  --signal-down: #9B2335;
+  --signal-down-bg: #F9EAEC;
+  --signal-neutral: #4A4540;
+
+  /* Issue severity */
+  --critical: #9B2335;
+  --warning: #A05F0A;
+  --info-color: #1E4A8C;
+
+  /* Fonts */
+  --font-display: 'Barlow', system-ui, sans-serif;
+  --font-body: 'Satoshi', system-ui, sans-serif;
+
+  /* shadcn tokens */
+  --background: #F8F7F4;
+  --foreground: #1A1916;
+  --card: #F5F3EF;
+  --card-foreground: #1A1916;
+  --popover: #F5F3EF;
+  --popover-foreground: #1A1916;
+  --primary: #1A1916;
+  --primary-foreground: #F8F7F4;
+  --secondary: #EAE7E1;
+  --secondary-foreground: #1A1916;
+  --muted: #EAE7E1;
+  --muted-foreground: #6B6760;
+  --accent: #EAE7E1;
+  --accent-foreground: #1A1916;
+  --destructive: #9B2335;
+  --border: #D8D5D0;
+  --input: #D8D5D0;
+  --ring: #6B6760;
+  --chart-1: #1A1916;
+  --chart-2: #6B6760;
+  --chart-3: #9B9894;
+  --chart-4: #D8D5D0;
+  --chart-5: #2D6A4F;
+  --radius: 0.375rem;
+  --sidebar: #F5F3EF;
+  --sidebar-foreground: #1A1916;
+  --sidebar-primary: #1A1916;
+  --sidebar-primary-foreground: #F8F7F4;
+  --sidebar-accent: #EAE7E1;
+  --sidebar-accent-foreground: #1A1916;
+  --sidebar-border: #D8D5D0;
+  --sidebar-ring: #6B6760;
+}
+
+.dark {
+  /* Brand palette — inverted warm editorial */
+  --bone: #2C2A27;
+  --bone-dark: #242220;
+  --parchment: #1A1916;
+  --charcoal: #F0EDE8;
+  --charcoal-mid: #D8D5D0;
+  --slate: #9B9894;
+  --slate-light: #6B6760;
+  --rule: #3A3835;
+  --rule-light: #2C2A27;
+
+  /* Accent gradient — slightly warmer on dark */
+  --accent-coral: #EF6B63;
+  --accent-amber: #F7B340;
+
+  /* Signal colors — slightly desaturated for dark bg */
+  --signal-up: #6FCF97;
+  --signal-up-bg: #1A2E24;
+  --signal-down: #F28B82;
+  --signal-down-bg: #2E1A1C;
+  --signal-neutral: #9B9894;
+
+  /* Issue severity */
+  --critical: #F28B82;
+  --warning: #F6B84B;
+  --info-color: #7EB3F7;
+
+  /* shadcn tokens */
+  --background: #1A1916;
+  --foreground: #F0EDE8;
+  --card: #2C2A27;
+  --card-foreground: #F0EDE8;
+  --popover: #2C2A27;
+  --popover-foreground: #F0EDE8;
+  --primary: #F0EDE8;
+  --primary-foreground: #1A1916;
+  --secondary: #2C2A27;
+  --secondary-foreground: #F0EDE8;
+  --muted: #2C2A27;
+  --muted-foreground: #9B9894;
+  --accent: #2C2A27;
+  --accent-foreground: #F0EDE8;
+  --destructive: #F28B82;
+  --border: #3A3835;
+  --input: #3A3835;
+  --ring: #9B9894;
+  --chart-1: #F0EDE8;
+  --chart-2: #9B9894;
+  --chart-3: #6B6760;
+  --chart-4: #3A3835;
+  --chart-5: #6FCF97;
+  --sidebar: #242220;
+  --sidebar-foreground: #F0EDE8;
+  --sidebar-primary: #F0EDE8;
+  --sidebar-primary-foreground: #1A1916;
+  --sidebar-accent: #2C2A27;
+  --sidebar-accent-foreground: #F0EDE8;
+  --sidebar-border: #3A3835;
+  --sidebar-ring: #9B9894;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  html {
+    font-family: var(--font-body);
+    scroll-behavior: smooth;
+  }
+}
+
+/* ─── Slide system ────────────────────────────────────────────────────────── */
+
+.slide {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(3.5rem, 8vh, 6rem) clamp(2.5rem, 10vw, 9rem);
+  position: relative;
+  overflow: hidden;
+}
+
+/* ─── Typography classes ──────────────────────────────────────────────────── */
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.eyebrow {
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--slate);
+}
+
+.label-xs {
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  color: var(--slate-light);
+}
+
+/* ─── Trend badges ────────────────────────────────────────────────────────── */
+
+.trend-up {
+  color: var(--signal-up);
+  background: var(--signal-up-bg);
+}
+
+.trend-down {
+  color: var(--signal-down);
+  background: var(--signal-down-bg);
+}
+
+/* ─── Recharts overrides ──────────────────────────────────────────────────── */
+
+.recharts-tooltip-wrapper { outline: none; }
+.recharts-cartesian-axis-tick-value { font-size: 11px; fill: var(--slate-light); }
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line { stroke: var(--rule-light); }
+
+/* ─── Scrollbar ───────────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 2px; }
