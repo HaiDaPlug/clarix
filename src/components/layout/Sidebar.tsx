@@ -52,6 +52,15 @@ export function Sidebar() {
         { label: t.nav.items.integrations, href: "/integrations", icon: IconIntegrations },
       ],
     },
+    {
+      section: "Design v2",
+      items: [
+        { label: "Dashboard 2", href: "/dashboard2", icon: IconDashboard },
+        { label: "Anslutningar", href: "/connections", icon: IconIntegrations },
+        { label: "Kunder", href: "/clients", icon: IconReport },
+        { label: "Inställningar 2", href: "/settings2", icon: IconReport },
+      ],
+    },
   ];
 
   return (
