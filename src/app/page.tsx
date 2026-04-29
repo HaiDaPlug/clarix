@@ -9,7 +9,7 @@ import {
   Showcase, DashboardKpiVisual, AiInsightsVisual, SeoChannelsVisual,
 } from "@/components/landing/landing-showcase";
 import {
-  GoogleAnalyticsLogo, GoogleSearchConsoleLogo, GoogleAdsLogo, MetaLogo,
+  GoogleAnalyticsLogo, GoogleAdsLogo, LinkedInLogo,
 } from "@/components/landing/brand-logos";
 
 export default function LandingPage() {
@@ -278,12 +278,11 @@ export default function LandingPage() {
                 </p>
               </div>
 
-              <div className="mx-auto mt-14 grid max-w-6xl grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="mx-auto mt-14 grid max-w-4xl grid-cols-1 gap-5 sm:grid-cols-3">
                 {([
                   { name: "Google Analytics 4", label: "WEBBTRAFIK", Logo: GoogleAnalyticsLogo, badge: "Mest vald" as string | undefined, primary: true },
-                  { name: "Search Console", label: "SEO", Logo: GoogleSearchConsoleLogo, badge: undefined as string | undefined, primary: false },
-                  { name: "Google Ads", label: "ANNONSER", Logo: GoogleAdsLogo, badge: undefined as string | undefined, primary: false },
-                  { name: "Meta Ads", label: "ANNONSER", Logo: MetaLogo, badge: undefined as string | undefined, primary: false },
+                  { name: "Google Ads", label: "BETALD TILLVÄXT", Logo: GoogleAdsLogo, badge: undefined as string | undefined, primary: false },
+                  { name: "LinkedIn", label: "B2B-MARKNADSFÖRING", Logo: LinkedInLogo, badge: undefined as string | undefined, primary: false },
                 ] as const).map((c, i) => (
                   <motion.div
                     key={c.name}
@@ -327,8 +326,7 @@ export default function LandingPage() {
 
               <div className="mx-auto mt-16 max-w-3xl text-center">
                 <p className="text-[1.15rem] leading-relaxed text-white/85 sm:text-[1.2rem]">
-                  <span className="font-semibold text-white">Fler integrationer:</span>{" "}
-                  Shopify · LinkedIn · YouTube · Matomo · Excel / CSV
+                  + Meta • Shopify • Search Console • Matomo • YouTube • Excel / CSV
                 </p>
                 <a
                   href="#pricing"
