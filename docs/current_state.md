@@ -10,7 +10,13 @@ The product has two layers:
 - **Dashboard** — always-on home base. Narrative metric cards, traffic chart, channel breakdown. Designed to answer "how are we doing?" at a glance.
 - **Report** — the depth layer. A slide-by-slide walkthrough assembled dynamically from whatever data sources are connected. The report is a feature inside the app, not the whole product.
 
-The design language is Barlow (headings) + Satoshi (body), bone/charcoal palette, deliberate whitespace. Every block is expected to answer "so what?" — not just display a number.
+The design language is Barlow (headings) + Satoshi (body), pure white background, deliberate whitespace. Every block is expected to answer "so what?" — not just display a number.
+
+---
+
+## Repository
+
+GitHub: https://github.com/HaiDaPlug/clarix.git — `main` branch
 
 ---
 
@@ -34,21 +40,28 @@ The app uses a Next.js route group `(app)` for all authenticated pages. The layo
 
 ```
 src/app/
-├── page.tsx                          # Redirects → /dashboard
-├── login/page.tsx                    # Google OAuth sign-in page
+├── page.tsx                          # Landing page (pixel-perfect port of Chris's design)
 ├── auth/callback/route.ts            # OAuth code exchange handler
 ├── (app)/
 │   ├── layout.tsx                    # App shell — renders Sidebar + content area
 │   ├── dashboard/page.tsx            # Dashboard overview (narrative cards, chart, channels)
 │   ├── report/page.tsx               # Report viewer with scenario selector
 │   └── integrations/page.tsx         # Connect GA4 / GSC / Ads
+├── (app2)/                           # Chris's design system — parallel for visual comparison
+│   ├── dashboard2/page.tsx           # Chris's dashboard (KPI grid, AI summary, charts)
+│   ├── connections/page.tsx          # Connections with ConnectModal flow
+│   ├── clients/page.tsx              # Client workspace grid
+│   └── settings2/page.tsx           # Settings with tabbed sidebar nav
+└── _archive/login/page.tsx           # Google OAuth sign-in page — archived, auth not wired yet
 ```
 
-The proxy (`src/proxy.ts`) intercepts all requests: unauthenticated users are redirected to `/login`, authenticated users hitting `/login` are sent to `/dashboard`.
+Auth is temporarily bypassed — the proxy (`src/proxy.ts`) previously redirected unauthenticated users to `/login` but that guard is not active. The login page is archived in `_archive/login/`.
 
 ---
 
 ## Auth flow
+
+Auth is not enforced yet — the login page is archived and the proxy guard is disabled. The flow below is built but inactive:
 
 1. User hits `/login` → clicks "Continue with Google"
 2. Supabase Auth redirects to Google OAuth consent
@@ -56,9 +69,7 @@ The proxy (`src/proxy.ts`) intercepts all requests: unauthenticated users are re
 4. `route.ts` exchanges the code for a session via `supabase.auth.exchangeCodeForSession()`
 5. User lands on `/dashboard`
 
-Session refresh is handled automatically by the proxy on every request via `supabase.auth.getUser()`.
-
-Supabase clients:
+Supabase clients are wired and ready:
 - [src/utils/supabase/server.ts](../src/utils/supabase/server.ts) — for Server Components and API routes
 - [src/utils/supabase/client.ts](../src/utils/supabase/client.ts) — for Client Components
 - [src/utils/supabase/middleware.ts](../src/utils/supabase/middleware.ts) — for the proxy
@@ -140,9 +151,14 @@ Dashboard currently hardcodes scenario 2. Report page has the scenario selector 
 
 ## Design system
 
-Tokens live in [src/app/globals.css](../src/app/globals.css). Key vars:
+Two design systems live simultaneously — original (app) and Chris's v2 (app2).
 
-- `--bone` / `--bone-dark` / `--parchment` — backgrounds
+### Original (app)
+
+Tokens in [src/app/globals.css](../src/app/globals.css):
+
+- `--background: #ffffff` — pure white (changed from off-white #F8F7F4)
+- `--bone` / `--bone-dark` / `--parchment` — sidebar and card backgrounds
 - `--charcoal` / `--charcoal-mid` — primary text and fills
 - `--slate` / `--slate-light` — secondary text
 - `--rule` / `--rule-light` — borders and dividers
@@ -151,7 +167,50 @@ Tokens live in [src/app/globals.css](../src/app/globals.css). Key vars:
 - `--font-display: 'Barlow'` — headings, KPI values, hero text
 - `--font-body: 'Satoshi'` — all body and UI text
 
-Both fonts loaded via `<head>` in [src/app/layout.tsx](../src/app/layout.tsx) (Barlow from Google Fonts, Satoshi from Fontshare).
+### Chris's v2 (app2)
+
+Additive tokens (no collision with original) in [src/app/globals.css](../src/app/globals.css):
+
+- `--c2-accent` — violet `oklch(0.62 0.22 295)` — primary accent
+- `--c2-success` — green `oklch(0.7 0.16 155)`
+- `--gradient-aurora` — purple-to-blue background gradient
+- `--gradient-card2` — frosted card background
+- `--shadow-soft2` / `--shadow-elevated2` / `--shadow-glow2` — layered shadow scale
+- `font-display2` — Plus Jakarta Sans 800, tight tracking
+- `font-accent italic` — Fraunces italic for gradient headline text
+- `font-numeric` — Plus Jakarta Sans tabular nums
+
+Shared components: [src/components/landing/](../src/components/landing/) (brand logos, showcase visuals, animated counter), [src/components/layout2/](../src/components/layout2/) (AppShell2, KpiCard2).
+
+Both fonts (Plus Jakarta Sans + Fraunces) loaded alongside Barlow + Satoshi in [src/app/layout.tsx](../src/app/layout.tsx).
+
+---
+
+## Design v2 merge — completed 2026-04-29
+
+Chris's Lovable/Clarix repo ported into the Next.js stack as a parallel design system. Both designs live simultaneously for side-by-side comparison — no data wiring needed in v2 yet.
+
+### What was built
+
+**Landing page** (`src/app/page.tsx`) — pixel-perfect port of Chris's index route. All sections inline (no one-off section components): sticky header, hero with `DashboardKpiVisual`, two Showcase blocks, AI insight panel, features grid, channels section, agencies section, 3-tier pricing, final CTA, footer.
+
+**Route group `(app2)`** — 4 pages behind `AppShell2` (Chris's sidebar + header shell):
+- `/dashboard2` — KPI grid (6 cards with sparklines), AI summary lavender panel, traffic AreaChart, channels PieChart, top pages BarChart, recommendations list
+- `/connections` — hero section, smart Google hint banner, animated progress bar, search, recommended 2-col grid, others 3-col grid, full ConnectModal flow (consent → account picker → scope review → connecting → done + invite form)
+- `/clients` — client card grid with gradient avatars, status badges, empty add card
+- `/settings2` — tabbed sidebar nav (Profil / White-label / Domän / AI), accent color picker, DNS config, toggle switches
+
+**Shared primitives** in `src/components/landing/`:
+- `brand-logos.tsx` — 11 SVG brand logo components (GA4, GSC, Google Ads, Meta, LinkedIn, TikTok, Shopify, Matomo, YouTube, Excel, Google Business)
+- `landing-showcase.tsx` — `Showcase`, `VisualFrame`, `DashboardKpiVisual`, `AiInsightsVisual`, `SeoChannelsVisual`
+- `animated-counter.tsx` — requestAnimationFrame cubic ease-out counter
+
+**Mock data** in `src/lib/demo-data2.ts` — kpis, trafficTrend, channelBreakdown, topPages, insights, integrations, clients.
+
+**Sidebar** (`src/components/layout/Sidebar.tsx`) — "Design v2" section added with links to all four (app2) pages for comparison access from the main app.
+
+### CSS collision strategy
+All v2 tokens use `2` suffix or `--c2-` prefix. `font-display2` used instead of `font-display` (already mapped to Barlow). No shadcn token collisions — both systems share the same base `--background`, `--foreground`, `--border`, `--muted` vars.
 
 ---
 
@@ -576,8 +635,11 @@ Iterating on the dashboard hero card. Current state:
 - **Background** — soft lavender-to-white gradient (`#E8E6FF → #F0EEFF → #FAF9FF`), purple border `rgba(108,92,231,0.3)`, subtle grain overlay at 5.5% opacity
 - **Eyebrow** — `AI-sammanfattning — MARS 2026` (dash separator, not dot), deep purple `#6C5CE7`, `font-weight: 700`
 - **Headline** — display font, `clamp(1.2rem, 2.1vw, 1.6rem)`, `font-weight: 700`, constrained to `max-w: 480px` to control line breaks. Numbers colorized inline: green (`#15803D`) for positive, red (`#B91C1C`) for negative, `font-weight: 800`
-- **Subheadline** — `font-weight: 600`, dark `#2A2825`, numbers also colorized
-- **Highlight pills** — white background, solid `1.5px` black border, black label text, value colored by sentiment (green/red/black)
+- **Subheadline** — `font-weight: 400`, muted purple-grey `#6B6577`. Supports the headline, doesn't compete.
+- **Highlight pills** — no border, soft `8%` purple tint background (`rgba(108,92,231,0.08)`). Value at `700` weight colored by sentiment (green/red/purple), label at `400` weight muted. Reads as metadata, not a second headline.
 - **CTA button** — purple gradient
 
-Design direction: bold not timid. Colors and contrast should pop. Positive numbers celebrated, negative flagged. Still iterating — founder not fully satisfied with current result.
+Design direction: bold not timid. Headline is the only heavy element — everything else whispers around it. Numbers in headline and subheadline colorized inline (green positive, red negative).
+
+## Repository
+Codebase pushed to GitHub: https://github.com/HaiDaPlug/clarix.git (main branch)
