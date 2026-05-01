@@ -749,5 +749,90 @@ Replaced spring-based `scale: 0 → 1` explosions with a tasteful `opacity: 0 + 
 
 ---
 
+---
+
+## Auth + integration fixes — completed 2026-05-01
+
+A full pass fixing the OAuth redirect loop, the provider_token loss bug, and the post-connection UX.
+
+### What was fixed
+
+**Supabase URL configuration**
+Site URL set to `https://clarix.se`. Redirect URLs: `https://clarix.se/**` and `http://localhost:3000/**`. Without the wildcard, Supabase stripped the path and redirected to the landing page root with the code as a query param — causing an infinite sign-in loop.
+
+**Auth callback — smart routing**
+`/auth/callback` now checks `connected_sources` after exchanging the code. New users (no real connections) are sent to `/integrations`. Returning users with existing connections go to `/dashboard`.
+
+**provider_token persistence**
+Supabase only provides `session.provider_token` (the Google access token) during the initial OAuth exchange. On any subsequent request it is gone. Fix: the auth callback immediately writes the token to a `connected_sources` row with `property_id = "_pending"`. The `/api/google/properties` and `/api/google/connect` routes fall back to reading from this sentinel row when the session token is absent. The `_pending` row is filtered out of the UI and overwritten with the real property once the user connects.
+
+**Integrations page — UX**
+- `_pending` rows filtered from the displayed connected sources list
+- Auto-redirect to `/dashboard` as soon as both GA4 and GSC are connected
+- "Gå till dashboard" button added to the integrations header — always visible regardless of connection state
+
+**Light/dark toggle on landing page**
+`ThemeToggle` component added to the landing page header, to the left of "Logga in". Reads/writes `localStorage` and toggles `.dark` on `<html>` — consistent with the app's theme system.
+
+**proxy.ts moved to project root**
+Next.js 16 requires `proxy.ts` at the project root, not inside `src/`. Build error resolved.
+
+---
+
+## Data merge fixes — completed 2026-05-01
+
+Three bugs in `mergeReportData` that caused real data to partially overwrite or corrupt other real data.
+
+### What was wrong
+
+**kpiSnapshot overwrite** — GSC mapper emitted its own `kpiSnapshot` (2 metrics: clicks + position). Because the merge was a shallow spread, GSC's snapshot silently overwrote GA4's 6-metric snapshot. Users saw only 2 KPI cards.
+
+**topPages never joined** — GA4 returned pages with sessions + bounce rate. GSC returned the same URLs with clicks + impressions + position. They lived in separate `topPages` objects and one always won. Pages never had both traffic and search data at once.
+
+**paidOverview always mock** — No Google Ads connector exists yet. `paidOverview` came from the mock fallback and was passed through as if it were real, showing fake paid numbers to live users.
+
+### What was fixed
+
+**`src/lib/google/report-mappers.ts`**
+GSC mapper no longer emits `kpiSnapshot`. The `mapGscKpiSnapshot` function removed entirely.
+
+**`src/lib/google/connected-sources.ts`** — `mergeReportData` now:
+- `mergeKpiSnapshot()` — collects `kpiSnapshot` from all real source parts, combines their metrics into one snapshot deduped by label, capped at 6. GA4 metrics + GSC metrics appear together.
+- `mergeTopPages()` — when both GA4 and GSC return `topPages`, pages are joined by URL. A page present in both sources gets sessions/bounceRate (GA4) and clicks/impressions/position (GSC) merged onto the same row.
+- `paidOverview` is set to `undefined` when `google_ads` is not in `availableSources` — mock paid data never leaks through to real users.
+
+---
+
+## Founder note — what needs to be designed next (2026-05-01)
+
+The data pipeline is now solid. GA4 and GSC flow end-to-end, tokens refresh silently, the merge is correct, and mock data doesn't contaminate real data. The next frontier is not another technical fix — it's a product design conversation.
+
+**The question is: what makes this feel like an agency in your pocket?**
+
+Right now the dashboard shows real numbers with static narrative copy. The "Nästa steg" card derives action items from rules. The executive summary hero is generated from a bridge function. It works, but it reads like software that knows the data — not an advisor who understands the business.
+
+The gap to close: **dynamic, data-aware language that speaks directly to what happened this month, not generic descriptions of metrics.**
+
+Some open questions that need to be worked through before building:
+
+**Report logic**
+- Each slide currently shows a static headline and an insight line. These are strings in the i18n dictionary — the same text regardless of whether sessions are up 40% or down 15%. What should the logic be for switching between these? Rules? AI? A hybrid where rules determine the narrative branch and AI fills the copy within it?
+- The `InsightContract` shape (`observation`, `implication`, `recommendedAction`) is defined and ready. The question is: does AI fill all three, or does the rule engine set the observation from data and AI only writes the implication and action?
+- How much should the report "know" about the business? Right now it knows the numbers. Should it know the industry, the seasonality, the client's stated goals? And if so, where does that context live?
+
+**Dashboard logic**
+- The hero card today shows the executive summary headline — one sentence about total sessions trend. What should it show when sessions are flat? When only GSC is connected and there's no traffic data? When it's the first month and there's no prior period to compare against?
+- The "Nästa steg" card derives up to 3 steps from three rules. Is that the right model? Should it be more like a prioritized inbox — a living list of open action items, some persistent across periods, some new each month?
+- What is the right frequency of language? Monthly summaries feel editorial. Weekly feels operational. Daily would feel like noise. The cadence should match how often an SME owner actually changes behavior.
+
+**The "agency in your pocket" feeling**
+- A good agency doesn't just report what happened — it tells you what to do about it before you ask. The product should feel proactive, not reactive.
+- The language should be first-person confident: "Your organic traffic dropped because position 6–10 rankings shifted. Here's what we'd do." Not: "Bounce rate increased 4.2% vs prior period."
+- Numbers should only appear when they answer a question. Every number on screen should be paired with a "so what?" that a 50-year-old business owner without a marketing background would act on.
+
+This is the design conversation that needs to happen before the AI wiring pass. Building the wiring first and filling in the product thinking later produces something technically correct but editorially empty.
+
+---
+
 ## Repository
 Codebase pushed to GitHub: https://github.com/HaiDaPlug/clarix.git (main branch)
