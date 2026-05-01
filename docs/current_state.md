@@ -40,36 +40,37 @@ The app uses a Next.js route group `(app)` for all authenticated pages. The layo
 
 ```
 src/app/
-├── page.tsx                          # Landing page (pixel-perfect port of Chris's design)
-├── auth/callback/route.ts            # OAuth code exchange handler
+├── page.tsx                          # Landing page (public)
+├── login/page.tsx                    # Google OAuth sign-in page
+├── auth/callback/route.ts            # OAuth code exchange handler → redirects to /dashboard
 ├── (app)/
 │   ├── layout.tsx                    # App shell — renders Sidebar + content area
 │   ├── dashboard/page.tsx            # Dashboard overview (narrative cards, chart, channels)
 │   ├── report/page.tsx               # Report viewer with scenario selector
-│   └── integrations/page.tsx         # Connect GA4 / GSC / Ads
-├── (app2)/                           # Chris's design system — parallel for visual comparison
-│   ├── dashboard2/page.tsx           # Chris's dashboard (KPI grid, AI summary, charts)
-│   ├── connections/page.tsx          # Connections with ConnectModal flow
+│   ├── integrations/page.tsx         # Connect GA4 / GSC / Ads — V2 shell + real auth logic
 │   ├── clients/page.tsx              # Client workspace grid
-│   └── settings2/page.tsx           # Settings with tabbed sidebar nav
-└── _archive/login/page.tsx           # Google OAuth sign-in page — archived, auth not wired yet
+│   └── settings/page.tsx            # Settings with tabbed sidebar nav
 ```
 
-Auth is temporarily bypassed — the proxy (`src/proxy.ts`) previously redirected unauthenticated users to `/login` but that guard is not active. The login page is archived in `_archive/login/`.
+The `(app2)` parallel design system route group has been fully merged into `(app)` and deleted.
 
 ---
 
 ## Auth flow
 
-Auth is not enforced yet — the login page is archived and the proxy guard is disabled. The flow below is built but inactive:
+Auth is fully wired and enforced via `src/proxy.ts` (Next.js 16's equivalent of middleware):
 
-1. User hits `/login` → clicks "Continue with Google"
-2. Supabase Auth redirects to Google OAuth consent
-3. Google sends user back to `/auth/callback?code=...`
-4. `route.ts` exchanges the code for a session via `supabase.auth.exchangeCodeForSession()`
-5. User lands on `/dashboard`
+1. User hits `/` (landing page — always public)
+2. Clicks "Continue with Google" → hits `/login`
+3. `signInWithOAuth` fires with `access_type: offline` + `prompt: consent` — forces Google to return a `refresh_token`
+4. Supabase redirects to Google OAuth consent screen
+5. Google sends user back to `/auth/callback?code=...`
+6. `route.ts` exchanges code for session via `supabase.auth.exchangeCodeForSession()`
+7. User lands on `/dashboard`
 
-Supabase clients are wired and ready:
+Protected routes (`/dashboard`, `/integrations`, `/clients`, `/settings`, `/report`) redirect unauthenticated users to `/login`. Authenticated users hitting `/login` are bounced to `/dashboard`.
+
+Supabase clients:
 - [src/utils/supabase/server.ts](../src/utils/supabase/server.ts) — for Server Components and API routes
 - [src/utils/supabase/client.ts](../src/utils/supabase/client.ts) — for Client Components
 - [src/utils/supabase/middleware.ts](../src/utils/supabase/middleware.ts) — for the proxy
@@ -80,15 +81,16 @@ Supabase clients are wired and ready:
 
 [src/app/(app)/dashboard/page.tsx](../src/app/(app)/dashboard/page.tsx)
 
-Currently powered by `scenario2` mock data. Structure:
+Currently powered by `scenario2` mock data (or real data when sources are connected). Structure:
 
-1. **Sticky header** — period label + period toggle (This month / Last month / Custom)
-2. **Sample data banner** — shown when `hasIntegrations = false`, links to integrations
-3. **AI Summary hero** — dark card with concentric circle motif, Barlow headline from `executiveSummary.headline`, subheadline, highlight pills (positive/negative coloured), "Read full report" CTA
-4. **Narrative KPI cards** (4 across) — each has: eyebrow label, large number, delta chip with arrow, a divider, then a headline sentence + insight line. Cards talk, not just display.
-5. **Traffic chart** — narrative sentence above (`"Traffic held strong, with a dip in the final week"`), total sessions callout, area chart
-6. **Channel breakdown** — bar chart with delta arrows per channel
+1. **Sticky header** — period label + "Senaste 30 dagarna" date pill + "Exportera" dark button (replaced period toggle tabs)
+2. **Sample data / expiry banner** — shown when not connected or token expired, links to integrations
+3. **AI Summary hero** — purple gradient card, "Insikter från proffset" eyebrow, wavy SVG underline on headline, colorized numbers inline, "Läs hela rapporten" CTA
+4. **Narrative KPI cards** (3-column grid) — large number + inline delta arrow, educational headline + insight line, flush sparkline strip at bottom
+5. **Traffic chart** — dual area series (Besök + Besökare), dark tooltip, legend
+6. **Channel breakdown** — SVG donut diagram with interactive arc segments; legend rows show channel name, bold session count, delta arrow, percentage pill. Hover cross-highlights arc + row.
 7. **Search visibility** — 2×2 grid of GSC metrics with deltas
+8. **Nästa steg card** — derived from real data (ROAS, SEO position, bounce rate, missing paid), max 3 steps with Effort/Vinst badges
 
 ---
 
@@ -131,7 +133,27 @@ Viewer: [src/components/report/ReportViewer.tsx](../src/components/report/Report
 
 [src/app/(app)/integrations/page.tsx](../src/app/(app)/integrations/page.tsx)
 
-Lists GA4, GSC, Google Ads with tagline, description, "unlocks" chips, and connect CTA. Google Ads marked coming soon. No actual OAuth connection flow built yet — button is present but wired to nothing.
+V2 visual shell fully wired to real auth logic.
+
+**Hero** — full-width gradient panel with large display headline ("Koppla dina viktigaste kanaler på 2 minuter." with italic purple gradient), body copy, shield trust line, and a staggered floating logo cluster (GA4, Google Ads, GSC) on the right.
+
+**Progress bar** — animated gradient bar showing X of Y channels connected.
+
+**Integration cards** — GA4, GSC, Google Ads with real logo SVGs, category eyebrow, purpose description, "unlocks" chips. Google Ads marked coming soon.
+
+**Connect flow** — inline property picker expands below each card with `AnimatePresence` height animation. Loads available GA4 properties and GSC sites from `/api/google/properties`. Disconnect removes the row. `needs_refresh` surfaces a re-auth prompt. All loading/error states handled.
+
+## Clients page
+
+[src/app/(app)/clients/page.tsx](../src/app/(app)/clients/page.tsx)
+
+V2 shell: client card grid with gradient avatar tiles, status badges (Aktiv/Inaktiv), report count, "Öppna arbetsyta" CTA. "Lägg till ny kund" dashed empty card at end. Currently uses static demo data.
+
+## Settings page
+
+[src/app/(app)/settings/page.tsx](../src/app/(app)/settings/page.tsx)
+
+V2 shell: left-nav tab switching (Profil / White-label / Eget domännamn / AI-insikter), animated panel transitions, accent color picker, DNS config block with verified status, toggle switches. Currently uses static demo data.
 
 ---
 
@@ -151,38 +173,46 @@ Dashboard currently hardcodes scenario 2. Report page has the scenario selector 
 
 ## Design system
 
-Two design systems live simultaneously — original (app) and Chris's v2 (app2).
+One unified design system. The `(app2)` parallel system has been merged in and the route group deleted.
 
-### Original (app)
+### Design tokens (`src/app/globals.css`)
 
-Tokens in [src/app/globals.css](../src/app/globals.css):
-
-- `--background: #ffffff` — pure white (changed from off-white #F8F7F4)
-- `--bone` / `--bone-dark` / `--parchment` — sidebar and card backgrounds
+- `--background: #ffffff` — pure white
+- `--bone` / `--bone-dark` / `--parchment` — card and sidebar backgrounds (all `#ffffff` / `#F5F3EF`)
 - `--charcoal` / `--charcoal-mid` — primary text and fills
 - `--slate` / `--slate-light` — secondary text
 - `--rule` / `--rule-light` — borders and dividers
 - `--signal-up` / `--signal-up-bg` — positive delta (green)
 - `--signal-down` / `--signal-down-bg` — negative delta (red)
+- `--accent-coral` / `--accent-amber` — gradient accents
+- `--c2-accent` — violet `oklch(0.62 0.22 295)` — used in integrations hero and landing
+- `--c2-success` — green `oklch(0.7 0.16 155)`
 - `--font-display: 'Barlow'` — headings, KPI values, hero text
 - `--font-body: 'Satoshi'` — all body and UI text
 
-### Chris's v2 (app2)
+Dark mode remaps all tokens via `.dark { ... }` block — warm inverted palette.
 
-Additive tokens (no collision with original) in [src/app/globals.css](../src/app/globals.css):
+Shared components: [src/components/landing/](../src/components/landing/) (brand logos, showcase visuals, animated counter), [src/components/layout2/](../src/components/layout2/) (AppShell2, KpiCard2 — still used by landing page visuals).
 
-- `--c2-accent` — violet `oklch(0.62 0.22 295)` — primary accent
-- `--c2-success` — green `oklch(0.7 0.16 155)`
-- `--gradient-aurora` — purple-to-blue background gradient
-- `--gradient-card2` — frosted card background
-- `--shadow-soft2` / `--shadow-elevated2` / `--shadow-glow2` — layered shadow scale
-- `font-display2` — Plus Jakarta Sans 800, tight tracking
-- `font-accent italic` — Fraunces italic for gradient headline text
-- `font-numeric` — Plus Jakarta Sans tabular nums
+---
 
-Shared components: [src/components/landing/](../src/components/landing/) (brand logos, showcase visuals, animated counter), [src/components/layout2/](../src/components/layout2/) (AppShell2, KpiCard2).
+## UI merge + new pages — completed 2026-04-30
 
-Both fonts (Plus Jakarta Sans + Fraunces) loaded alongside Barlow + Satoshi in [src/app/layout.tsx](../src/app/layout.tsx).
+`(app2)` route group fully deleted. All V2 visual work migrated into `(app)` as production pages.
+
+### What changed
+
+**Sidebar** — "Design v2" section removed. Kunder (`/clients`) and Inställningar (`/settings`) added to the Data section with bespoke SVG icons.
+
+**Dashboard header** — Period tab switcher (This month / Last month / Custom) replaced with "Senaste 30 dagarna" date pill + "Exportera" dark button, matching V2 screenshot.
+
+**`/integrations`** — V2 connections shell adopted: full-width hero with large italic gradient headline, floating logo cluster (staggered entrance), progress bar, rich integration cards. Real auth logic (connect/disconnect/property picker/refresh prompt) preserved exactly.
+
+**`/clients`** (new) — V2 client card grid: gradient avatar tiles, status badges, report count, dashed empty card. Static demo data for now.
+
+**`/settings`** (new) — V2 settings shell: left-nav tabs (Profil / White-label / Eget domännamn / AI-insikter), accent color picker, DNS config, toggle switches. Static demo data for now.
+
+**Dashboard — Trafikkanaler** — replaced flat progress bars with a custom SVG donut diagram. Interactive: hover on arc segment or legend row cross-highlights both. Center shows total (or hovered channel's count + share). Legend rows show bold session number + delta arrow + percentage pill.
 
 ---
 
@@ -321,8 +351,9 @@ Never show a metric going down without a corresponding recommendation or action 
 8. ~~**Real data end-to-end**~~ — ✅ Done. OAuth scopes, DB schema, connect flow, property picker, dashboard wired to real data. Migration applied.
 9. ~~**Wire `/report` to real data**~~ — ✅ Done. Report page reads connected sources from Supabase, fetches `/api/ga4` + `/api/gsc` in parallel, merges over localized mock fallback via `mergeReportData`, assembles deck from merged data. Dev scenario switcher preserved. `tsc` and `npm run lint` clean.
 10. ~~**`executiveSummary` generation (rule-based bridge)**~~ — ✅ Done. `src/lib/engine/derive-executive-summary.ts` — pure function `deriveExecutiveSummary(data, locale)` builds headline, subheadline, and up to 4 highlight pills from real KPI deltas. Called in both `dashboard/page.tsx` and `report/page.tsx` after merge, only when `executiveSummary` is absent from real data. Replaced by AI wiring later.
-11. **Insight contract + AI wiring** — wire a model to fill the three-field `InsightContract` shape per slide using real data as evidence. Each slide sends its raw JSON + module type + period context to the model; model returns `{ observation, implication, recommendedAction }`. The `InsightContract` type and prompt discipline are already defined in `src/types/insight.ts` and the founder notes. `executiveSummary` generation can be folded into this pass.
-12. **PDF export** — each slide as a page, animations stripped, typography and layout fully respected. The most beautiful PDF a client has ever received.
+11. ~~**Auth enforcement + token refresh**~~ — ✅ Done. Login page restored with correct OAuth scopes. Proxy guard protects all app routes. Server-side token refresh wired into both API routes — tokens auto-renew silently, no more hourly re-auth.
+12. **Insight contract + AI wiring** — wire a model to fill the three-field `InsightContract` shape per slide using real data as evidence. Each slide sends its raw JSON + module type + period context to the model; model returns `{ observation, implication, recommendedAction }`. The `InsightContract` type and prompt discipline are already defined in `src/types/insight.ts` and the founder notes. `executiveSummary` generation can be folded into this pass.
+13. **PDF export** — each slide as a page, animations stripped, typography and layout fully respected. The most beautiful PDF a client has ever received.
 
 ---
 
@@ -571,9 +602,7 @@ Shared types (`ConnectedSource`, `GooglePropertiesResponse`), `currentCalendarMo
 
 ### Known limitations / future work
 - `access_token` and `refresh_token` stored as plain text — encrypt in a future pass
-- Token refresh not yet implemented server-side — when the access token expires (1 hour), the user needs to re-auth. The `needs_refresh` flag surfaces this in the UI.
 - Integrations page has some Swedish/English copy in a local `COPY` object rather than `sv.ts`/`en.ts` — minor inconsistency, worth a cleanup pass
-- Report page (`/report`) still uses mock data only — not yet wired to real data like the dashboard
 
 ---
 
@@ -628,18 +657,97 @@ Raised from `z-10` to `z-30` so the sticky header correctly sits above the hero 
 
 ---
 
-## Executive summary hero redesign — in progress 2026-04-29
+## Dashboard visual overhaul — completed 2026-04-30
 
-Iterating on the dashboard hero card. Current state:
+Major design pass merging the best of v1 (layout, editorial copy, real data) and v2 (card shell, charts, AI summary panel). The dashboard now looks and feels like a premium product.
 
-- **Background** — soft lavender-to-white gradient (`#E8E6FF → #F0EEFF → #FAF9FF`), purple border `rgba(108,92,231,0.3)`, subtle grain overlay at 5.5% opacity
-- **Eyebrow** — `AI-sammanfattning — MARS 2026` (dash separator, not dot), deep purple `#6C5CE7`, `font-weight: 700`
-- **Headline** — display font, `clamp(1.2rem, 2.1vw, 1.6rem)`, `font-weight: 700`, constrained to `max-w: 480px` to control line breaks. Numbers colorized inline: green (`#15803D`) for positive, red (`#B91C1C`) for negative, `font-weight: 800`
-- **Subheadline** — `font-weight: 400`, muted purple-grey `#6B6577`. Supports the headline, doesn't compete.
-- **Highlight pills** — no border, soft `8%` purple tint background (`rgba(108,92,231,0.08)`). Value at `700` weight colored by sentiment (green/red/purple), label at `400` weight muted. Reads as metadata, not a second headline.
-- **CTA button** — purple gradient
+### Landing page
+- Added quote bridge section between hero and showcase: warm cream card, wavy SVG orange quote marks, "Data är värdelös om du inte förstår den." — "Därför byggde vi Clarix." with purple underline on "Clarix"
+- Updated AI-insikter showcase copy: new title and body text
 
-Design direction: bold not timid. Headline is the only heavy element — everything else whispers around it. Numbers in headline and subheadline colorized inline (green positive, red negative).
+### Dashboard — "Insikter från proffset" hero card
+Replaced the old flat lavender hero with v2's AI summary shell, wired to real `executiveSummary` data:
+- **Background** — purple-to-lilac gradient with three radial glows (top-left, bottom-right, center-right)
+- **Eyebrow** — "Insikter från proffset — MARS 2026", same color and weight, dash separator
+- **Headline** — `2rem–2.4rem`, `font-semibold`, with a wavy SVG underline in purple that fits the text width exactly
+- **Subheadline** — `text-xl`, one step smaller, same weight as headline for hierarchy
+- **Numbers** — colorized inline: green `#16a34a` for positive, red `#B91C1C` for negative, `font-weight: 800`
+- **No pills** — removed highlight pills entirely. Headline + subheadline carry the full story
+- **CTA** — "Läs hela rapporten" button inside the text column below the subheadline, with arrow icon
+
+### Dashboard — KPI cards (3-column grid)
+Redesigned card shell:
+- Clean white background, `border: 1px solid var(--rule)`, subtle shadow
+- **Label** — eyebrow at top
+- **Number** — `2.4rem / 700 / -0.04em` tracking. Commands the card.
+- **Delta** — inline beside the number at baseline, no pill background — just colored arrow + percentage
+- **Educational text** — bold headline + lighter insight line, separated by a full-width rule
+- **Sparkline** — flush to the bottom edge as its own strip, green when trend is good, red when bad. No fill gradient clutter.
+
+### Dashboard — traffic chart
+Replaced v1's single-line `TrendLine` with v2's dual `AreaChart`:
+- Two overlapping area series: **Besök** (purple) and **Besökare** (green)
+- Data from `trafficOverview.timeSeries` with `secondaryValue` as users, falling back to `value * 0.72`
+- Custom dark tooltip (charcoal background, bone text)
+- Legend top-right: colored line samples with bold labels
+- Narrative header preserved: `1.5rem / 700` title + total count subline
+
+### Dashboard — "Nästa steg" card
+New card, derived entirely from real data — no hardcoded steps:
+- `deriveNextSteps(data)` checks ROAS (scale ads), SEO position > 8 (optimize CTR), bounce rate > 50% (fix landing page), missing paid channel (test Ads). Returns max 3 steps.
+- Each step: numbered circle, bold action title, one-sentence rationale, two badges — **Effort** (låg/medel/hög, green/amber/red) and **Vinst** (låg/medel/hög, blue/green/purple)
+- Sits in the same 2-column grid as "Betald prestanda", beside it
+
+### Global
+- `--bone` changed to `#ffffff` (pure white). `--parchment` to `#ffffff`. Dashboard and all cards are now fully white.
+- All section narrative headings unified to `1.5rem / 700 / -0.025em` (previously inconsistent 1.1rem/1.25rem)
+- "Sessioner" renamed to "Besök" / "Besökare" throughout dashboard and i18n strings
+
+### Mock data copy
+- Scenario 2 headline: "En bra månad. Annonserna drog och SEO höll."
+- Scenario 2 subheadline: "Ni fick 24 % fler leads från Google Ads och kostnade mindre per lead än månaden innan. Organiken tappade lite men inget att oroa sig för."
+- Scenario 1 and 3 headlines rewritten to plain Swedish
+
+---
+
+## (app2) route group deleted — completed 2026-04-30
+
+All five `(app2)` pages (`/dashboard2`, `/connections`, `/clients`, `/settings2`, layout) deleted from the codebase. The V2 visual work had already been migrated into `(app)` as production pages. The "Design v2" section in the sidebar was removed at the same time.
+
+---
+
+## Integrations page V2 shell — completed 2026-04-30
+
+`/integrations` rebuilt with the V2 visual shell while preserving all real auth logic exactly.
+
+**Visual changes:**
+- `BrandMark` component: logo inside a rounded white container with soft border; fallback to colored initial tile
+- Integration cards: hover lift + top-edge shimmer on hover, pill badges with live dot for connected state, `rounded-full` CTA buttons with elevated shadow
+- Property picker moved out of inline accordion and into a modal (`ConnectModal`) with a browser-chrome header (lock icon + `accounts.google.com`) — mimics the real Google OAuth consent dialog
+- Connected state inside modal: checkmark header, property/status/sync detail rows, "Koppla ifrån" / "Klar" button pair
+
+**Logic preserved exactly:** all `fetch` calls to `/api/google/connections`, `/api/google/properties`, `/api/google/connect`, `/api/google/disconnect`; `needsRefresh` warning; `optionsBySource` memoization; locale/copy system; loading and error states.
+
+---
+
+## Dashboard polish + auth wiring — completed 2026-05-01
+
+### KPI cards
+- **Blue sparklines** — all KPI card sparklines use a single blue accent (`oklch(0.55 0.2 250)`), not green/red. The diagram communicates trend shape; the pill communicates direction.
+- **Green/red delta pills** — bold pill beside the KPI number: green for up, red for down. Arrow icon + percentage, `fontWeight: 800`. Pill is inline-right of the number.
+- **Secondary metric** on the same line as the number (e.g. "Konverteringsgrad: 3.0%" beside "340").
+- **Layout** — label → number + secondary → pill → divider → headline/insight. All six cards consistent.
+
+### Entrance animations
+Replaced spring-based `scale: 0 → 1` explosions with a tasteful `opacity: 0 + y: 12 → 1 + 0` fade-lift, staggered 50ms per card. Hero fires first at 500ms duration. Numbers fade in with a subtle `y: 6` drift. Sparkline clip-reveal slowed to 1.2s. Next steps rows use vertical drift instead of horizontal slide. All `transformOrigin` hacks removed.
+
+### Auth — fully wired
+- **`src/app/login/page.tsx`** restored from `_archive/login/`. Google OAuth with `access_type: offline` + `prompt: consent` — forces `refresh_token` on every sign-in.
+- **`src/proxy.ts`** — auth guard wired. Protected routes redirect to `/login`; authenticated users bounce from `/login` to `/dashboard`.
+- **`src/lib/google/token-refresh.ts`** (new) — `getValidAccessToken()` checks expiry (with 60s buffer), auto-refreshes via Google token endpoint if within 60s of expiry, saves new token back to `connected_sources`. `refreshGoogleToken()` pure function handles the exchange.
+- **`/api/ga4`** and **`/api/gsc`** — both now call `getValidAccessToken()` instead of manually querying the DB. Tokens auto-refresh silently; users are no longer forced to re-authenticate every hour.
+
+---
 
 ## Repository
 Codebase pushed to GitHub: https://github.com/HaiDaPlug/clarix.git (main branch)
