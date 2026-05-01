@@ -256,13 +256,8 @@ export function mapGscReport(params: {
 
   return {
     seoOverview,
-    kpiSnapshot: mapGscKpiSnapshot({
-      locale: params.locale,
-      dateRange: params.dateRange,
-      priorDateRange: params.priorDateRange,
-      summary,
-      priorSummary,
-    }),
+    // kpiSnapshot intentionally omitted — GSC metrics are merged into the
+    // GA4 kpiSnapshot by mergeReportData so neither source overwrites the other.
     topPages: topPages.pages.length > 0 ? topPages : undefined,
     sourceConfidence: {
       gsc: gscSourceConfidence(params.dateRange, params.syncedAt, params.today),
@@ -354,38 +349,6 @@ function mapGa4KpiSnapshot(params: {
     period: formatPeriod(params.dateRange),
     comparisonPeriod: formatPeriod(params.priorDateRange),
     metrics: metrics.slice(0, 6),
-  };
-}
-
-function mapGscKpiSnapshot(params: {
-  locale: GoogleReportLocale;
-  dateRange: DateRange;
-  priorDateRange: DateRange;
-  summary: GscSummary;
-  priorSummary: GscSummary | undefined;
-}): KpiSnapshot {
-  return {
-    period: formatPeriod(params.dateRange),
-    comparisonPeriod: formatPeriod(params.priorDateRange),
-    metrics: [
-      createMetric({
-        value: params.summary.clicks,
-        previousValue: params.priorSummary?.clicks,
-        unit: "number",
-        label: label(params.locale, "clicks"),
-        trendGoodKey: "totalClicks",
-      }),
-      createMetric({
-        value: round(params.summary.position),
-        previousValue:
-          params.priorSummary === undefined
-            ? undefined
-            : round(params.priorSummary.position),
-        unit: "number",
-        label: label(params.locale, "position"),
-        trendGoodKey: "avgPosition",
-      }),
-    ],
   };
 }
 
