@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { fetchDiscoverableGoogleProperties } from "@/lib/google/property-discovery";
+import { getValidAccessToken } from "@/lib/google/token-refresh";
 import { createClient } from "@/utils/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -11,9 +12,31 @@ export async function GET() {
   const {
     data: { session },
   } = await supabase.auth.getSession();
-  const accessToken = session?.provider_token;
 
-  if (!session?.user || !accessToken) {
+  if (!session?.user) {
+    return NextResponse.json(
+      {
+        ga4: [],
+        gsc: [],
+        error: { type: "auth", message: "You must be signed in." },
+      },
+      { status: 401 },
+    );
+  }
+
+  // provider_token is only present immediately after OAuth exchange.
+  // Fall back to the token stored in connected_sources (_pending sentinel row).
+  const accessToken =
+    session.provider_token ??
+    (await getValidAccessToken(
+      supabase,
+      session.user.id,
+      "ga4",
+      "_pending",
+      undefined,
+    ));
+
+  if (!accessToken) {
     return NextResponse.json(
       {
         ga4: [],

@@ -2,6 +2,8 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useLocale } from "@/lib/i18n";
 import {
   ArrowRight,
@@ -149,6 +151,7 @@ function BrandMark({
 export default function IntegrationsPage() {
   const { locale, t } = useLocale();
   const copy = COPY[locale];
+  const router = useRouter();
 
   const [connectedSources, setConnectedSources] = useState<
     Partial<Record<ConnectableSource, ConnectedSource>>
@@ -183,13 +186,16 @@ export default function IntegrationsPage() {
         return;
       }
       const payload = (await response.json()) as { sources?: ConnectedSource[] };
-      const bySource = (payload.sources ?? []).reduce<
-        Partial<Record<ConnectableSource, ConnectedSource>>
-      >((acc, source) => {
-        if (source.source === "ga4" || source.source === "gsc")
-          acc[source.source as ConnectableSource] = source as ConnectedSource;
-        return acc;
-      }, {});
+      const bySource = (payload.sources ?? [])
+        .filter((s) => s.property_id !== "_pending")
+        .reduce<Partial<Record<ConnectableSource, ConnectedSource>>>(
+          (acc, source) => {
+            if (source.source === "ga4" || source.source === "gsc")
+              acc[source.source as ConnectableSource] = source as ConnectedSource;
+            return acc;
+          },
+          {},
+        );
       setConnectedSources(bySource);
       setLoadingConnections(false);
     }
@@ -221,6 +227,13 @@ export default function IntegrationsPage() {
       cancelled = true;
     };
   }, [copy.failedProperties, hasMissingGoogleSource, loadingConnections]);
+
+  // Auto-redirect to dashboard once both GA4 and GSC are connected
+  useEffect(() => {
+    if (!loadingConnections && connectedSources.ga4 && connectedSources.gsc) {
+      router.push("/dashboard");
+    }
+  }, [loadingConnections, connectedSources.ga4, connectedSources.gsc, router]);
 
   const optionsBySource = useMemo(
     (): Record<ConnectableSource, PropertyOption[]> => ({
@@ -319,6 +332,14 @@ export default function IntegrationsPage() {
             {t.integrations.heading}
           </h1>
         </div>
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-semibold transition-all hover:opacity-80"
+          style={{ backgroundColor: "var(--charcoal)", color: "var(--parchment)" }}
+        >
+          Gå till dashboard
+          <ArrowRight className="h-3.5 w-3.5" />
+        </Link>
       </header>
 
       <main className="flex-1 px-8 py-8 max-w-4xl space-y-8">

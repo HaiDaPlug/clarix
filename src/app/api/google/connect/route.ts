@@ -25,9 +25,39 @@ export async function POST(request: Request) {
   const {
     data: { session },
   } = await supabase.auth.getSession();
-  const accessToken = session?.provider_token;
 
-  if (!session?.user || !accessToken) {
+  if (!session?.user) {
+    return NextResponse.json(
+      { error: { type: "auth", message: "You must be signed in." } },
+      { status: 401 },
+    );
+  }
+
+  // provider_token is only available right after OAuth. Fall back to the
+  // token stored in the _pending sentinel row written by the auth callback.
+  let accessToken = session.provider_token ?? null;
+  let refreshToken = session.provider_refresh_token ?? null;
+  let expiresAt = session.expires_at
+    ? new Date(session.expires_at * 1000).toISOString()
+    : null;
+
+  if (!accessToken) {
+    const { data: pending } = await supabase
+      .from("connected_sources")
+      .select("access_token, refresh_token, token_expires_at")
+      .eq("user_id", session.user.id)
+      .eq("source", "ga4")
+      .eq("property_id", "_pending")
+      .maybeSingle();
+
+    if (pending) {
+      accessToken = pending.access_token;
+      refreshToken = pending.refresh_token;
+      expiresAt = pending.token_expires_at;
+    }
+  }
+
+  if (!accessToken) {
     return NextResponse.json(
       {
         error: {
@@ -40,14 +70,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const expiresAt = session.expires_at
-    ? new Date(session.expires_at * 1000).toISOString()
-    : null;
-
-  // Provider tokens are short-lived. A future pass should refresh with
-  // provider_refresh_token server-side before expiry instead of relying on
-  // a fresh browser session.
-  const needsRefresh = !session.provider_refresh_token;
+  const needsRefresh = !refreshToken;
 
   const { error } = await supabase.from("connected_sources").upsert(
     {
@@ -56,7 +79,7 @@ export async function POST(request: Request) {
       property_id: parsed.data.propertyId,
       display_name: parsed.data.displayName,
       access_token: accessToken,
-      refresh_token: session.provider_refresh_token ?? null,
+      refresh_token: refreshToken,
       token_expires_at: expiresAt,
     },
     { onConflict: "user_id,source" },
