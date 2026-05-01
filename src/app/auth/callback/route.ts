@@ -11,7 +11,7 @@ export async function GET(request: Request) {
     const supabase = createClient(cookieStore);
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      return NextResponse.redirect(`${origin}/`);
+      return NextResponse.redirect(`${origin}/dashboard`);
     }
   }
 

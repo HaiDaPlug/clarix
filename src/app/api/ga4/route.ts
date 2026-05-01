@@ -5,6 +5,7 @@ import { GoogleApiError, fetchGa4ReportSet } from "@/lib/google/api-client";
 import { assertDateRange, getPriorDateRange } from "@/lib/google/date-range";
 import { mapGa4Report } from "@/lib/google/report-mappers";
 import type { DateRange } from "@/lib/google/report-types";
+import { getValidAccessToken } from "@/lib/google/token-refresh";
 import { createClient } from "@/utils/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -41,20 +42,16 @@ export async function POST(request: Request) {
     const {
       data: { session },
     } = await supabase.auth.getSession();
-    let accessToken = session?.provider_token;
+    let accessToken: string | null = null;
 
-    if (!accessToken && session?.user && propertyId) {
-      // Stored provider tokens can expire. Server-side refresh via
-      // provider_refresh_token should be added before relying on long-lived
-      // background syncs.
-      const { data } = await supabase
-        .from("connected_sources")
-        .select("access_token")
-        .eq("user_id", session.user.id)
-        .eq("source", "ga4")
-        .eq("property_id", propertyId)
-        .maybeSingle();
-      accessToken = data?.access_token;
+    if (session?.user && propertyId) {
+      accessToken = await getValidAccessToken(
+        supabase,
+        session.user.id,
+        "ga4",
+        propertyId,
+        session.provider_token ?? undefined,
+      );
     }
 
     if (!propertyId || !accessToken) {
