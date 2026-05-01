@@ -22,9 +22,9 @@ export const scenario2: ReportData = {
   },
 
   executiveSummary: {
-    headline: "Stark paid-prestanda kompenserade för en svagare organisk månad.",
+    headline: "En bra månad. Annonserna drog och SEO höll.",
     subheadline:
-      "Google Ads levererade 24 % fler leads till lägre kostnad per lead. Organisk synlighet höll nivån med mindre positionstapp.",
+      "Ni fick 24 % fler leads från Google Ads och kostnade mindre per lead än månaden innan. Organiken tappade lite men inget att oroa sig för.",
     paragraphs: [
       "Mars visade en tydlig skillnad mellan kanalerna: betald sökning överpresterade medan organisk synlighet planade ut. Google Ads drev 340 konverteringar till en kostnad per lead 12 % under mål.",
       "Organisk klickvolym minskade något på grund av lägre säsongsefterfrågan. Positionerna är stabila och inga strukturella SEO-problem identifierades.",

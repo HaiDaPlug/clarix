@@ -22,8 +22,8 @@ export const scenario1: ReportData = {
   },
 
   executiveSummary: {
-    headline: "Organisk trafik ökade 18 % och SEO-momentumet stärks.",
-    subheadline: "Mars var en stark månad för synlighet. Tillväxten i övre delen av tratten accelererar.",
+    headline: "SEO levererar. 18 % mer trafik utan att spendera en krona.",
+    subheadline: "Synligheten växer månad för månad. Du är på väg upp — håll kursen.",
     paragraphs: [
       "Bergström & Co hade en tydlig ökning i organisk trafik under mars, främst drivet av bättre positioner på köpintensiva produktfrågor. Sessioner från organisk sökning ökade 18 % jämfört med föregående månad.",
       "CTR förbättrades för de flesta bevakade sökorden och flera kategorisidor nådde topp 5 för första gången. Två sidor behöver följas upp på grund av fallande positioner.",

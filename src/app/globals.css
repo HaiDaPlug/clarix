@@ -52,9 +52,9 @@
 
 :root {
   /* Brand palette — bone / charcoal editorial */
-  --bone: #F5F3EF;
-  --bone-dark: #EAE7E1;
-  --parchment: #F8F7F4;
+  --bone: #ffffff;
+  --bone-dark: #F5F3EF;
+  --parchment: #ffffff;
   --charcoal: #1A1916;
   --charcoal-mid: #2C2A27;
   --slate: #6B6760;

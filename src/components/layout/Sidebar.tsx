@@ -50,15 +50,8 @@ export function Sidebar() {
       section: t.nav.sections.data,
       items: [
         { label: t.nav.items.integrations, href: "/integrations", icon: IconIntegrations },
-      ],
-    },
-    {
-      section: "Design v2",
-      items: [
-        { label: "Dashboard 2", href: "/dashboard2", icon: IconDashboard },
-        { label: "Anslutningar", href: "/connections", icon: IconIntegrations },
-        { label: "Kunder", href: "/clients", icon: IconReport },
-        { label: "Inställningar 2", href: "/settings2", icon: IconReport },
+        { label: "Kunder", href: "/clients", icon: IconClients },
+        { label: "Inställningar", href: "/settings", icon: IconSettings },
       ],
     },
   ];
@@ -261,6 +254,28 @@ function IconIntegrations({ size = 16, active }: { size?: number; active?: boole
       <circle cx="12.5" cy="12.5" r="2" stroke={active ? "var(--parchment)" : "var(--slate)"} strokeWidth="1.2" />
       <line x1="5.5" y1="7" x2="10.5" y2="4.5" stroke={active ? "var(--parchment)" : "var(--slate)"} strokeWidth="1.2" strokeLinecap="round" />
       <line x1="5.5" y1="9" x2="10.5" y2="11.5" stroke={active ? "var(--parchment)" : "var(--slate)"} strokeWidth="1.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconClients({ size = 16, active }: { size?: number; active?: boolean }) {
+  const c = active ? "var(--parchment)" : "var(--slate)";
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+      <circle cx="6" cy="5" r="2.5" stroke={c} strokeWidth="1.2" />
+      <path d="M1.5 13.5c0-2.485 2.015-4.5 4.5-4.5s4.5 2.015 4.5 4.5" stroke={c} strokeWidth="1.2" strokeLinecap="round" />
+      <path d="M11 7.5a2 2 0 1 0 0-4" stroke={c} strokeWidth="1.2" strokeLinecap="round" />
+      <path d="M13.5 13.5c0-1.8-1-3.35-2.5-4.1" stroke={c} strokeWidth="1.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconSettings({ size = 16, active }: { size?: number; active?: boolean }) {
+  const c = active ? "var(--parchment)" : "var(--slate)";
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+      <circle cx="8" cy="8" r="2" stroke={c} strokeWidth="1.2" />
+      <path d="M8 1.5v1.8M8 12.7v1.8M1.5 8h1.8M12.7 8h1.8M3.4 3.4l1.27 1.27M11.33 11.33l1.27 1.27M12.6 3.4l-1.27 1.27M4.67 11.33l-1.27 1.27" stroke={c} strokeWidth="1.2" strokeLinecap="round" />
     </svg>
   );
 }

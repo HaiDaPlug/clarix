@@ -23,9 +23,9 @@ export const scenario3: ReportData = {
   },
 
   executiveSummary: {
-    headline: "Datan är partiell, men söktrenden är positiv.",
+    headline: "Bilden är inte komplett — men riktningen är rätt.",
     subheadline:
-      "Rapporten bygger på manuellt inmatad data och Google Search Console. GA4-anslutning återstår.",
+      "Söktrafiken pekar uppåt. Koppla GA4 så får du hela storyn.",
     paragraphs: [
       "Eklund Fastigheters synlighetsdata från Google Search Console visar positiv utveckling i mars. Full trafikdata blir tillgänglig när GA4 är anslutet.",
     ],

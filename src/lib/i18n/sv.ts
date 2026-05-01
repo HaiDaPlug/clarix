@@ -158,10 +158,10 @@ const sv = {
       vsPrior: "mot föreg.",
     },
     sessions: {
-      eyebrow: "Sessioner över tid",
+      eyebrow: "Besök över tid",
       eyebrowTooltip: "Visar det dagliga antalet besök på webbplatsen under perioden. Varje punkt är en dag — toppen är den mest trafikerade dagen.",
-      allSessions: "Alla sessioner",
-      totalSessions: (n: string) => `${n} sessioner totalt`,
+      allSessions: "Alla besök",
+      totalSessions: (n: string) => `${n} besök totalt`,
     },
     channels: {
       eyebrow: "Trafikkanaler",

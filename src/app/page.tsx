@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { motion } from "motion/react";
+import { useEffect, useState } from "react";
 import {
-  ArrowRight, Check, Sparkles, Zap, Layers, Globe, TrendingUp, ShieldCheck, Palette,
+  ArrowRight, Check, Sparkles, Zap, Layers, Globe, TrendingUp, ShieldCheck, Palette, Sun, Moon,
 } from "lucide-react";
 import {
   Showcase, DashboardKpiVisual, AiInsightsVisual, SeoChannelsVisual,
@@ -11,6 +12,31 @@ import {
 import {
   GoogleAnalyticsLogo, GoogleAdsLogo, LinkedInLogo,
 } from "@/components/landing/brand-logos";
+
+function ThemeToggle() {
+  const [dark, setDark] = useState(false);
+
+  useEffect(() => {
+    setDark(document.documentElement.classList.contains("dark"));
+  }, []);
+
+  function toggle() {
+    const next = !dark;
+    setDark(next);
+    document.documentElement.classList.toggle("dark", next);
+    localStorage.setItem("theme", next ? "dark" : "light");
+  }
+
+  return (
+    <button
+      onClick={toggle}
+      aria-label={dark ? "Byt till ljust läge" : "Byt till mörkt läge"}
+      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border/60 bg-background/80 text-muted-foreground transition-colors hover:border-border hover:text-foreground"
+    >
+      {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+    </button>
+  );
+}
 
 export default function LandingPage() {
   return (
@@ -32,6 +58,7 @@ export default function LandingPage() {
             <a href="#pricing" className="transition-colors hover:text-foreground">Priser</a>
           </nav>
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             <Link
               href="/login"
               className="hidden rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground sm:inline-flex"

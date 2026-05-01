@@ -147,10 +147,10 @@ const en: Translations = {
       vsPrior: "vs prior",
     },
     sessions: {
-      eyebrow: "Sessions over time",
+      eyebrow: "Visits over time",
       eyebrowTooltip: "Shows the daily number of visits to the website across the period. Each point is one day — the peak is the busiest day.",
-      allSessions: "All sessions",
-      totalSessions: (n: string) => `${n} total sessions`,
+      allSessions: "All visits",
+      totalSessions: (n: string) => `${n} total visits`,
     },
     channels: {
       eyebrow: "Traffic channels",
