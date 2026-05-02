@@ -42,18 +42,23 @@ export async function POST(request: Request) {
     : null;
 
   if (!accessToken) {
-    const { data: pending } = await supabase
-      .from("connected_sources")
-      .select("access_token, refresh_token, token_expires_at")
-      .eq("user_id", session.user.id)
-      .eq("source", "ga4")
-      .eq("property_id", "_pending")
-      .maybeSingle();
-
-    if (pending) {
-      accessToken = pending.access_token;
-      refreshToken = pending.refresh_token;
-      expiresAt = pending.token_expires_at;
+    // Retry once after a short delay — the auth callback writes the sentinel
+    // row asynchronously and may not have committed yet when this route fires.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (attempt > 0) await new Promise((r) => setTimeout(r, 800));
+      const { data: pending } = await supabase
+        .from("connected_sources")
+        .select("access_token, refresh_token, token_expires_at")
+        .eq("user_id", session.user.id)
+        .eq("source", "ga4")
+        .eq("property_id", "_pending")
+        .maybeSingle();
+      if (pending) {
+        accessToken = pending.access_token;
+        refreshToken = pending.refresh_token;
+        expiresAt = pending.token_expires_at;
+        break;
+      }
     }
   }
 

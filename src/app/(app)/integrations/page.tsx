@@ -165,6 +165,7 @@ export default function IntegrationsPage() {
   const [loadingProperties, setLoadingProperties] = useState(false);
   const [pendingSource, setPendingSource] = useState<ConnectableSource | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [propertiesRefreshKey, setPropertiesRefreshKey] = useState(0);
 
   const hasMissingGoogleSource = !connectedSources.ga4 || !connectedSources.gsc;
   const connectedCount = INTEGRATION_IDS.filter((id) => {
@@ -178,26 +179,35 @@ export default function IntegrationsPage() {
     async function loadConnections() {
       setLoadingConnections(true);
       setError(null);
-      const response = await fetch("/api/google/connections", { cache: "no-store" });
-      if (cancelled) return;
-      if (!response.ok) {
-        setError(copy.failedConnections);
-        setLoadingConnections(false);
-        return;
+      try {
+        const response = await fetch("/api/google/connections", { cache: "no-store" });
+        if (cancelled) return;
+        if (!response.ok) {
+          setError(copy.failedConnections);
+          setLoadingConnections(false);
+          return;
+        }
+        const payload = (await response.json()) as { sources?: ConnectedSource[] };
+        const bySource = (payload.sources ?? [])
+          .filter((s) => s.property_id !== "_pending")
+          .reduce<Partial<Record<ConnectableSource, ConnectedSource>>>(
+            (acc, source) => {
+              if (source.source === "ga4" || source.source === "gsc")
+                acc[source.source as ConnectableSource] = source as ConnectedSource;
+              return acc;
+            },
+            {},
+          );
+        if (!cancelled) {
+          setConnectedSources(bySource);
+          setLoadingConnections(false);
+        }
+      } catch {
+        if (!cancelled) {
+          setError(copy.failedConnections);
+          setLoadingConnections(false);
+        }
       }
-      const payload = (await response.json()) as { sources?: ConnectedSource[] };
-      const bySource = (payload.sources ?? [])
-        .filter((s) => s.property_id !== "_pending")
-        .reduce<Partial<Record<ConnectableSource, ConnectedSource>>>(
-          (acc, source) => {
-            if (source.source === "ga4" || source.source === "gsc")
-              acc[source.source as ConnectableSource] = source as ConnectedSource;
-            return acc;
-          },
-          {},
-        );
-      setConnectedSources(bySource);
-      setLoadingConnections(false);
     }
     loadConnections();
     return () => {
@@ -226,7 +236,7 @@ export default function IntegrationsPage() {
     return () => {
       cancelled = true;
     };
-  }, [copy.failedProperties, hasMissingGoogleSource, loadingConnections]);
+  }, [copy.failedProperties, hasMissingGoogleSource, loadingConnections, propertiesRefreshKey]);
 
   // Auto-redirect to dashboard once both GA4 and GSC are connected
   useEffect(() => {
@@ -272,6 +282,7 @@ export default function IntegrationsPage() {
           needs_refresh: payload.needsRefresh,
         },
       }));
+      setPropertiesRefreshKey((k) => k + 1);
       setActiveModal(null);
     } catch (connectError) {
       setError(
@@ -517,23 +528,40 @@ export default function IntegrationsPage() {
         {/* Error / loading banner */}
         {(loadingConnections || error) && (
           <div
-            className="rounded-xl px-4 py-3"
+            className="rounded-xl px-4 py-4"
             style={{
-              backgroundColor: "var(--bone)",
-              border: "1px solid var(--rule)",
-              color: error ? "var(--signal-down)" : "var(--slate)",
-              fontSize: "13px",
+              backgroundColor: error ? "rgba(185,28,28,0.06)" : "var(--bone)",
+              border: error ? "1px solid rgba(185,28,28,0.2)" : "1px solid var(--rule)",
             }}
           >
-            {error ?? copy.loadingConnections}
-            {properties.error?.type === "auth" && (
-              <a
-                href="/login"
-                className="ml-3 underline"
-                style={{ color: "var(--charcoal)", fontWeight: 600 }}
-              >
-                {copy.reconnect}
-              </a>
+            {error ? (
+              <div className="flex items-start gap-3">
+                <div
+                  className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
+                  style={{ backgroundColor: "rgba(185,28,28,0.1)" }}
+                >
+                  <X className="h-3.5 w-3.5" style={{ color: "var(--signal-down)" }} />
+                </div>
+                <div>
+                  <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--charcoal)", marginBottom: "2px" }}>
+                    Något gick fel
+                  </p>
+                  <p style={{ fontSize: "13px", color: "var(--slate)", lineHeight: "1.5" }}>
+                    {error}
+                  </p>
+                  {properties.error?.type === "auth" && (
+                    <a
+                      href="/login"
+                      className="inline-block mt-2 underline"
+                      style={{ fontSize: "13px", color: "var(--charcoal)", fontWeight: 600 }}
+                    >
+                      {copy.reconnect}
+                    </a>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <p style={{ fontSize: "13px", color: "var(--slate)" }}>{copy.loadingConnections}</p>
             )}
           </div>
         )}
@@ -819,7 +847,7 @@ function ConnectModal({
   onDisconnect: () => void;
 }) {
   const isConnected = Boolean(connectedSource);
-  const isPending = pendingSource === integration.id;
+  const isPending = pendingSource !== null;
 
   return (
     <motion.div
@@ -1044,9 +1072,33 @@ function ConnectModal({
               )}
 
               {!loadingProperties && options.length === 0 && (
-                <p style={{ fontSize: "13px", color: "var(--slate)" }}>
-                  {copy.noProperties}
-                </p>
+                <div
+                  className="rounded-xl p-4"
+                  style={{
+                    backgroundColor: "var(--bone)",
+                    border: "1px solid var(--rule)",
+                  }}
+                >
+                  <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--charcoal)", marginBottom: "6px" }}>
+                    Inga egendomar hittades
+                  </p>
+                  <p style={{ fontSize: "13px", color: "var(--slate)", lineHeight: "1.5" }}>
+                    Kontot du loggade in med har ingen GA4-egendom kopplad. Du behöver logga in med Google-kontot som äger din GA4-egendom.
+                  </p>
+                  <p style={{ fontSize: "12px", color: "var(--slate-light)", lineHeight: "1.5", marginTop: "6px" }}>
+                    Du loggas ut från ditt nuvarande konto och kan sedan välja ett annat Google-konto.
+                  </p>
+                  <a
+                    href="/login"
+                    className="inline-block mt-3 rounded-full px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-80"
+                    style={{
+                      backgroundColor: "var(--charcoal)",
+                      color: "var(--parchment)",
+                    }}
+                  >
+                    Logga in med annat konto
+                  </a>
+                </div>
               )}
 
               {!loadingProperties && options.length > 0 && (

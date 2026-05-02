@@ -98,6 +98,14 @@ async function postGoogleJson<T>(
   accessToken: string,
   body: unknown,
 ): Promise<T> {
+  return withRetry(() => postGoogleJsonOnce<T>(url, accessToken, body));
+}
+
+async function postGoogleJsonOnce<T>(
+  url: string,
+  accessToken: string,
+  body: unknown,
+): Promise<T> {
   const response = await fetch(url, {
     method: "POST",
     headers: {
@@ -118,4 +126,19 @@ async function postGoogleJson<T>(
   }
 
   return response.json() as Promise<T>;
+}
+
+async function withRetry<T>(fn: () => Promise<T>, attempts = 2): Promise<T> {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const isPermanent =
+        err instanceof GoogleApiError &&
+        (err.status === 400 || err.status === 401 || err.status === 403 || err.status === 404);
+      if (isPermanent || i === attempts - 1) throw err;
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  }
+  throw new Error("unreachable");
 }

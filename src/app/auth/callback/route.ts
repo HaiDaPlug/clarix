@@ -20,7 +20,7 @@ export async function GET(request: Request) {
         const expiresAt = session.expires_at
           ? new Date(session.expires_at * 1000).toISOString()
           : null;
-        await supabase.from("connected_sources").upsert(
+        const { error: upsertError } = await supabase.from("connected_sources").upsert(
           {
             user_id: session.user.id,
             source: "ga4",
@@ -32,6 +32,9 @@ export async function GET(request: Request) {
           },
           { onConflict: "user_id,source" },
         );
+        if (upsertError) {
+          return NextResponse.redirect(`${origin}/login?error=token_save_failed`);
+        }
       }
 
       const { data: sources } = await supabase

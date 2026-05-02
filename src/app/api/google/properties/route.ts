@@ -55,17 +55,22 @@ export async function GET() {
     return NextResponse.json(
       await fetchDiscoverableGoogleProperties(accessToken),
     );
-  } catch {
+  } catch (err) {
+    const isAuthError =
+      err instanceof Error &&
+      (err.message.includes("401") || err.message.includes("403"));
     return NextResponse.json(
       {
         ga4: [],
         gsc: [],
         error: {
-          type: "data",
-          message: "Could not load Google properties for this account.",
+          type: isAuthError ? "auth" : "data",
+          message: isAuthError
+            ? "Google access has expired. Sign in with Google again."
+            : "Could not load Google properties for this account.",
         },
       },
-      { status: 502 },
+      { status: isAuthError ? 401 : 502 },
     );
   }
 }

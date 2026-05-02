@@ -72,15 +72,16 @@ export async function POST(request: Request) {
       dateRange: priorDateRange,
     });
 
-    return NextResponse.json(
-      mapGscReport({
-        current,
-        prior,
-        dateRange,
-        priorDateRange,
-        locale,
-      }),
-    );
+    let mapped: ReturnType<typeof mapGscReport>;
+    try {
+      mapped = mapGscReport({ current, prior, dateRange, priorDateRange, locale });
+    } catch {
+      return NextResponse.json(
+        { error: { type: "data", message: "Search Console response could not be parsed." } },
+        { status: 502 },
+      );
+    }
+    return NextResponse.json(mapped);
   } catch (error) {
     return googleRouteError(error, "gsc");
   }
@@ -115,10 +116,23 @@ function googleRouteError(error: unknown, source: "gsc") {
     );
   }
 
+  if (error instanceof Error && error.message.startsWith("token_refresh_failed")) {
+    return NextResponse.json(
+      {
+        error: {
+          type: "connection",
+          message: "Search Console token has expired. Please reconnect your account.",
+        },
+        sourceConfidence: { [source]: { connected: false } },
+      },
+      { status: 401 },
+    );
+  }
+
   const message =
     error instanceof Error ? error.message : "Search Console request failed.";
   return NextResponse.json(
-    { error: { type: "validation", message } },
-    { status: 400 },
+    { error: { type: "data", message } },
+    { status: 500 },
   );
 }

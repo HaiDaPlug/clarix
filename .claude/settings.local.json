@@ -25,7 +25,9 @@
       "Bash(git stash *)",
       "Bash(git pull *)",
       "Bash(find . -name \"*.sql\" -not -path \"*/node_modules/*\")",
-      "Bash(ls supabase/)"
+      "Bash(ls supabase/)",
+      "Bash(git commit -m 'Fix merge bugs: kpiSnapshot overwrite, topPages split, mock paidOverview *)",
+      "Bash(git commit -m 'Update current_state.md — auth fixes, merge fixes, founder note on agency UX *)"
     ]
   }
 }

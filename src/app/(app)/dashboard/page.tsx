@@ -49,11 +49,11 @@ function getMetric(data: ReportData, path?: string): Metric | undefined {
   return getNestedField(data, path) as Metric | undefined;
 }
 
-function getKpiLabel(itemId: DashboardItemId, metric: Metric, t: Translations): string {
+function getKpiLabel(itemId: DashboardItemId, metric: Metric | undefined, t: Translations): string {
   if (itemId === "engagement-kpi") return t.dashboard.kpi.engagement;
   if (itemId === "paid-efficiency-kpi") return t.dashboard.kpi.paidEfficiency;
   if (itemId === "conversions-kpi") return t.dashboard.kpi.conversions;
-  return metric.label;
+  return metric?.label ?? "";
 }
 
 function getRegistryHeadline(itemId: DashboardItemId, metric: Metric, data: ReportData, t: Translations): string | undefined {
@@ -368,7 +368,27 @@ function KpiCard({
 }) {
   const { t } = useLocale();
   const metric = getMetric(data, item.definition.metricPath);
-  if (!metric) return null;
+  if (!metric) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={CARD_ENTER(index)}
+        className="relative overflow-hidden rounded-2xl flex flex-col items-center justify-center gap-1.5"
+        style={{
+          background: "var(--bone)",
+          border: "1px solid var(--rule)",
+          minHeight: "180px",
+          opacity: 0.5,
+        }}
+      >
+        <p style={{ fontSize: "13px", fontWeight: 600, color: "var(--charcoal)" }}>
+          {getKpiLabel(item.itemId, undefined, t)}
+        </p>
+        <p style={{ fontSize: "12px", color: "var(--slate)" }}>Ingen data tillgänglig</p>
+      </motion.div>
+    );
+  }
 
   const isFull = item.eligibility.variant === "full";
   const secondaryMetric = item.definition.secondaryMetricPaths
@@ -712,6 +732,25 @@ function SessionsChart({ item, data }: { item: AssembledDashboardItem; data: Rep
     besök: pt.value,
     besökare: pt.secondaryValue ?? Math.round(pt.value * 0.72),
   }));
+
+  if (chartData.length === 0) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: [0.0, 0.0, 0.2, 1], delay: 0.2 }}
+        className="rounded-2xl p-6 flex flex-col items-center justify-center gap-2"
+        style={{ backgroundColor: "var(--bone)", border: "1px solid var(--rule)", minHeight: "200px" }}
+      >
+        <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--charcoal)" }}>
+          Ingen data för denna period
+        </p>
+        <p style={{ fontSize: "13px", color: "var(--slate)" }}>
+          GA4 har inte registrerat några sessioner ännu. Data dyker upp så fort besökare landar på sajten.
+        </p>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div
@@ -1209,7 +1248,8 @@ export default function DashboardPage() {
   const dashboard = useMemo(() => assembleDashboard(activeData, t), [activeData, t]);
 
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
+    const { signal } = controller;
 
     async function loadRealData() {
       setIsLoadingRealData(true);
@@ -1222,7 +1262,7 @@ export default function DashboardPage() {
         .select("id, source, property_id, display_name, token_expires_at")
         .in("source", ["ga4", "gsc"]);
 
-      if (cancelled) return;
+      if (signal.aborted) return;
 
       if (error) {
         setHasConnectedSources(false);
@@ -1245,6 +1285,7 @@ export default function DashboardPage() {
 
       const dateRange = currentCalendarMonthRange();
       const expired: string[] = [];
+      const successfulSourceIds: ConnectableSource[] = [];
       const parts = await Promise.all(
         sources.map(async (source) => {
           try {
@@ -1257,6 +1298,7 @@ export default function DashboardPage() {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(body),
+              signal,
             });
 
             if (response.status === 401 || response.status === 403) {
@@ -1264,21 +1306,23 @@ export default function DashboardPage() {
               return undefined;
             }
             if (!response.ok) return undefined;
-            return (await response.json()) as Partial<ReportData>;
-          } catch {
+            const data = (await response.json()) as Partial<ReportData>;
+            successfulSourceIds.push(source.source);
+            return data;
+          } catch (err) {
+            if (err instanceof Error && err.name === "AbortError") return undefined;
             return undefined;
           }
         }),
       );
 
-      if (cancelled) return;
+      if (signal.aborted) return;
 
       setExpiredSources(expired);
-      const connectedSourceIds = sources.map((source) => source.source);
       const merged = mergeReportData(
         fallbackData,
         parts,
-        connectedSourceIds as ConnectableSource[],
+        successfulSourceIds,
       );
       if (!merged.executiveSummary) {
         merged.executiveSummary = deriveExecutiveSummary(merged, locale);
@@ -1290,7 +1334,7 @@ export default function DashboardPage() {
     loadRealData();
 
     return () => {
-      cancelled = true;
+      controller.abort();
     };
   }, [fallbackData, locale]);
 

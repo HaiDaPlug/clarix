@@ -777,6 +777,12 @@ Supabase only provides `session.provider_token` (the Google access token) during
 **proxy.ts moved to project root**
 Next.js 16 requires `proxy.ts` at the project root, not inside `src/`. Build error resolved.
 
+**Founder note — post-connection success modal**
+After a data source is successfully connected, instead of the current "Gå till dashboard" button, show a modal overlay with:
+- Header: "Klappat och klart!"
+- Subtext: "Nu är [data source name] kopplat! Vill du se din data live?"
+- Two buttons: "Gå till dashboard" (primary) and "Stannar kvar lite till" (secondary, dismisses the modal)
+
 ---
 
 ## Data merge fixes — completed 2026-05-01
@@ -831,6 +837,48 @@ Some open questions that need to be worked through before building:
 - Numbers should only appear when they answer a question. Every number on screen should be paired with a "so what?" that a 50-year-old business owner without a marketing background would act on.
 
 This is the design conversation that needs to happen before the AI wiring pass. Building the wiring first and filling in the product thinking later produces something technically correct but editorially empty.
+
+---
+
+## Production readiness audit — 2026-05-02
+
+Full findings in [`docs/production-audit.md`](production-audit.md) — checkboxes, priority order, and notes for future sharpening passes.
+
+### What was fixed (2026-05-02)
+
+All 18 items resolved. 14 were code fixes, 4 were reviewed and confirmed non-issues.
+
+**Auth & session**
+- A1 — Sentinel row upsert now checks for errors; redirects to `/login?error=token_save_failed` on failure instead of silently continuing
+- A2 — Connect route retries sentinel row read once after 800ms to handle slow DB writes from the auth callback
+- A3 — Properties route now classifies 401/403 errors as `type: "auth"` so the "Sign in again" CTA appears
+- A4 — Reviewed: Supabase SSR client auto-refreshes sessions on every proxy request; API 401s surface via expired sources banner
+
+**Data fetching**
+- D1 — `withRetry` wrapper on all Google API calls: 2 attempts, 1s gap, permanent errors (400/401/403/404) not retried
+- D2 — `successfulSourceIds` now only includes sources whose fetch returned data; failed sources no longer contaminate the merge with mock data
+- D3 — `refreshGoogleToken` now throws with `token_refresh_failed:<reason>`; both API routes catch it and return `type: "connection"` + 401
+- D4 — Connections fetch wrapped in try/catch; network timeouts now set error state instead of crashing the component
+- D5 — Mapper calls wrapped in try/catch in both API routes; shape errors return explicit `type: "data"` 502 instead of unhandled crash
+
+**Empty states**
+- E1 — Empty `timeSeries` array shows "Ingen data för denna period" card instead of blank chart axes
+- E2 — Undefined metric renders a dimmed placeholder card instead of silently vanishing from the grid
+- E3 — No-properties state now has explicit copy explaining the sign-out, button reads "Logga in med annat konto"
+
+**Race conditions**
+- R1 — `isPending = pendingSource !== null` locks all property buttons while any connect is in flight
+- R2 — `AbortController` wired to all dashboard fetch calls; navigating away cancels in-flight requests
+- R3 — `propertiesRefreshKey` counter triggers property list re-fetch after every successful connect
+
+**UX gaps**
+- U1 — Deferred to UX discussion pass (skeleton loading design is a taste decision)
+- U2 — Reviewed: effect re-runs on mount, banner auto-clears on return from login
+- U3 — Reviewed: React 18 batching prevents flicker in practice
+
+**Security**
+- S1 — Reviewed: tokens come from DB keyed on userId, no user-input injection path
+- S2 — Reviewed: Postgres upsert with onConflict is atomic, last write wins is correct
 
 ---
 

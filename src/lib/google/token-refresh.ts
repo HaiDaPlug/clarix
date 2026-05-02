@@ -20,7 +20,10 @@ export async function refreshGoogleToken(
     }),
   });
 
-  if (!res.ok) return null;
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({})) as { error?: string };
+    throw new Error(`token_refresh_failed:${body.error ?? res.status}`);
+  }
 
   const json = await res.json() as { access_token?: string; expires_in?: number };
   const newToken = json.access_token;
@@ -67,5 +70,9 @@ export async function getValidAccessToken(
 
   if (!data.refresh_token) return null;
 
-  return refreshGoogleToken(supabase, userId, source, propertyId, data.refresh_token);
+  try {
+    return await refreshGoogleToken(supabase, userId, source, propertyId, data.refresh_token);
+  } catch {
+    throw new Error("token_refresh_failed");
+  }
 }
