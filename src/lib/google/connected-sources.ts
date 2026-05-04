@@ -26,10 +26,11 @@ export function currentCalendarMonthRange(today = new Date()): {
 } {
   const year = today.getFullYear();
   const month = today.getMonth();
+  const lastOfMonth = new Date(year, month + 1, 0);
 
   return {
     startDate: toLocalIsoDate(new Date(year, month, 1)),
-    endDate: toLocalIsoDate(new Date(year, month + 1, 0)),
+    endDate: toLocalIsoDate(lastOfMonth < today ? lastOfMonth : today),
   };
 }
 
