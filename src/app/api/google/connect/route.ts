@@ -1,6 +1,8 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { getValidAccessToken } from "@/lib/google/token-refresh";
 import { createClient } from "@/utils/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -47,17 +49,27 @@ export async function POST(request: Request) {
     // row asynchronously and may not have committed yet when this route fires.
     for (let attempt = 0; attempt < 2; attempt++) {
       if (attempt > 0) await new Promise((r) => setTimeout(r, 800));
-      const { data: pending } = await supabase
-        .from("connected_sources")
-        .select("access_token, refresh_token, token_expires_at")
-        .eq("user_id", user.id)
-        .eq("source", "ga4")
-        .eq("property_id", "_pending")
-        .maybeSingle();
-      if (pending) {
-        accessToken = pending.access_token;
-        refreshToken = pending.refresh_token;
-        expiresAt = pending.token_expires_at;
+      let storedCredential: Awaited<ReturnType<typeof getStoredGoogleCredential>>;
+      try {
+        storedCredential = await getStoredGoogleCredential(supabase, user.id);
+      } catch (err) {
+        if (isTokenRefreshFailure(err)) {
+          return NextResponse.json(
+            {
+              error: {
+                type: "auth",
+                message: "Google access has expired. Sign in with Google again.",
+              },
+            },
+            { status: 401 },
+          );
+        }
+        throw err;
+      }
+      if (storedCredential) {
+        accessToken = storedCredential.accessToken;
+        refreshToken = storedCredential.refreshToken;
+        expiresAt = storedCredential.expiresAt;
         break;
       }
     }
@@ -108,8 +120,75 @@ export async function POST(request: Request) {
     .from("connected_sources")
     .delete()
     .eq("user_id", user.id)
-    .eq("source", parsed.data.source)
+    .eq("source", "ga4")
     .eq("property_id", "_pending");
 
   return NextResponse.json({ success: true, needsRefresh });
+}
+
+async function getStoredGoogleCredential(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<{
+  accessToken: string;
+  refreshToken: string | null;
+  expiresAt: string | null;
+} | null> {
+  const { data: rows } = await supabase
+    .from("connected_sources")
+    .select("source, property_id, refresh_token, token_expires_at")
+    .eq("user_id", userId)
+    .in("source", ["ga4", "gsc"]);
+
+  const candidates = (rows ?? [])
+    .filter(
+      (row): row is {
+        source: "ga4" | "gsc";
+        property_id: string;
+        refresh_token: string | null;
+        token_expires_at: string | null;
+      } =>
+        (row.source === "ga4" || row.source === "gsc") &&
+        typeof row.property_id === "string",
+    )
+    .sort((a, b) => {
+      if (a.property_id === "_pending") return -1;
+      if (b.property_id === "_pending") return 1;
+      return 0;
+    });
+
+  let sawRefreshFailure = false;
+  for (const candidate of candidates) {
+    let accessToken: string | null = null;
+    try {
+      accessToken = await getValidAccessToken(
+        supabase,
+        userId,
+        candidate.source,
+        candidate.property_id,
+        undefined,
+      );
+    } catch (err) {
+      if (isTokenRefreshFailure(err)) {
+        sawRefreshFailure = true;
+        continue;
+      }
+      throw err;
+    }
+
+    if (accessToken) {
+      return {
+        accessToken,
+        refreshToken: candidate.refresh_token,
+        expiresAt: candidate.token_expires_at,
+      };
+    }
+  }
+
+  if (sawRefreshFailure) throw new Error("token_refresh_failed");
+  return null;
+}
+
+function isTokenRefreshFailure(err: unknown): boolean {
+  return err instanceof Error && err.message.startsWith("token_refresh_failed");
 }

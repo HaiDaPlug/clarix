@@ -1,6 +1,5 @@
--- Change unique constraint from (user_id, source) to (user_id, source, property_id).
--- This lets the _pending sentinel row coexist with real property rows so that
--- re-signing in with Google does not overwrite an already-connected property.
+-- Idempotent repair for environments where the original property-key migration
+-- was already recorded before the three-column constraint was verified.
 
 do $$
 begin

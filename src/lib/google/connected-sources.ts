@@ -36,7 +36,7 @@ export function currentCalendarMonthRange(today = new Date()): {
 export function mergeReportData(
   fallback: ReportData,
   parts: Array<Partial<ReportData> | undefined>,
-  connectedSources: ConnectableSource[],
+  connectedSources: DataSource[],
 ): ReportData {
   const realParts = parts.filter((p): p is Partial<ReportData> => p !== undefined);
 
@@ -45,12 +45,12 @@ export function mergeReportData(
     fallback,
   );
 
-  const availableSources = Array.from(
-    new Set<DataSource>([...fallback.meta.availableSources, ...connectedSources]),
-  );
+  const availableSources = realParts.length > 0
+    ? Array.from(new Set<DataSource>(connectedSources))
+    : fallback.meta.availableSources;
 
   const sourceConfidence = {
-    ...fallback.sourceConfidence,
+    ...(realParts.length === 0 ? fallback.sourceConfidence : {}),
     ...realParts.reduce<NonNullable<ReportData["sourceConfidence"]>>(
       (acc, part) => ({ ...acc, ...part.sourceConfidence }),
       {},
@@ -67,7 +67,7 @@ export function mergeReportData(
 
   // Suppress paidOverview when google_ads isn't connected — without it the
   // dashboard would show mock paid numbers as if they were real.
-  const hasAds = availableSources.includes("google_ads");
+  const hasAds = connectedSources.includes("google_ads");
   const paidOverview = hasAds ? merged.paidOverview : undefined;
 
   return {

@@ -840,6 +840,85 @@ This is the design conversation that needs to happen before the AI wiring pass. 
 
 ---
 
+## Founder note — single-source dashboard behavior (2026-05-04)
+
+When a user connects only one source (GA4 only, or GSC only), the dashboard must behave gracefully and honestly. Rules:
+
+**GA4 only (no GSC):**
+- Show: traffic KPIs (sessions, users, bounce rate, engagement), sessions chart, channel breakdown, "Nästa steg" card
+- Hide: all GSC-dependent cards (organic reach, search clicks, search visibility grid, top queries)
+- Top pages show: sessions + bounce rate only (no clicks/impressions/position columns)
+- Executive summary: traffic-only headline, no search angle
+- Nudge: one GSC nudge card at the bottom — "Koppla Search Console för att se hur din trafik hittar dig organiskt"
+
+**GSC only (no GA4):**
+- Show: search clicks KPI, avg position KPI, search visibility grid, top pages (clicks/impressions/position only)
+- Hide: sessions chart, channel breakdown, all traffic-dependent KPIs, paid card
+- Executive summary: search-only headline
+- Nudge: GA4 nudge — "Koppla Google Analytics för att se hur besökarna beter sig på sajten"
+
+**Both connected (full state):**
+- Full dashboard as currently built. No nudges.
+
+**Rules for all partial states:**
+- Never show a card with undefined/null data — show the dimmed placeholder instead
+- Never show mock data mixed with real data — if a section has no real source, it is hidden entirely (not filled with scenario mock)
+- The nudge is always singular — show only the highest-value missing source, never stack nudges
+- The progress bar on integrations reflects 0/1/2 channels, not 0/2 binary
+
+**For later — onboarding quiz:**
+Before the user connects anything, show a short quiz (2–3 questions max) on the integrations page or as a post-login interstitial:
+- "What is your main goal with measuring data?" — options: Grow organic traffic / Understand what converts / Optimize ad spend / All of the above
+- Based on answer, the recommended integration cards are reordered and highlighted: SEO goal → GSC first; Conversions → GA4 first; Ads → GA4 + Ads
+- The quiz result sets a `user_goal` field (stored in Supabase user metadata or a `user_settings` table) that the eligibility engine and nudge copy can reference later
+- This is a product/design decision — build the quiz UI and goal-routing logic only after the single-source dashboard behavior is confirmed working
+
+---
+
+## Auth + token pipeline hardening — completed 2026-05-04
+
+Full stress-test and repair pass on the auth → token storage → properties fetch → dashboard render pipeline. 9 files changed.
+
+### What changed
+
+**`proxy.ts`**
+Removed the authenticated-user redirect from `/login`. Logged-in users can now reach `/login` again to re-consent with Google without being bounced to `/dashboard`. This unblocks the re-auth flow when tokens expire.
+
+**`src/lib/google/token-refresh.ts`**
+- Missing or unparseable `token_expires_at` is now treated as refresh-needed (was previously treated as "not expired"). Prevents stale tokens from being used indefinitely when expiry is null.
+- `refreshGoogleToken` now checks the Supabase update response for errors and throws `token_refresh_failed:update_failed` if the save fails — previously a failed DB write was silently swallowed.
+- Returns `null` (not throws) when no `refresh_token` exists — correct behaviour, not an error.
+
+**`src/app/api/google/properties/route.ts`**
+Refactored token resolution into `getDiscoveryAccessToken()`: iterates all stored rows (sorted `_pending` first), tries each via `getValidAccessToken`, returns the first that yields a valid token. If all fail with `token_refresh_failed`, surfaces a single 401 auth error. Google API failures are now always 502 data errors (not 401) — cleaner error type separation.
+
+**`src/app/api/google/connect/route.ts`**
+Refactored stored credential lookup into `getStoredGoogleCredential()` with the same multi-row iteration pattern as the properties route. Catches `token_refresh_failed` from the lookup and returns a clean 401. The `_pending` cleanup delete is now hardcoded to `source: "ga4"` (correct — only GA4 has a `_pending` sentinel row; GSC never did).
+
+**`src/lib/google/connected-sources.ts`**
+- `mergeReportData` signature changed: `connectedSources` parameter is now `DataSource[]` (was `ConnectableSource[]`) — accepts the broader type from `meta.availableSources`.
+- `availableSources` in the merged result now uses only `connectedSources` when real parts exist, rather than unioning with the fallback's sources. Prevents mock sources from leaking into the real-data merge.
+- `sourceConfidence` no longer merges from fallback when real parts exist — only real API responses set confidence.
+
+**`src/lib/google/report-mappers.ts`**
+GSC mapper re-emits `kpiSnapshot` (4 metrics: clicks, impressions, CTR, position). Works correctly with `mergeKpiSnapshot()` which deduplicates by label across all real source snapshots.
+
+**`src/app/(report)/report/page.tsx`**
+Added `.neq("property_id", "_pending")` to the connected sources query — mirrors the fix already applied to the dashboard page.
+
+**`supabase/migrations/20260504000000_connected_sources_property_key.sql`**
+Made idempotent: wrapped both `DROP CONSTRAINT` and `ADD CONSTRAINT` in `DO $$ IF EXISTS / IF NOT EXISTS $$` blocks. Safe to run multiple times or on DBs where the constraint already exists.
+
+**`supabase/migrations/20260504110000_connected_sources_property_key_repair.sql`** (new)
+Identical idempotent migration for environments where the original migration file was already recorded in the migration history before the constraint was verified. Ensures all remote DBs reach the correct `(user_id, source, property_id)` constraint regardless of migration state.
+
+### Verification
+- `tsc --noEmit` passes clean.
+- `npm run build` passes.
+- Pre-existing lint errors in `src/app/page.tsx` remain (unrelated to this pass).
+
+---
+
 ## Production readiness audit — 2026-05-02
 
 Full findings in [`docs/production-audit.md`](production-audit.md) — checkboxes, priority order, and notes for future sharpening passes.

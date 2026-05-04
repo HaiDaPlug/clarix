@@ -253,11 +253,20 @@ export function mapGscReport(params: {
   };
 
   const topPages = mapGscTopPages(params.current.topPages);
+  const kpiSnapshot: KpiSnapshot = {
+    period: formatPeriod(params.dateRange),
+    comparisonPeriod: formatPeriod(params.priorDateRange),
+    metrics: [
+      seoOverview.totalClicks,
+      seoOverview.totalImpressions,
+      seoOverview.avgCtr,
+      seoOverview.avgPosition,
+    ],
+  };
 
   return {
     seoOverview,
-    // kpiSnapshot intentionally omitted — GSC metrics are merged into the
-    // GA4 kpiSnapshot by mergeReportData so neither source overwrites the other.
+    kpiSnapshot,
     topPages: topPages.pages.length > 0 ? topPages : undefined,
     sourceConfidence: {
       gsc: gscSourceConfidence(params.dateRange, params.syncedAt, params.today),

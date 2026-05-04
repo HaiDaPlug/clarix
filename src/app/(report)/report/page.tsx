@@ -54,7 +54,8 @@ export default function ReportPage() {
       const { data, error } = await supabase
         .from("connected_sources")
         .select("id, source, property_id, display_name, token_expires_at")
-        .in("source", ["ga4", "gsc"]);
+        .in("source", ["ga4", "gsc"])
+        .neq("property_id", "_pending");
 
       if (cancelled) return;
 

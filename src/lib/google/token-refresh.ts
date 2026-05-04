@@ -1,11 +1,14 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
+const REFRESH_SKEW_MS = 60_000;
+
+type GoogleSource = "ga4" | "gsc";
 
 export async function refreshGoogleToken(
   supabase: SupabaseClient,
   userId: string,
-  source: "ga4" | "gsc",
+  source: GoogleSource,
   propertyId: string,
   refreshToken: string,
 ): Promise<string | null> {
@@ -33,12 +36,16 @@ export async function refreshGoogleToken(
     ? new Date(Date.now() + json.expires_in * 1000).toISOString()
     : null;
 
-  await supabase
+  const { error } = await supabase
     .from("connected_sources")
     .update({ access_token: newToken, token_expires_at: expiresAt })
     .eq("user_id", userId)
     .eq("source", source)
     .eq("property_id", propertyId);
+
+  if (error) {
+    throw new Error("token_refresh_failed:update_failed");
+  }
 
   return newToken;
 }
@@ -46,7 +53,7 @@ export async function refreshGoogleToken(
 export async function getValidAccessToken(
   supabase: SupabaseClient,
   userId: string,
-  source: "ga4" | "gsc",
+  source: GoogleSource,
   propertyId: string,
   sessionToken: string | undefined,
 ): Promise<string | null> {
@@ -62,11 +69,15 @@ export async function getValidAccessToken(
 
   if (!data) return null;
 
-  const isExpired = data.token_expires_at
-    ? new Date(data.token_expires_at).getTime() - Date.now() < 60_000
-    : false;
+  const expiresAtMs = data.token_expires_at
+    ? new Date(data.token_expires_at).getTime()
+    : Number.NaN;
+  const hasKnownValidExpiry =
+    data.token_expires_at !== null &&
+    !Number.isNaN(expiresAtMs) &&
+    expiresAtMs - Date.now() >= REFRESH_SKEW_MS;
 
-  if (!isExpired) return data.access_token;
+  if (hasKnownValidExpiry) return data.access_token;
 
   if (!data.refresh_token) return null;
 
