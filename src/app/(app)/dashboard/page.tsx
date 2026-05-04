@@ -1306,8 +1306,12 @@ export default function DashboardPage() {
               expired.push(source.source === "ga4" ? "Google Analytics" : "Search Console");
               return undefined;
             }
-            if (!response.ok) return undefined;
+            if (!response.ok) {
+              console.error(`[dashboard] ${source.source} returned ${response.status}`, await response.json().catch(() => null));
+              return undefined;
+            }
             const data = (await response.json()) as Partial<ReportData>;
+            console.log(`[dashboard] ${source.source} data:`, JSON.stringify(data).slice(0, 500));
             successfulSourceIds.push(source.source);
             return data;
           } catch (err) {
