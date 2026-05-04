@@ -840,6 +840,33 @@ This is the design conversation that needs to happen before the AI wiring pass. 
 
 ---
 
+## Priority — prove the core loop works (2026-05-04)
+
+The connection flow now works end-to-end: user signs in, Google Analytics Admin API lists real properties, user picks one, it saves to DB. The next and only priority is proving real data flows from GA4 into the dashboard visually.
+
+**The core loop that must work:**
+1. User connects GA4 on `/integrations`
+2. Dashboard fetches `/api/ga4` with real `property_id` and current month date range
+3. GA4 Data API returns real sessions, traffic, channels, time series
+4. `mapGa4Report` translates raw response to `ReportData` shape
+5. `mergeReportData` overlays real data over mock fallback
+6. Dashboard renders real numbers in KPI cards, sessions chart, channel breakdown
+
+**What's confirmed working:** OAuth, property listing (Admin API), property selection, DB save, token storage.
+
+**What's not yet confirmed:** Whether real GA4 data is actually reaching the dashboard renderer and overwriting mock values. The dashboard may be showing mock data because the API call fails silently, the mapper returns empty/partial data, or the merge isn't overwriting the right fields.
+
+**Immediate next step:** Check browser devtools console for `[dashboard] ga4 data:` log to see exactly what the API returns. Temporary debug logging is live on main. Once real data is confirmed flowing, remove the logs and update this doc.
+
+**Required to close this out:**
+- Confirm `/api/ga4` returns non-empty `trafficOverview`, `kpiSnapshot`, `timeSeries`
+- Confirm KPI card numbers match what's in GA4
+- Confirm sessions chart shows real dates and values
+- Remove debug logging
+- Enable Google Analytics Admin API scope in Google Cloud (done)
+
+---
+
 ## Founder note — single-source dashboard behavior (2026-05-04)
 
 When a user connects only one source (GA4 only, or GSC only), the dashboard must behave gracefully and honestly. Rules:
