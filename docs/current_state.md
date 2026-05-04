@@ -840,30 +840,34 @@ This is the design conversation that needs to happen before the AI wiring pass. 
 
 ---
 
-## Priority — prove the core loop works (2026-05-04)
+## Core loop closed — completed 2026-05-04
 
-The connection flow now works end-to-end: user signs in, Google Analytics Admin API lists real properties, user picks one, it saves to DB. The next and only priority is proving real data flows from GA4 into the dashboard visually.
+The full end-to-end pipeline is now working. Real GA4 data flows from Google into the dashboard.
 
-**The core loop that must work:**
-1. User connects GA4 on `/integrations`
-2. Dashboard fetches `/api/ga4` with real `property_id` and current month date range
-3. GA4 Data API returns real sessions, traffic, channels, time series
-4. `mapGa4Report` translates raw response to `ReportData` shape
-5. `mergeReportData` overlays real data over mock fallback
-6. Dashboard renders real numbers in KPI cards, sessions chart, channel breakdown
+### What was fixed to close the loop
 
-**What's confirmed working:** OAuth, property listing (Admin API), property selection, DB save, token storage.
+**Google Analytics Admin API not enabled**
+Property listing (`analyticsadmin.googleapis.com/v1beta/accountSummaries`) requires the Admin API to be explicitly enabled in Google Cloud Console — having the Data API alone is not enough. Enabled manually in the project.
 
-**What's not yet confirmed:** Whether real GA4 data is actually reaching the dashboard renderer and overwriting mock values. The dashboard may be showing mock data because the API call fails silently, the mapper returns empty/partial data, or the merge isn't overwriting the right fields.
+**Missing OAuth scope for Admin API**
+Login page only requested `analytics.readonly` (Data API) and `webmasters.readonly` (GSC). Added `analytics` scope so the Admin API endpoint is authorized. Users must re-consent after this change.
 
-**Immediate next step:** Check browser devtools console for `[dashboard] ga4 data:` log to see exactly what the API returns. Temporary debug logging is live on main. Once real data is confirmed flowing, remove the logs and update this doc.
+**GA4 400: future end date rejected**
+`currentCalendarMonthRange()` returned the last calendar day of the month as `endDate` (e.g. May 31 when today is May 4). GA4 Data API rejects any `endDate` in the future with 400. Fixed: `endDate` is now capped at today when the month hasn't ended yet.
 
-**Required to close this out:**
-- Confirm `/api/ga4` returns non-empty `trafficOverview`, `kpiSnapshot`, `timeSeries`
-- Confirm KPI card numbers match what's in GA4
-- Confirm sessions chart shows real dates and values
-- Remove debug logging
-- Enable Google Analytics Admin API scope in Google Cloud (done)
+### Confirmed working
+- OAuth sign-in → `_pending` sentinel row written to DB
+- `/integrations` lists real GA4 properties from Admin API
+- User picks property → real row written, `_pending` deleted
+- Dashboard fetches `/api/ga4` with real `property_id` and capped date range
+- GA4 Data API returns real data → mapped → merged over mock fallback
+- Real numbers render in KPI cards, sessions chart, channel breakdown
+
+### Next priorities
+- Connect GSC and confirm search data flows alongside GA4
+- Verify KPI numbers match GA4 dashboard exactly (QA pass)
+- AI wiring — `InsightContract` per slide using real data as evidence
+- PDF export
 
 ---
 
