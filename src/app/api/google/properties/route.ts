@@ -73,7 +73,9 @@ export async function GET() {
     return NextResponse.json(
       await fetchDiscoverableGoogleProperties(accessToken),
     );
-  } catch {
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    console.error("[properties] fetchDiscoverableGoogleProperties failed:", detail);
     return NextResponse.json(
       {
         ga4: [],

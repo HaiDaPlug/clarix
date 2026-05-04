@@ -13,7 +13,7 @@ function LoginContent() {
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
         scopes:
-          "https://www.googleapis.com/auth/analytics.readonly https://www.googleapis.com/auth/webmasters.readonly",
+          "https://www.googleapis.com/auth/analytics.readonly https://www.googleapis.com/auth/analytics https://www.googleapis.com/auth/webmasters.readonly",
         queryParams: {
           access_type: "offline",
           prompt: "consent",

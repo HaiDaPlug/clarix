@@ -93,7 +93,8 @@ async function googleGet<T>(url: string, accessToken: string): Promise<T> {
   });
 
   if (!response.ok) {
-    throw new Error(`Google property discovery failed with ${response.status}.`);
+    const body = await response.text().catch(() => "");
+    throw new Error(`Google property discovery failed with ${response.status}: ${body}`);
   }
 
   return response.json() as Promise<T>;
