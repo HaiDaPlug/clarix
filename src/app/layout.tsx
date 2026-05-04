@@ -12,7 +12,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="sv" className="h-full antialiased">
+    <html lang="sv" className="h-full antialiased" data-scroll-behavior="smooth">
       <head>
         {/* Apply dark class before first paint to avoid flash */}
         <script

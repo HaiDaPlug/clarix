@@ -30,7 +30,7 @@ export async function GET(request: Request) {
             refresh_token: session.provider_refresh_token ?? null,
             token_expires_at: expiresAt,
           },
-          { onConflict: "user_id,source" },
+          { onConflict: "user_id,source,property_id" },
         );
         if (upsertError) {
           return NextResponse.redirect(`${origin}/login?error=token_save_failed`);

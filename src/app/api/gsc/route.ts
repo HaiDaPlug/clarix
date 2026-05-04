@@ -40,17 +40,18 @@ export async function POST(request: Request) {
     const cookieStore = await cookies();
     const supabase = createClient(cookieStore);
     const {
-      data: { session },
-    } = await supabase.auth.getSession();
+      data: { user },
+    } = await supabase.auth.getUser();
     let accessToken: string | null = null;
 
-    if (session?.user && siteUrl) {
+    if (user && siteUrl) {
+      const { data: { session } } = await supabase.auth.getSession();
       accessToken = await getValidAccessToken(
         supabase,
-        session.user.id,
+        user.id,
         "gsc",
         siteUrl,
-        session.provider_token ?? undefined,
+        session?.provider_token ?? undefined,
       );
     }
 

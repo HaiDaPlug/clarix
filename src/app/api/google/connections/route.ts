@@ -8,10 +8,10 @@ export async function GET() {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session?.user) {
+  if (!user) {
     return NextResponse.json(
       { error: { type: "auth", message: "You must be signed in." } },
       { status: 401 },
@@ -21,8 +21,9 @@ export async function GET() {
   const { data, error } = await supabase
     .from("connected_sources")
     .select("id, source, property_id, display_name, token_expires_at, refresh_token")
-    .eq("user_id", session.user.id)
-    .in("source", ["ga4", "gsc"]);
+    .eq("user_id", user.id)
+    .in("source", ["ga4", "gsc"])
+    .neq("property_id", "_pending");
 
   if (error) {
     return NextResponse.json(

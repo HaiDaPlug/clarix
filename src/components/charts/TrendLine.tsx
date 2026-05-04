@@ -51,7 +51,7 @@ export function TrendLine({
   const uid = `tl-${(useAccent ? "accent" : color.replace(/[^a-z0-9]/gi, "").slice(0, 8))}-${data.length}`;
 
   return (
-    <ResponsiveContainer width="100%" height={height}>
+    <ResponsiveContainer width="100%" height={height} minWidth={0}>
       <AreaChart data={data} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
         <defs>
           {useAccent ? (

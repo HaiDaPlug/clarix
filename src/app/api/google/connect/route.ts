@@ -23,10 +23,10 @@ export async function POST(request: Request) {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session?.user) {
+  if (!user) {
     return NextResponse.json(
       { error: { type: "auth", message: "You must be signed in." } },
       { status: 401 },
@@ -35,9 +35,10 @@ export async function POST(request: Request) {
 
   // provider_token is only available right after OAuth. Fall back to the
   // token stored in the _pending sentinel row written by the auth callback.
-  let accessToken = session.provider_token ?? null;
-  let refreshToken = session.provider_refresh_token ?? null;
-  let expiresAt = session.expires_at
+  const { data: { session } } = await supabase.auth.getSession();
+  let accessToken = session?.provider_token ?? null;
+  let refreshToken = session?.provider_refresh_token ?? null;
+  let expiresAt = session?.expires_at
     ? new Date(session.expires_at * 1000).toISOString()
     : null;
 
@@ -49,7 +50,7 @@ export async function POST(request: Request) {
       const { data: pending } = await supabase
         .from("connected_sources")
         .select("access_token, refresh_token, token_expires_at")
-        .eq("user_id", session.user.id)
+        .eq("user_id", user.id)
         .eq("source", "ga4")
         .eq("property_id", "_pending")
         .maybeSingle();
@@ -79,7 +80,7 @@ export async function POST(request: Request) {
 
   const { error } = await supabase.from("connected_sources").upsert(
     {
-      user_id: session.user.id,
+      user_id: user.id,
       source: parsed.data.source,
       property_id: parsed.data.propertyId,
       display_name: parsed.data.displayName,
@@ -87,7 +88,7 @@ export async function POST(request: Request) {
       refresh_token: refreshToken,
       token_expires_at: expiresAt,
     },
-    { onConflict: "user_id,source" },
+    { onConflict: "user_id,source,property_id" },
   );
 
   if (error) {
@@ -101,6 +102,14 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
+
+  // Clean up the _pending sentinel row now that a real property is connected.
+  await supabase
+    .from("connected_sources")
+    .delete()
+    .eq("user_id", user.id)
+    .eq("source", parsed.data.source)
+    .eq("property_id", "_pending");
 
   return NextResponse.json({ success: true, needsRefresh });
 }

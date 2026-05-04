@@ -52,7 +52,7 @@ export function BarComparison({
   highlightIndex = 0,
 }: BarComparisonProps) {
   return (
-    <ResponsiveContainer width="100%" height={height}>
+    <ResponsiveContainer width="100%" height={height} minWidth={0}>
       <BarChart
         data={data}
         layout="vertical"

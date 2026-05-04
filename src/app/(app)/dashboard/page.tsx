@@ -319,7 +319,7 @@ function SparklineReveal({
       animate={{ clipPath: "inset(0% 0% 0% 0%)" }}
       transition={prefersReduced ? { duration: 0 } : { duration: 1.2, delay, ease: [0.25, 0.1, 0.25, 1] }}
     >
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
         <AreaChart data={sparkData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
@@ -683,7 +683,7 @@ function SessionsChartReveal({ chartData }: { chartData: { date: string; besök:
       animate={{ clipPath: "inset(0% 0% 0% 0%)" }}
       transition={prefersReduced ? { duration: 0 } : { duration: 1.1, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
     >
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
         <AreaChart data={chartData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
           <defs>
             <linearGradient id="grad-sessions" x1="0" y1="0" x2="0" y2="1">
@@ -1260,7 +1260,8 @@ export default function DashboardPage() {
       const { data, error } = await supabase
         .from("connected_sources")
         .select("id, source, property_id, display_name, token_expires_at")
-        .in("source", ["ga4", "gsc"]);
+        .in("source", ["ga4", "gsc"])
+        .neq("property_id", "_pending");
 
       if (signal.aborted) return;
 

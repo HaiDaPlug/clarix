@@ -21,10 +21,10 @@ export async function POST(request: Request) {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session?.user) {
+  if (!user) {
     return NextResponse.json(
       { error: { type: "auth", message: "You must be signed in." } },
       { status: 401 },
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
   const { error } = await supabase
     .from("connected_sources")
     .delete()
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .eq("source", parsed.data.source);
 
   if (error) {

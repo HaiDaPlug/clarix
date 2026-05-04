@@ -10,10 +10,10 @@ export async function GET() {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session?.user) {
+  if (!user) {
     return NextResponse.json(
       {
         ga4: [],
@@ -26,11 +26,12 @@ export async function GET() {
 
   // provider_token is only present immediately after OAuth exchange.
   // Fall back to the token stored in connected_sources (_pending sentinel row).
+  const { data: { session } } = await supabase.auth.getSession();
   const accessToken =
-    session.provider_token ??
+    session?.provider_token ??
     (await getValidAccessToken(
       supabase,
-      session.user.id,
+      user.id,
       "ga4",
       "_pending",
       undefined,
@@ -56,9 +57,12 @@ export async function GET() {
       await fetchDiscoverableGoogleProperties(accessToken),
     );
   } catch (err) {
+    const isTokenRefreshFailure =
+      err instanceof Error && err.message.startsWith("token_refresh_failed");
     const isAuthError =
-      err instanceof Error &&
-      (err.message.includes("401") || err.message.includes("403"));
+      isTokenRefreshFailure ||
+      (err instanceof Error &&
+        (err.message.includes("401") || err.message.includes("403")));
     return NextResponse.json(
       {
         ga4: [],
