@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "motion/react";
 import {
   ArrowRight,
@@ -57,8 +58,15 @@ export function LandingHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-border/40 bg-background/60 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-        <Link href="/" className="font-display2 text-xl tracking-tight text-foreground">
-          Clarix
+        <Link href="/" className="shrink-0">
+          <Image
+            src="/clarix-logga-transparent.png"
+            alt="Clarix"
+            width={96}
+            height={32}
+            className="h-8 w-auto dark:invert"
+            priority
+          />
         </Link>
         <nav className="hidden items-center gap-8 text-sm text-muted-foreground md:flex">
           <a href="#features" className="transition-colors hover:text-foreground">Funktioner</a>
@@ -674,7 +682,13 @@ export function LandingFooter() {
     <footer className="border-t border-border/40 py-8">
       <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-6 text-sm text-muted-foreground sm:flex-row">
         <div className="flex items-center gap-2">
-          <span className="font-display2 text-base font-bold text-foreground">Clarix</span>
+          <Image
+            src="/clarix-logga-transparent.png"
+            alt="Clarix"
+            width={64}
+            height={22}
+            className="h-5 w-auto dark:invert opacity-70"
+          />
           <span>© 2025</span>
         </div>
         <div className="flex gap-6">

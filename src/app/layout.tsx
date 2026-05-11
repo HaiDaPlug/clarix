@@ -2,8 +2,11 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Digital Rapport — AI Visibility Reports",
+  title: "Clarix — AI Visibility Reports",
   description: "Premium AI-powered reporting for SME decision-makers.",
+  icons: {
+    icon: "/clarix-logga-transparent.png",
+  },
 };
 
 export default function RootLayout({
