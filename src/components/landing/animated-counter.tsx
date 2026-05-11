@@ -4,17 +4,23 @@ import { useEffect, useRef, useState } from "react";
 
 export function AnimatedCounter({
   value,
-  duration = 1200,
+  duration = 1000,
   format = (n: number) => n.toLocaleString(),
+  animate = true,
 }: {
   value: number;
   duration?: number;
   format?: (n: number) => string;
+  animate?: boolean;
 }) {
-  const [display, setDisplay] = useState(0);
+  const [display, setDisplay] = useState(animate ? 0 : value);
   const startRef = useRef<number | null>(null);
 
   useEffect(() => {
+    if (!animate) {
+      setDisplay(value);
+      return;
+    }
     let raf = 0;
     startRef.current = null;
     const step = (ts: number) => {
@@ -26,7 +32,7 @@ export function AnimatedCounter({
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, [value, duration]);
+  }, [value, duration, animate]);
 
-  return <span>{format(display)}</span>;
+  return <span>{format(Math.round(display))}</span>;
 }

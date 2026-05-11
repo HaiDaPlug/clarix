@@ -117,6 +117,18 @@
   --sidebar-ring: #6B6760;
 }
 
+@keyframes shimmer-sweep {
+  0%   { transform: translateX(-100%); opacity: 0; }
+  8%   { opacity: 1; }
+  72%  { opacity: 1; }
+  80%  { transform: translateX(100%); opacity: 0; }
+  100% { transform: translateX(100%); opacity: 0; }
+}
+
+.shimmer-sweep {
+  animation: shimmer-sweep 2.8s ease-in-out infinite;
+}
+
 .dark {
   /* Brand palette — inverted warm editorial */
   --bone: #2C2A27;

@@ -78,7 +78,6 @@ export function mergeReportData(
     paidOverview,
     meta: {
       ...fallback.meta,
-      ...merged.meta,
       availableSources,
     },
     sourceConfidence,

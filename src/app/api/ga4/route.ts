@@ -62,16 +62,10 @@ export async function POST(request: Request) {
     }
 
     const priorDateRange = getPriorDateRange(dateRange);
-    const current = await fetchGa4ReportSet({
-      accessToken,
-      propertyId,
-      dateRange,
-    });
-    const prior = await fetchGa4ReportSet({
-      accessToken,
-      propertyId,
-      dateRange: priorDateRange,
-    });
+    const [current, prior] = await Promise.all([
+      fetchGa4ReportSet({ accessToken, propertyId, dateRange }),
+      fetchGa4ReportSet({ accessToken, propertyId, dateRange: priorDateRange }),
+    ]);
 
     let mapped: ReturnType<typeof mapGa4Report>;
     try {

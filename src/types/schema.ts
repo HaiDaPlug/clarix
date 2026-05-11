@@ -122,6 +122,7 @@ export const TrafficOverviewSchema = z.object({
       z.object({
         channel: z.string(),
         sessions: z.number(),
+        previousSessions: z.number().optional(),
         share: z.number(),
       })
     )

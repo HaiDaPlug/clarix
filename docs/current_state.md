@@ -352,8 +352,13 @@ Never show a metric going down without a corresponding recommendation or action 
 9. ~~**Wire `/report` to real data**~~ — ✅ Done. Report page reads connected sources from Supabase, fetches `/api/ga4` + `/api/gsc` in parallel, merges over localized mock fallback via `mergeReportData`, assembles deck from merged data. Dev scenario switcher preserved. `tsc` and `npm run lint` clean.
 10. ~~**`executiveSummary` generation (rule-based bridge)**~~ — ✅ Done. `src/lib/engine/derive-executive-summary.ts` — pure function `deriveExecutiveSummary(data, locale)` builds headline, subheadline, and up to 4 highlight pills from real KPI deltas. Called in both `dashboard/page.tsx` and `report/page.tsx` after merge, only when `executiveSummary` is absent from real data. Replaced by AI wiring later.
 11. ~~**Auth enforcement + token refresh**~~ — ✅ Done. Login page restored with correct OAuth scopes. Proxy guard protects all app routes. Server-side token refresh wired into both API routes — tokens auto-renew silently, no more hourly re-auth.
-12. **Insight contract + AI wiring** — wire a model to fill the three-field `InsightContract` shape per slide using real data as evidence. Each slide sends its raw JSON + module type + period context to the model; model returns `{ observation, implication, recommendedAction }`. The `InsightContract` type and prompt discipline are already defined in `src/types/insight.ts` and the founder notes. `executiveSummary` generation can be folded into this pass.
-13. **PDF export** — each slide as a page, animations stripped, typography and layout fully respected. The most beautiful PDF a client has ever received.
+12. ~~**Dashboard loading UX + shimmer**~~ — ✅ Done. Purple/blue shimmer sweep (`ShimmerCard`, `ShimmerOverlay` in `src/components/primitives/ShimmerCard.tsx`) replaces all grey skeleton blocks. Shimmer only runs when connected sources exist — mock-only users get instant render. KPI skeleton count derived from actual connected source types (GA4 → 4, GSC → +1, Ads → +1) so placeholder count matches the real dashboard. Counter animation (`AnimatedCounter`) only runs after real data loads. GA4 API parallelized (current + prior period fetched simultaneously) — halved fetch time.
+13. ~~**Dashboard modularized**~~ — ✅ Done. `dashboard/page.tsx` extracted from 1,579 lines to ~200 lines. All components moved to `src/components/dashboard/`: `KpiCard`, `DashboardHero`, `SessionsChart`, `ChannelBreakdown`, `SearchVisibility`, `PaidPerformance`, `NextStepsCard`, `metrics` (shared helpers). TypeScript clean, zero logic changes.
+14. **Dashboard — world-class with real data** — The shimmer and loading UX is solid. Next: make the dashboard undeniable. Real data QA pass (every KPI verified against GA4 dashboard), remove any remaining mock contamination, sharpen the narrative copy, elevate visual hierarchy. Every number must earn its space.
+15. **Report — needs serious work** — The report feature exists but is not yet premium. Slides need narrative sharpening, real data wiring verification, and visual polish to match the dashboard's level. This is the core product and must feel like a cinematic, editorial experience.
+16. **File extraction — large files flagged** — Three files need splitting before they become blockers: `src/app/(app)/integrations/page.tsx` (1,206 lines — same problem dashboard had), `src/lib/google/report-mappers.ts` (722 lines — split into `ga4-mapper.ts` / `gsc-mapper.ts`), `src/app/page.tsx` (653 lines — landing page sections inlined). Do in a dedicated pass.
+17. **Insight contract + AI wiring** — wire a model to fill the three-field `InsightContract` shape per slide using real data as evidence. Each slide sends its raw JSON + module type + period context to the model; model returns `{ observation, implication, recommendedAction }`. The `InsightContract` type and prompt discipline are already defined in `src/types/insight.ts` and the founder notes. `executiveSummary` generation can be folded into this pass.
+18. **PDF export** — each slide as a page, animations stripped, typography and layout fully respected. The most beautiful PDF a client has ever received.
 
 ---
 
@@ -859,15 +864,33 @@ Login page only requested `analytics.readonly` (Data API) and `webmasters.readon
 - OAuth sign-in → `_pending` sentinel row written to DB
 - `/integrations` lists real GA4 properties from Admin API
 - User picks property → real row written, `_pending` deleted
-- Dashboard fetches `/api/ga4` with real `property_id` and capped date range
-- GA4 Data API returns real data → mapped → merged over mock fallback
-- Real numbers render in KPI cards, sessions chart, channel breakdown
+
+### Root cause found and fixed — completed 2026-05-04
+
+**`conversionRate` is not a valid GA4 Data API metric name.** The correct name is `sessionConversionRate`. GA4 rejects any request containing an unknown metric with a blanket 400, which killed the entire report set — sessions, traffic, channels, everything. Fixed in `src/lib/google/report-queries.ts` and the matching `readGa4Summary` call in `src/lib/google/report-mappers.ts`.
+
+Also fixed this session:
+- `successfulSourceIds` now only pushed when response has `trafficOverview` or `seoOverview` — previously a 200 with no real data (token missing) counted as success and poisoned the merge with mock data
+- `meta.period` stamped with real month/year label when real data loads (was showing mock scenario's period label)
+- `...merged.meta` removed from `mergeReportData` — it was always a no-op since no mapper returns `meta`
+- Debug logging added to `/api/ga4/route.ts` (should be removed before production)
+
+### Confirmed working
+- Real GA4 data renders on the dashboard — sessions, channel breakdown, KPI cards
+- `[ga4] mapped ok — sessions: N` visible in server terminal
+
+### Known issues — next session priority
+- **Some stats are suspiciously high** — likely mock data bleeding through for fields the GA4 mapper doesn't populate (e.g. `organicSessions` shows mock value when GA4 channel breakdown returns a different channel name). Need a QA pass comparing each KPI card value against GA4 dashboard directly.
+- **All stats must be fully dynamic** — any field still falling back to mock data when GA4 is connected needs to be identified and either populated from real data or hidden. The "no mock contamination" rule must be absolute.
+- Debug `console.log`/`console.error` calls in `/api/ga4/route.ts` should be removed once QA is complete.
 
 ### Next priorities
-- Connect GSC and confirm search data flows alongside GA4
-- Verify KPI numbers match GA4 dashboard exactly (QA pass)
-- AI wiring — `InsightContract` per slide using real data as evidence
-- PDF export
+1. QA pass — open GA4 dashboard side-by-side, verify every KPI card value matches. Note any that are wrong.
+2. For each wrong stat: trace whether it's a mapper gap (channel name mismatch, missing field) or a merge leak (mock fallback bleeding through).
+3. Connect GSC and verify search data flows alongside GA4.
+4. Remove debug logging from `/api/ga4/route.ts`.
+5. AI wiring — `InsightContract` per slide using real data as evidence.
+6. PDF export.
 
 ---
 

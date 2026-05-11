@@ -36,7 +36,7 @@ export function buildGa4SummaryRequest(dateRange: DateRange) {
       { name: "engagementRate" },
       { name: "averageSessionDuration" },
       { name: "conversions" },
-      { name: "conversionRate" },
+      { name: "sessionConversionRate" },
     ],
   };
 }
@@ -53,7 +53,7 @@ export function buildGa4TimeSeriesRequest(dateRange: DateRange) {
   return {
     dateRanges: [dateRange],
     dimensions: [{ name: "date" }],
-    metrics: [{ name: "sessions" }],
+    metrics: [{ name: "sessions" }, { name: "totalUsers" }],
     orderBys: [{ dimension: { dimensionName: "date" }, desc: false }],
   };
 }
