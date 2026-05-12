@@ -10,6 +10,7 @@ const sv = {
     items: {
       dashboard: "Översikt",
       report: "Rapport",
+      report2: "Rapport 2",
       integrations: "Integrationer",
     },
     user: {

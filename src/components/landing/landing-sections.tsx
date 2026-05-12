@@ -57,37 +57,37 @@ export function ThemeToggle() {
 export function LandingHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-border/40 bg-background/60 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
+      <div className="mx-auto flex h-24 max-w-7xl items-center justify-between px-8">
         <Link href="/" className="shrink-0">
           <Image
             src="/clarix-logga-transparent.png"
             alt="Clarix"
-            width={96}
-            height={32}
-            className="h-8 w-auto dark:invert"
+            width={200}
+            height={64}
+            className="h-16 w-auto dark:invert"
             priority
           />
         </Link>
-        <nav className="hidden items-center gap-8 text-sm text-muted-foreground md:flex">
+        <nav className="hidden items-center gap-10 text-base text-muted-foreground md:flex">
           <a href="#features" className="transition-colors hover:text-foreground">Funktioner</a>
           <a href="#channels" className="transition-colors hover:text-foreground">Kanaler</a>
           <a href="#agencies" className="transition-colors hover:text-foreground">För byråer</a>
           <a href="#pricing" className="transition-colors hover:text-foreground">Priser</a>
         </nav>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <ThemeToggle />
           <Link
             href="/login"
-            className="hidden rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground sm:inline-flex"
+            className="hidden rounded-full px-5 py-2.5 text-base font-medium text-muted-foreground transition-colors hover:text-foreground sm:inline-flex"
           >
             Logga in
           </Link>
           <Link
             href="/dashboard"
-            className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background transition-all hover:opacity-90"
+            className="inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-base font-medium text-background transition-all hover:opacity-90"
           >
             Kom igång
-            <ArrowRight className="h-3.5 w-3.5" />
+            <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
       </div>

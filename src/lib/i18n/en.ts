@@ -11,6 +11,7 @@ const en: Translations = {
     items: {
       dashboard: "Dashboard",
       report: "Report",
+      report2: "Report 2",
       integrations: "Integrations",
     },
     user: {
