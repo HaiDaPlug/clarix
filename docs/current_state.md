@@ -8,7 +8,7 @@ It is not agency software. The end user is a business owner who logs in, connect
 
 The product has two layers:
 - **Dashboard** — always-on home base. Narrative metric cards, traffic chart, channel breakdown. Designed to answer "how are we doing?" at a glance.
-- **Report** — the depth layer. A slide-by-slide walkthrough assembled dynamically from whatever data sources are connected. The report is a feature inside the app, not the whole product.
+- **Report** — the depth layer. Two report formats now exist side-by-side: Rapport 1 (editorial, narrative-driven slide deck assembled dynamically from real data) and Rapport 2 (cinematic presentation shell ported from the Clarix traffic report design — bold purple aurora aesthetic, swipeable slides, keyboard + fullscreen nav).
 
 The design language is Barlow (headings) + Satoshi (body), pure white background, deliberate whitespace. Every block is expected to answer "so what?" — not just display a number.
 
@@ -46,10 +46,13 @@ src/app/
 ├── (app)/
 │   ├── layout.tsx                    # App shell — renders Sidebar + content area
 │   ├── dashboard/page.tsx            # Dashboard overview (narrative cards, chart, channels)
-│   ├── report/page.tsx               # Report viewer with scenario selector
 │   ├── integrations/page.tsx         # Connect GA4 / GSC / Ads — V2 shell + real auth logic
 │   ├── clients/page.tsx              # Client workspace grid
 │   └── settings/page.tsx            # Settings with tabbed sidebar nav
+├── (report)/
+│   ├── layout.tsx                    # Isolated report layout — no sidebar, clean canvas
+│   ├── report/page.tsx               # Rapport 1 — narrative slide deck, real data wired
+│   └── report2/page.tsx              # Rapport 2 — cinematic presentation shell (Clarix traffic report design)
 ```
 
 The `(app2)` parallel design system route group has been fully merged into `(app)` and deleted.
@@ -1012,6 +1015,61 @@ All 18 items resolved. 14 were code fixes, 4 were reviewed and confirmed non-iss
 **Security**
 - S1 — Reviewed: tokens come from DB keyed on userId, no user-input injection path
 - S2 — Reviewed: Postgres upsert with onConflict is atomic, last write wins is correct
+
+---
+
+## Rapport 2 — completed 2026-05-12
+
+New presentation format built alongside Rapport 1. Ported directly from the `clarix-traffic-report.zip` Vite/TanStack Router prototype into the Next.js `(report)` route group.
+
+### Design language
+
+Entirely different from Rapport 1. Where Rapport 1 is editorial (bone/charcoal, whitespace-first), Rapport 2 is cinematic:
+- **Background** — soft `oklch(0.985 0.005 270)` near-white with two radial aurora gradients (violet top-left, teal bottom-right)
+- **Cards** — rounded 3xl/2xl with soft multi-layer shadows and frosted glass on AISummary blocks
+- **Color tokens** — `oklch`-based: `TREND_POS` green, `TREND_NEG` coral, `ACCENT` violet `oklch(0.5 0.18 290)`
+- **Typography** — same Barlow/Satoshi stack but `font-display` used at `3.6rem` for hero headings
+- **Bottom nav** — fixed frosted bar with prev/next buttons, expanding dot indicators (active dot widens to 32px)
+- **Interaction** — drag-to-swipe (Framer Motion `drag="x"` with offset threshold), keyboard arrows, fullscreen present mode
+
+### 10 slides
+
+1. **Sammanfattning** — headline with inline TrendPill, summary badge strip, AISummary card with contextual copy
+2. **Nyckeltal** — 2×2 grid of KPI cards (Besök, Antal personer, Tid på sidan, Leads) — min-height 220px, value grows to fill
+3. **Trafikutveckling** — full-width AreaChart from real time-series data, gradient fill
+4. **Trafikkällor** — 6-card grid (Google SEO, Direkt, Sociala medier, Google Ads, Referral, E-post) with share %, visit count, delta pill
+5. **Bästa sidor** — 6-card grid with ranked color tiles (coral #1, gold #2, lavender #3, neutral for the rest)
+6. **Strategisk bedömning** — two-column layout with AISummary "Clarix executive insight"
+7. **Rekommendationer** — 3-card grid with tag pills (Skala / Fixa / Bygg) and icon avatars
+8. **Konvertering** — conditional: 3-metric summary when conversions connected, upsell panel when not
+9. **AI-synlighet** — 4 AI source status tiles (ChatGPT, Perplexity, Gemini, Claude) all showing "Ej spårat"
+10. **Kort summerat** — 3 recap bullets + a "Boka strategigenomgång" CTA panel in violet gradient
+
+### Real data wiring
+
+Same pattern as Rapport 1. On mount: reads `connected_sources` from Supabase, fetches `/api/ga4` + `/api/gsc` in parallel with `currentCalendarMonthRange()`, merges over localized `scenario2` fallback via `mergeReportData`. `buildSlideData()` maps the `ReportData` schema fields to slide-specific values:
+- Sessions/users from `trafficOverview.totalSessions` / `organicSessions`
+- Channel breakdown from `trafficOverview.channelBreakdown[]`
+- Time series from `trafficOverview.timeSeries[].value` (primary = sessions)
+- Top pages from `topPages.pages[]`
+- Conversions from `conversions.totalConversions`
+- Falls back to curated Swedish mock data per section when real data is absent
+
+### Sidebar
+
+"Rapport 2" link added below "Rapport" in the Overview section of the sidebar. Distinct icon (document with a chart dot). Both `sv.ts` and `en.ts` updated with `report2` key.
+
+---
+
+## Landing navbar enlargement — completed 2026-05-12
+
+`LandingHeader` in `src/components/landing/landing-sections.tsx`:
+- Navbar height: `h-16` → `h-24`
+- Logo: `h-8` → `h-16` (width/height props `96×32` → `200×64`)
+- Horizontal padding: `px-6` → `px-8`
+- Nav link text: `text-sm` → `text-base`, gap `gap-8` → `gap-10`
+- Button text: `text-sm` → `text-base`, padding `px-4 py-2` → `px-5 py-2.5`
+- CTA icon: `h-3.5 w-3.5` → `h-4 w-4`
 
 ---
 
