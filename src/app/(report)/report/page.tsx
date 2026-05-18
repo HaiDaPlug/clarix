@@ -576,7 +576,7 @@ function SlideTrend({ d }: { d: SlideData }) {
                       borderRadius: 12,
                       fontSize: 12,
                     }}
-                    formatter={(value: number) => [value.toLocaleString("sv-SE"), "Sessioner"]}
+                    formatter={(value) => [typeof value === "number" ? value.toLocaleString("sv-SE") : value, "Sessioner"]}
                     labelFormatter={(v) => {
                       const d = new Date(v);
                       if (isNaN(d.getTime())) return v;
