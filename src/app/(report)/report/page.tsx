@@ -195,7 +195,7 @@ interface SlideData {
   topChannels: {
     name: string;
     sub: string;
-    info: string;
+    tip: { title: string; body: string; example?: string };
     pct: number;
     visits: number;
     delta: number;
@@ -260,15 +260,15 @@ function buildSlideData(reportData: ReportData | null): SlideData {
     referral: Globe, "Referral": Globe, "Hänvisningar": Globe,
     email: Mail, "Email": Mail, "E-post": Mail,
   };
-  const ORGANIC = { name: "Google (Obetald söktrafik)", sub: "Besök från Googles vanliga sökresultat", info: "Det här är personer som hittade företaget via Google utan att man betalat för klicket." };
-  const PAID    = { name: "Google Ads", sub: "Köpt trafik från Google", info: "Besökare som kom via en betald annons i Google Sök eller Display." };
-  const SOCIAL  = { name: "Sociala medier", sub: "Besök från inlägg och delningar i sociala medier", info: "Det här är personer som klickat in från exempelvis LinkedIn, Facebook eller Instagram." };
-  const DIRECT  = { name: "Direkttrafik", sub: "Besökare som gick direkt till hemsidan", info: "Det här är personer som redan känner till företaget och själva skrev in webbadressen eller använde ett bokmärke." };
-  const REFERRAL = { name: "Referral", sub: "Länkar från andra sajter", info: "Besökare som kommit via en länk på en annan webbplats." };
-  const EMAIL   = { name: "E-post", sub: "Nyhetsbrev & utskick", info: "Besökare som klickat via ett e-postutskick eller nyhetsbrev." };
-  const UNKNOWN = { name: "Okänd källa", sub: "Trafik som inte kunnat kopplas tydligt till en källa", info: "Ibland saknas tillräcklig information för att systemet ska kunna avgöra exakt var trafiken kom ifrån." };
+  const ORGANIC = { name: "Google (Obetald söktrafik)", sub: "Besök från Googles vanliga sökresultat", tip: { title: "Vad är obetald söktrafik?", body: "Personer som hittade er via Googles vanliga sökresultat — utan att ni betalat för klicket.", example: "Ni rankar högt på 'redovisningsbyrå Stockholm' → någon klickar → ett organiskt besök." } };
+  const PAID    = { name: "Google Ads", sub: "Köpt trafik från Google", tip: { title: "Vad är Google Ads-trafik?", body: "Besökare som kom via en betald annons i Google Sök eller Display-nätverket.", example: "Ni betalar per klick. Stoppar ni budgeten → slutar trafiken direkt." } };
+  const SOCIAL  = { name: "Sociala medier", sub: "Besök från inlägg och delningar i sociala medier", tip: { title: "Vad är social trafik?", body: "Besökare som klickat in från sociala plattformar som LinkedIn, Facebook eller Instagram.", example: "Ett LinkedIn-inlägg som delas vidare kan ge en pik av social trafik." } };
+  const DIRECT  = { name: "Direkttrafik", sub: "Besökare som gick direkt till hemsidan", tip: { title: "Vad är direkttrafik?", body: "Besökare som redan känner till er och skrev in adressen direkt, eller kom via ett bokmärke.", example: "Befintliga kunder och varumärkeskännare dyker upp här." } };
+  const REFERRAL = { name: "Referral", sub: "Länkar från andra sajter", tip: { title: "Vad är referraltrafik?", body: "Besökare som kom via en länk på en annan webbplats — t.ex. en partner, artikel eller katalog.", example: "En omnämning i en branschblogg kan ge hög-kvalitativa referralbesök." } };
+  const EMAIL   = { name: "E-post", sub: "Nyhetsbrev & utskick", tip: { title: "Vad är e-posttrafik?", body: "Besökare som klickat via ett nyhetsbrev eller e-postutskick med UTM-spårning.", example: "Skickar ni ett månadsbrev med spårade länkar syns klicken här." } };
+  const UNKNOWN = { name: "Okänd källa", sub: "Trafik som inte kunnat kopplas tydligt till en källa", tip: { title: "Vad är okänd källa?", body: "Trafik där systemet inte kunnat avgöra varifrån besökaren kom — ofta p.g.a. saknade spårparametrar.", example: "Klick från appar, direktmeddelanden eller skyddade webbläsare hamnar ofta här." } };
 
-  const channelNames: Record<string, { name: string; sub: string; info: string }> = {
+  const channelNames: Record<string, { name: string; sub: string; tip: { title: string; body: string; example?: string } }> = {
     // English GA4 keys
     "organic": ORGANIC, "Organic Search": ORGANIC, "organic search": ORGANIC,
     "paid": PAID, "Paid Search": PAID, "paid search": PAID,
@@ -297,7 +297,7 @@ function buildSlideData(reportData: ReportData | null): SlideData {
           return {
             name: channelNames[c.channel]?.name ?? c.channel,
             sub: channelNames[c.channel]?.sub ?? "",
-            info: channelNames[c.channel]?.info ?? "",
+            tip: channelNames[c.channel]?.tip ?? { title: c.channel, body: "" },
             pct: Math.round((curr / totalVisits) * 100),
             visits: curr,
             delta,
@@ -306,12 +306,12 @@ function buildSlideData(reportData: ReportData | null): SlideData {
           };
         })
       : [
-          { name: "Google (Obetald söktrafik)", sub: "Besök från Googles vanliga sökresultat", info: "Det här är personer som hittade företaget via Google utan att man betalat för klicket.", pct: 58, visits: 10672, delta: 14, icon: SearchIcon, featured: true },
-          { name: "Direkttrafik", sub: "Besökare som gick direkt till hemsidan", info: "Det här är personer som redan känner till företaget och själva skrev in webbadressen eller använde ett bokmärke.", pct: 14, visits: 2576, delta: 3, icon: MousePointerClick },
-          { name: "Sociala medier", sub: "Besök från inlägg och delningar i sociala medier", info: "Det här är personer som klickat in från exempelvis LinkedIn, Facebook eller Instagram.", pct: 11, visits: 2024, delta: -8, icon: Megaphone },
-          { name: "Google Ads", sub: "Köpt trafik från Google", info: "Besökare som kom via en betald annons i Google Sök eller Display.", pct: 9, visits: 1656, delta: 6, icon: Globe },
-          { name: "Referral", sub: "Länkar från andra sajter", info: "Besökare som kommit via en länk på en annan webbplats.", pct: 5, visits: 920, delta: 2, icon: Globe },
-          { name: "E-post", sub: "Nyhetsbrev & utskick", info: "Besökare som klickat via ett e-postutskick eller nyhetsbrev.", pct: 3, visits: 552, delta: -1, icon: Mail },
+          { name: "Google (Obetald söktrafik)", sub: "Besök från Googles vanliga sökresultat", tip: ORGANIC.tip, pct: 58, visits: 10672, delta: 14, icon: SearchIcon, featured: true },
+          { name: "Direkttrafik", sub: "Besökare som gick direkt till hemsidan", tip: DIRECT.tip, pct: 14, visits: 2576, delta: 3, icon: MousePointerClick },
+          { name: "Sociala medier", sub: "Besök från inlägg och delningar i sociala medier", tip: SOCIAL.tip, pct: 11, visits: 2024, delta: -8, icon: Megaphone },
+          { name: "Google Ads", sub: "Köpt trafik från Google", tip: PAID.tip, pct: 9, visits: 1656, delta: 6, icon: Globe },
+          { name: "Referral", sub: "Länkar från andra sajter", tip: REFERRAL.tip, pct: 5, visits: 920, delta: 2, icon: Globe },
+          { name: "E-post", sub: "Nyhetsbrev & utskick", tip: EMAIL.tip, pct: 3, visits: 552, delta: -1, icon: Mail },
         ];
 
   // Time series — TrafficOverview.timeSeries uses { date, value } (value = sessions)
@@ -437,28 +437,28 @@ function SlideKpis({ d }: { d: SlideData }) {
       v: fmtNum(d.visits),
       d: sign(d.trafficDelta),
       p: d.trafficDelta >= 0,
-      h: "Totalt antal sessioner under perioden — varje gång någon besöker sidan räknas det som ett besök, oavsett om de varit inne förut.",
+      tip: { title: "Vad är ett besök?", body: "Varje gång någon laddar sidan räknas det som ett besök — oavsett om de har varit inne förut.", example: "Samma person som besöker tre gånger = 3 besök." },
     },
     {
       l: "Antal personer",
       v: fmtNum(d.people),
       d: sign(d.peopleDelta),
       p: d.peopleDelta >= 0,
-      h: "Unika besökare — hur många olika personer som kom till sidan. En person kan göra flera besök men räknas bara en gång här.",
+      tip: { title: "Vad betyder antal personer?", body: "En person räknas bara en gång, även om den besöker flera gånger.", example: "1 person som går in 3 gånger = 3 besök, men bara 1 person här." },
     },
     {
       l: "Tid på sidan",
       v: "2 min 14 s",
       d: sign(d.timeDelta),
       p: d.timeDelta >= 0,
-      h: "Genomsnittlig tid per besök. Längre tid tyder på att besökarna hittar relevant innehåll och stannar kvar.",
+      tip: { title: "Genomsnittlig besökstid", body: "Hur länge en genomsnittlig besökare stannar. Längre tid betyder att folk hittar det de söker.", example: "2 min 14 s innebär att besökarna läser — inte bara studsar vidare." },
     },
     {
       l: "Leads",
       v: fmtNum(d.leads),
       d: sign(d.leadsDelta),
       p: d.leadsDelta >= 0,
-      h: "Antal registrerade konverteringar — t.ex. kontaktformulär, samtal eller köp. Kräver att konverteringsspårning är aktiverat.",
+      tip: { title: "Vad räknas som ett lead?", body: "Varje registrerad konvertering — t.ex. ifyllt kontaktformulär, telefonklick eller köp.", example: "Kräver att konverteringsspårning är aktiverat i Google Analytics." },
     },
   ];
   return (
@@ -475,7 +475,7 @@ function SlideKpis({ d }: { d: SlideData }) {
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-1.5">
                 <p className="text-sm font-semibold sm:text-base">{k.l}</p>
-                <InfoTooltip text={k.h} side="above" />
+                <InfoTooltip title={k.tip.title} body={k.tip.body} example={k.tip.example} side="above" />
               </div>
               <TrendPill delta={k.d} positive={k.p} size="md" />
             </div>
@@ -679,7 +679,7 @@ function SlideChannels({ d }: { d: SlideData }) {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
                     <p className="font-semibold leading-tight">{c.name}</p>
-                    {c.info && <InfoTooltip text={c.info} side="above" />}
+                    {c.tip.title && <InfoTooltip title={c.tip.title} body={c.tip.body} example={c.tip.example} side="above" />}
                   </div>
                   <p className="truncate text-xs text-muted-foreground">{c.sub}</p>
                 </div>
@@ -743,7 +743,7 @@ function SlidePages({ d }: { d: SlideData }) {
                   {fmtNum(row.v)}
                 </p>
                 <span className="text-sm font-medium text-muted-foreground">besök</span>
-                <InfoTooltip text="Antal gånger den här sidan laddades under perioden. En besökare kan bidra med flera besök om de återkommer." side="above" />
+                <InfoTooltip title="Vad räknas som ett sidbesök?" body="Antal gånger den här sidan laddades under perioden." example="En besökare som återkommer tre gånger bidrar med 3 sidbesök." side="above" />
               </div>
             </div>
           );
