@@ -119,11 +119,11 @@ function SlideHeading({
 }) {
   return (
     <div className="max-w-3xl">
-      <h1 className="font-display text-[3.1rem] leading-[1.05] tracking-tight lg:text-[3.8rem]">
+      <h1 className="font-display text-[3.1rem] font-bold leading-[1.05] tracking-tight lg:text-[3.8rem]">
         {children}
       </h1>
       {sub ? (
-        <p className="mt-3 text-[1.05rem] text-muted-foreground">{sub}</p>
+        <p className="mt-3 text-[1.05rem] text-foreground">{sub}</p>
       ) : null}
     </div>
   );
@@ -382,9 +382,8 @@ function SlideHero({ d }: { d: SlideData }) {
   return (
     <div className="flex h-full flex-col justify-center gap-6">
       <div className="space-y-4 text-center">
-        <Eyebrow>Sammanfattning · {d.period}</Eyebrow>
         <div className="mx-auto max-w-5xl space-y-3">
-          <h1 className="font-display text-[3.1rem] leading-[1.05] tracking-tight lg:text-[3.8rem] whitespace-nowrap">
+          <h1 className="font-display text-[3.1rem] font-bold leading-[1.05] tracking-tight lg:text-[3.8rem] whitespace-nowrap">
             Din digitala synlighet går åt rätt håll
           </h1>
           <div className="flex items-center justify-center gap-3">
@@ -393,7 +392,7 @@ function SlideHero({ d }: { d: SlideData }) {
               positive={d.trafficDelta >= 0}
               size="lg"
             />
-            <p className="text-[1.05rem] text-muted-foreground">En tydlig riktning — drivet av Google.</p>
+            <p className="text-[1.05rem] text-foreground">En tydlig riktning — drivet av Google.</p>
           </div>
         </div>
         <div className="flex flex-wrap justify-center gap-2.5 pt-1">
@@ -464,14 +463,9 @@ function SlideKpis({ d }: { d: SlideData }) {
   ];
   return (
     <div className="space-y-8">
-      <div>
-        <Eyebrow>Nyckeltal</Eyebrow>
-        <div className="mt-3">
-          <SlideHeading sub="Så ser perioden ut i siffror — jämfört med föregående månad.">
-            Snabb överblick
-          </SlideHeading>
-        </div>
-      </div>
+      <SlideHeading sub="Så ser perioden ut i siffror — jämfört med föregående månad.">
+        Snabb överblick
+      </SlideHeading>
       <div className="grid grid-cols-2 gap-4 sm:gap-6">
         {kpis.map((k) => (
           <div
@@ -511,11 +505,10 @@ function SlideTrend({ d }: { d: SlideData }) {
       {/* Header row */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <Eyebrow>Trafiköversikt</Eyebrow>
-          <h1 className="mt-2 font-display text-[3.1rem] leading-[1.05] tracking-tight">
+          <h1 className="font-display text-[3.1rem] font-bold leading-[1.05] tracking-tight">
             Så hittar besökarna till er
           </h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">Föregående månad</p>
+          <p className="mt-1.5 text-sm text-foreground">Föregående månad</p>
         </div>
         <TrendPill
           delta={sign(d.trafficDelta)}
@@ -665,12 +658,9 @@ function SlideChannels({ d }: { d: SlideData }) {
   return (
     <div className="space-y-6">
       <div>
-        <Eyebrow>Trafikkällor</Eyebrow>
-        <div className="mt-3">
-          <SlideHeading sub="Det här är källorna som driver flest besök till din sida.">
-            Dina bästa trafikkällor
-          </SlideHeading>
-        </div>
+        <SlideHeading sub="Det här är källorna som driver flest besök till din sida.">
+          Dina bästa trafikkällor
+        </SlideHeading>
       </div>
       <div className="grid grid-cols-2 gap-3">
         {d.topChannels.map((c) => {
@@ -719,12 +709,9 @@ function SlidePages({ d }: { d: SlideData }) {
   return (
     <div className="space-y-7">
       <div>
-        <Eyebrow>Bästa sidor</Eyebrow>
-        <div className="mt-3">
-          <SlideHeading sub="Sidorna som drar mest besök just nu — och hur de utvecklas.">
-            Dina viktigaste sidor
-          </SlideHeading>
-        </div>
+        <SlideHeading sub="Sidorna som drar mest besök just nu — och hur de utvecklas.">
+          Dina viktigaste sidor
+        </SlideHeading>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {d.topPages.map((row, i) => {
@@ -770,7 +757,6 @@ function SlideStrategicInsight({ d }: { d: SlideData }) {
   return (
     <div className="flex h-full flex-col justify-center gap-6">
       <div className="space-y-3 text-center">
-        <Eyebrow>Strategisk bedömning</Eyebrow>
         <div className="mx-auto max-w-3xl">
           <SlideHeading sub="Vad siffrorna betyder för affären — inte bara dashboarden.">
             Synligheten växer — men värdet fångas inte fullt ut
@@ -827,12 +813,9 @@ function SlideRecommendations() {
   return (
     <div className="space-y-7">
       <div>
-        <Eyebrow>Våra rekommendationer</Eyebrow>
-        <div className="mt-3">
-          <SlideHeading sub="Tre fokusområden att prioritera den närmaste perioden.">
-            Rekommenderade fokusområden
-          </SlideHeading>
-        </div>
+        <SlideHeading sub="Tre fokusområden att prioritera den närmaste perioden.">
+          Rekommenderade fokusområden
+        </SlideHeading>
       </div>
       <div className="grid gap-4 md:grid-cols-3">
         {actions.map((a) => {
@@ -869,12 +852,9 @@ function SlideConversion({ d }: { d: SlideData }) {
     return (
       <div className="space-y-7">
         <div>
-          <Eyebrow>Konverteringar</Eyebrow>
-          <div className="mt-3">
-            <SlideHeading sub="Senaste perioden — alla mätta konverteringar.">
-              Affären bakom trafiken
-            </SlideHeading>
-          </div>
+          <SlideHeading sub="Senaste perioden — alla mätta konverteringar.">
+            Affären bakom trafiken
+          </SlideHeading>
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
           {[
@@ -902,7 +882,6 @@ function SlideConversion({ d }: { d: SlideData }) {
   return (
     <div className="grid h-full content-center gap-10 lg:grid-cols-[1.1fr_1fr]">
       <div className="space-y-6">
-        <Eyebrow>Möjlighet</Eyebrow>
         <SlideHeading sub="Just nu mäter vi besök — men inte vad de leder till.">
           Du ser trafiken — men inte affären
         </SlideHeading>
@@ -951,7 +930,6 @@ function SlideAIVisibility() {
   return (
     <div className="grid h-full content-center gap-10 lg:grid-cols-[1.1fr_1fr]">
       <div className="space-y-6">
-        <Eyebrow>AI-synlighet</Eyebrow>
         <SlideHeading sub="ChatGPT, Perplexity och Gemini skickar redan trafik — men syns inte i vanliga rapporter.">
           AI-synligheten är just nu okänd
         </SlideHeading>
@@ -1013,7 +991,6 @@ function SlideRecap({ d }: { d: SlideData }) {
   return (
     <div className="grid h-full content-center gap-10 lg:grid-cols-[1.05fr_1fr]">
       <div className="space-y-6">
-        <Eyebrow>Kort summerat</Eyebrow>
         <SlideHeading sub="Tre rader att ta med sig från perioden.">
           Tre saker att komma ihåg
         </SlideHeading>
