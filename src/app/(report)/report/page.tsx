@@ -475,7 +475,7 @@ function SlideKpis({ d }: { d: SlideData }) {
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-1.5">
                 <p className="text-sm font-semibold sm:text-base">{k.l}</p>
-                <InfoTooltip text={k.h} side="below" />
+                <InfoTooltip text={k.h} side="above" />
               </div>
               <TrendPill delta={k.d} positive={k.p} size="md" />
             </div>
@@ -679,7 +679,7 @@ function SlideChannels({ d }: { d: SlideData }) {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
                     <p className="font-semibold leading-tight">{c.name}</p>
-                    {c.info && <InfoTooltip text={c.info} side="below" />}
+                    {c.info && <InfoTooltip text={c.info} side="above" />}
                   </div>
                   <p className="truncate text-xs text-muted-foreground">{c.sub}</p>
                 </div>
