@@ -10,7 +10,6 @@ const sv = {
     items: {
       dashboard: "Översikt",
       report: "Rapport",
-      report2: "Rapport 2",
       integrations: "Integrationer",
     },
     user: {
@@ -166,10 +165,12 @@ const sv = {
     },
     channels: {
       eyebrow: "Trafikkanaler",
-      organicSearch: "Organisk sökning",
+      organicSearch: "Google (Obetald söktrafik)",
       paidSearch: "Betald sökning",
-      direct: "Direkt",
+      direct: "Direkttrafik",
       referral: "Hänvisningar",
+      social: "Sociala medier",
+      unassigned: "Okänd källa",
     },
     search: {
       eyebrow: "Söksynlighet",
@@ -243,9 +244,19 @@ const sv = {
   // Login page
   login: {
     eyebrow: "Digital Rapport",
-    headline: "Er digitala utveckling,\ntydligt rapporterad.",
+    headline: "Välkommen!\nLogga in och få koll på er digitala närvaro.",
     description: "Anslut Google-kontot för att se trafik, söksynlighet och tillväxt i en tydlig rapport.",
     cta: "Fortsätt med Google",
+    divider: "eller",
+    emailPlaceholder: "E-postadress",
+    passwordPlaceholder: "Lösenord",
+    emailCta: "Fortsätt med e-post",
+    switchToSignup: "Inget konto? Registrera dig",
+    switchToLogin: "Har du redan ett konto? Logga in",
+    errorInvalidCredentials: "Fel e-post eller lösenord.",
+    errorEmailNotConfirmed: "Kolla inkorgen och bekräfta din e-post innan du loggar in.",
+    errorGeneric: "Något gick fel. Försök igen.",
+    successSignup: "Konto skapat — kolla inkorgen för att bekräfta din e-post.",
   },
 
   // Dashboard registry text (KPI card narratives)

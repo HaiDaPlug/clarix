@@ -88,10 +88,10 @@ export function SessionsChart({ item, data }: { item: AssembledDashboardItem; da
     >
       <div className="flex items-start justify-between mb-6">
         <div>
-          <p className="eyebrow mb-2 flex items-center gap-1.5" style={{ color: "var(--slate)" }}>
-            {t.dashboard.sessions.eyebrow}
-            <InfoTooltip text={t.dashboard.sessions.eyebrowTooltip} />
-          </p>
+          <div className="flex items-center gap-1.5 mb-2">
+            <p className="eyebrow" style={{ color: "var(--slate)" }}>{t.dashboard.sessions.eyebrow}</p>
+            <InfoTooltip text={t.dashboard.sessions.eyebrowTooltip} side="below" />
+          </div>
           {isFull && (
             <>
               <p style={{ fontFamily: "var(--font-display)", fontSize: "1.5rem", fontWeight: 700, letterSpacing: "-0.025em", color: "var(--charcoal)" }}>

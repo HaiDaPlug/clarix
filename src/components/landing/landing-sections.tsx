@@ -13,10 +13,9 @@ import {
   TrendingUp,
   ShieldCheck,
   Palette,
-  Sun,
-  Moon,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
 import {
   Showcase,
   DashboardKpiVisual,
@@ -30,27 +29,11 @@ import {
 } from "@/components/landing/brand-logos";
 
 export function ThemeToggle() {
-  const [dark, setDark] = useState(false);
-
-  useEffect(() => {
-    setDark(document.documentElement.classList.contains("dark"));
-  }, []);
-
-  function toggle() {
-    const next = !dark;
-    setDark(next);
-    document.documentElement.classList.toggle("dark", next);
-    localStorage.setItem("theme", next ? "dark" : "light");
-  }
-
   return (
-    <button
-      onClick={toggle}
-      aria-label={dark ? "Byt till ljust läge" : "Byt till mörkt läge"}
-      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border/60 bg-background/80 text-muted-foreground transition-colors hover:border-border hover:text-foreground"
-    >
-      {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-    </button>
+    <AnimatedThemeToggler
+      variant="circle"
+      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border/60 bg-background/80 text-muted-foreground transition-colors hover:border-border hover:text-foreground [&>svg]:h-4 [&>svg]:w-4"
+    />
   );
 }
 

@@ -8,7 +8,7 @@ It is not agency software. The end user is a business owner who logs in, connect
 
 The product has two layers:
 - **Dashboard** — always-on home base. Narrative metric cards, traffic chart, channel breakdown. Designed to answer "how are we doing?" at a glance.
-- **Report** — the depth layer. Two report formats now exist side-by-side: Rapport 1 (editorial, narrative-driven slide deck assembled dynamically from real data) and Rapport 2 (cinematic presentation shell ported from the Clarix traffic report design — bold purple aurora aesthetic, swipeable slides, keyboard + fullscreen nav).
+- **Report** — the depth layer. Two report formats now exist side-by-side: Rapport 1 (editorial, narrative-driven slide deck assembled dynamically from real data) and Rapport 2 (cinematic scroll-surface presentation — 10 floating cards on a grey surface, smooth spring scroll, keyboard nav, fullscreen present mode).
 
 The design language is Barlow (headings) + Satoshi (body), pure white background, deliberate whitespace. Every block is expected to answer "so what?" — not just display a number.
 
@@ -41,7 +41,8 @@ The app uses a Next.js route group `(app)` for all authenticated pages. The layo
 ```
 src/app/
 ├── page.tsx                          # Landing page (public)
-├── login/page.tsx                    # Google OAuth sign-in page
+├── login/page.tsx                    # Sign-in page (Google OAuth + email/password)
+├── signup/page.tsx                   # Registration page (Google OAuth + email/password/confirm)
 ├── auth/callback/route.ts            # OAuth code exchange handler → redirects to /dashboard
 ├── (app)/
 │   ├── layout.tsx                    # App shell — renders Sidebar + content area
@@ -64,14 +65,33 @@ The `(app2)` parallel design system route group has been fully merged into `(app
 Auth is fully wired and enforced via `src/proxy.ts` (Next.js 16's equivalent of middleware):
 
 1. User hits `/` (landing page — always public)
-2. Clicks "Continue with Google" → hits `/login`
-3. `signInWithOAuth` fires with `access_type: offline` + `prompt: consent` — forces Google to return a `refresh_token`
+2. Clicks "Logga in" → hits `/login`
+3. Google OAuth: `signInWithOAuth` fires with `access_type: offline` + `prompt: consent` — forces Google to return a `refresh_token`
 4. Supabase redirects to Google OAuth consent screen
 5. Google sends user back to `/auth/callback?code=...`
 6. `route.ts` exchanges code for session via `supabase.auth.exchangeCodeForSession()`
 7. User lands on `/dashboard`
 
+Email/password: `/login` calls `signInWithPassword`, `/signup` calls `signUp` with client-side validation (passwords match, min 8 chars). "Registrera dig" on login links to `/signup`; "Logga in" on signup links back to `/login`. Back button on both pages goes to `/`.
+
 Protected routes (`/dashboard`, `/integrations`, `/clients`, `/settings`, `/report`) redirect unauthenticated users to `/login`. Authenticated users hitting `/login` are bounced to `/dashboard`.
+
+---
+
+## Login & signup page design
+
+Both `/login` and `/signup` share the same two-column layout:
+
+**Left column (35%)** — form content on bone background. Headline + Google OAuth button + divider + email form + toggle link. Fields use bottom-border-only style with focus transitions. Spacing: `gap-8` between headline and form group, `gap-4` between fields.
+
+**Right panel (65%)** — interactive photo reveal effect:
+- Base layer: sharp `cloudmind.jpg` (`/public/metaphors/cloudmind.jpg`)
+- Blur layer: same photo at `blur(36px) scale(1.15)` — full-panel fog on load
+- Wipe mechanic: mousemove drives a spring (`stiffness: 120, damping: 20`) pixel value; a `linear-gradient` CSS mask cuts the blur layer left of the cursor, revealing the sharp photo underneath
+- Reveal lock: once the cursor sweeps past 97% of panel width, the blur layer fades out permanently until refresh
+- Grain: `NoiseTexture` SVG at `opacity-[0.18]` sits above both photo layers for film texture
+- **Dark gradient scrim** — `linear-gradient(to top, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.2) 40%, transparent 65%)` at `z-[15]` between grain and tagline, ensures text legibility over any photo
+- Tagline bottom-left: "Få **klarhet** i din data, / med **Clarix**." — plain words white, "klarhet" and "Clarix" use `AuroraText` with Clarix accent colors (pink `#FF4D9E` → coral `#FF6B55` → amber `#FFB830`). "klarhet" sweeps slow (`speed: 0.5`), "Clarix" sweeps faster with reversed color order (`speed: 1.4`) so they're always out of phase.
 
 Supabase clients:
 - [src/utils/supabase/server.ts](../src/utils/supabase/server.ts) — for Server Components and API routes
@@ -145,6 +165,37 @@ V2 visual shell fully wired to real auth logic.
 **Integration cards** — GA4, GSC, Google Ads with real logo SVGs, category eyebrow, purpose description, "unlocks" chips. Google Ads marked coming soon.
 
 **Connect flow** — inline property picker expands below each card with `AnimatePresence` height animation. Loads available GA4 properties and GSC sites from `/api/google/properties`. Disconnect removes the row. `needs_refresh` surfaces a re-auth prompt. All loading/error states handled.
+
+## Rapport 2
+
+[src/app/(report)/report2/page.tsx](../src/app/(report)/report2/page.tsx)
+
+A cinematic scroll-surface report viewer. All 10 slides rendered as floating white cards stacked vertically on a grey surface (`oklch(0.965 0.005 270)`). No slideshow transitions — free mouse scroll with a spring damping effect, arrow keys snap-center to each card.
+
+**Canvas system** — each card is `1280×720` (logical canvas) scaled down via CSS `transform: scale()`. Scale factor computed from container width × `0.86` multiplier, so cards float with visible surface on both sides. `fontSize: 20` on the canvas root makes all `rem`-based type scale linearly together.
+
+**Navigation:**
+- Mouse wheel: intercepted, spring-lerped (`0.1` per frame toward target, `0.8` delta multiplier) for a smooth decelerated feel
+- Arrow keys / space / enter: `scrollTo` with exact center math (`offsetTop - viewHeight/2 + cardHeight/2`)
+- Dot nav (right edge): `IntersectionObserver` tracks which card is most centered, dots reflect reality, click to jump
+- Bottom frosted glass pill: left/right arrows + `↑↓` keyboard hints + `1 / 10` counter. `backdrop-blur-md`, 55% white background, white border
+- Top bar: back link, slide counter, Present button (fullscreen toggle)
+
+**Slides (10):**
+1. Sammanfattning (Hero) — centered headline, trend pill + subtitle row, tag pills, full-width AI summary card below
+2. Nyckeltal — 2×2 KPI cards with large display numbers
+3. Trafiköversikt — area chart + per-channel right column + channel bar breakdown
+4. Trafikkällor — 3-col channel cards with icons, percentages, deltas
+5. Bästa sidor — 3-col page rank cards with colored rank badges
+6. Strategisk bedömning — centered heading + full-width Clarix executive insight card, "Bottom line" purple accent pill
+7. Rekommendationer — 3-col action cards (Skala / Fixa / Bygg)
+8. Konvertering — 3 metric cards if conversions exist, else upsell layout
+9. AI-synlighet — left text + right 2×2 AI source status grid
+10. Kort summerat — bullet list left + booking CTA card right
+
+**Data:** same real GA4/GSC pipeline as Rapport 1 — fetches from `/api/ga4` and `/api/gsc`, merges with `scenario2` mock fallback via `mergeReportData`.
+
+---
 
 ## Clients page
 
@@ -357,11 +408,15 @@ Never show a metric going down without a corresponding recommendation or action 
 11. ~~**Auth enforcement + token refresh**~~ — ✅ Done. Login page restored with correct OAuth scopes. Proxy guard protects all app routes. Server-side token refresh wired into both API routes — tokens auto-renew silently, no more hourly re-auth.
 12. ~~**Dashboard loading UX + shimmer**~~ — ✅ Done. Purple/blue shimmer sweep (`ShimmerCard`, `ShimmerOverlay` in `src/components/primitives/ShimmerCard.tsx`) replaces all grey skeleton blocks. Shimmer only runs when connected sources exist — mock-only users get instant render. KPI skeleton count derived from actual connected source types (GA4 → 4, GSC → +1, Ads → +1) so placeholder count matches the real dashboard. Counter animation (`AnimatedCounter`) only runs after real data loads. GA4 API parallelized (current + prior period fetched simultaneously) — halved fetch time.
 13. ~~**Dashboard modularized**~~ — ✅ Done. `dashboard/page.tsx` extracted from 1,579 lines to ~200 lines. All components moved to `src/components/dashboard/`: `KpiCard`, `DashboardHero`, `SessionsChart`, `ChannelBreakdown`, `SearchVisibility`, `PaidPerformance`, `NextStepsCard`, `metrics` (shared helpers). TypeScript clean, zero logic changes.
-14. **Dashboard — world-class with real data** — The shimmer and loading UX is solid. Next: make the dashboard undeniable. Real data QA pass (every KPI verified against GA4 dashboard), remove any remaining mock contamination, sharpen the narrative copy, elevate visual hierarchy. Every number must earn its space.
-15. **Report — needs serious work** — The report feature exists but is not yet premium. Slides need narrative sharpening, real data wiring verification, and visual polish to match the dashboard's level. This is the core product and must feel like a cinematic, editorial experience.
-16. **File extraction — large files flagged** — Three files need splitting before they become blockers: `src/app/(app)/integrations/page.tsx` (1,206 lines — same problem dashboard had), `src/lib/google/report-mappers.ts` (722 lines — split into `ga4-mapper.ts` / `gsc-mapper.ts`), `src/app/page.tsx` (653 lines — landing page sections inlined). Do in a dedicated pass.
-17. **Insight contract + AI wiring** — wire a model to fill the three-field `InsightContract` shape per slide using real data as evidence. Each slide sends its raw JSON + module type + period context to the model; model returns `{ observation, implication, recommendedAction }`. The `InsightContract` type and prompt discipline are already defined in `src/types/insight.ts` and the founder notes. `executiveSummary` generation can be folded into this pass.
-18. **PDF export** — each slide as a page, animations stripped, typography and layout fully respected. The most beautiful PDF a client has ever received.
+14. **Open auth — unblock real users** — New users hitting the Google OAuth flow get a "not a developer / app unverified" block because the app is still in testing mode in Google Cloud Console. Fix: either submit the app for Google OAuth verification, or add authorized test users in the Google Cloud Console OAuth consent screen settings. This is blocking any real user from logging in and must be resolved before sharing the product with anyone outside the team.
+15. **Report 2 — sharpen and promote, retire Report 1** — Rapport 2 (the cinematic Clarix-aesthetic shell) is the future. Polish its slides with real data, nail the visual identity, and make it the sole report format. Once Rapport 2 is undeniably better, remove Rapport 1 to reduce surface area and sharpen the product story.
+16. **UX and feel of Clarix — holistic pass** — After auth and report work stabilize, do a full UX pass: transitions, micro-interactions, copy tone, empty states, loading feedback. The product should feel like a premium tool from first login to last slide — every click, every state, every moment of waiting should feel intentional.
+17. **Dashboard — world-class with real data** — The shimmer and loading UX is solid. Next: make the dashboard undeniable. Real data QA pass (every KPI verified against GA4 dashboard), remove any remaining mock contamination, sharpen the narrative copy, elevate visual hierarchy. Every number must earn its space.
+18. **File extraction — large files flagged** — Three files need splitting before they become blockers: `src/app/(app)/integrations/page.tsx` (1,206 lines — same problem dashboard had), `src/lib/google/report-mappers.ts` (722 lines — split into `ga4-mapper.ts` / `gsc-mapper.ts`), `src/app/page.tsx` (653 lines — landing page sections inlined). Do in a dedicated pass.
+19. **Product model — accounts before reports, white-label architecture** — Before deepening the report feature, align on the business model: does a user/agency account own multiple client workspaces, each with their own report? White-label means the report renders with the agency's logo, domain, and accent color — not Clarix branding. Nail the data model (account → workspace → report) before building the UI so no architectural debt accumulates. Open questions: do we prioritize the account model or white-label first? Are these the same feature?
+20. **AI insights — living, dynamic, per-slide and dashboard** — AI is Clarix's USP. The `InsightContract` type and three-field shape (`observation`, `implication`, `recommendedAction`) are already defined in `src/types/insight.ts`. The next step is to wire a Claude model call behind each slide and each dashboard section — not once on page load, but dynamically as data changes. Every slide sends its raw JSON + module type + period context → model returns insight → rendered inline on the slide. Dashboard gets the same treatment. The insight must feel alive: contextual, specific to the numbers, written for a business owner. This is what differentiates Clarix from every other reporting tool.
+21. **Insight contract + AI wiring** — wire a model to fill the three-field `InsightContract` shape per slide using real data as evidence. Each slide sends its raw JSON + module type + period context to the model; model returns `{ observation, implication, recommendedAction }`. The `InsightContract` type and prompt discipline are already defined in `src/types/insight.ts` and the founder notes. `executiveSummary` generation can be folded into this pass.
+22. **PDF export** — each slide as a page, animations stripped, typography and layout fully respected. The most beautiful PDF a client has ever received.
 
 ---
 
@@ -1075,3 +1130,269 @@ Same pattern as Rapport 1. On mount: reads `connected_sources` from Supabase, fe
 
 ## Repository
 Codebase pushed to GitHub: https://github.com/HaiDaPlug/clarix.git (main branch)
+
+---
+
+## Rapport 2 — slide merge + viewer overhaul (2026-05-13 → 2026-05-14)
+
+### Goal
+Rapport 2 is the canonical report going forward. Rapport 1 is archived (still lives at `/report` untouched, but no longer the focus). The work this session was two-track: (1) enrich Rapport 2's traffic slide with the layout richness of Rapport 1, and (2) overhaul the viewer shell to feel like a premium slideshow — centered slide, grey breathing room, vertical dot nav, bottom keyboard controls.
+
+---
+
+### Track 1 — Traffic slide enriched (`SlideTrend`)
+
+**What the user wanted:** Rapport 2's `SlideTrend` ("Trafikutveckling") was clean but naked — just a chart. Take the "Per kanal" right-side stats and "Kanalfördelning" bottom bar from Rapport 1's `TrafficOverviewSlide`, keep Rapport 2's warm aesthetic (rounded cards, muted backgrounds, blue chart).
+
+**Heading changed** from "Så utvecklades trafiken" → "Så hittar besökarna till er" (matching Rapport 1's eyebrow "Trafiköversikt").
+
+**Layout added:**
+- Left: "Totala sessioner" label stacked above the big number, then the chart card
+- Right: "Per kanal" card showing top 3 channels by visits (resolved by position, not name-matching — fixes the "Google SEO" vs "Organisk sökning" mismatch), plus Avvisningsfrekvens and Genomsn. besökstid when available
+- Bottom: "Kanalfördelning" card with horizontal fill bars
+
+**Chart updated:** Stroke 2.6px → 1.5px (thin, like Rapport 1), fill opacity 32% → 12% (whisper gradient). Date formatter added: ISO `2026-05-11` → Swedish `"11 maj"`.
+
+**`SlideData` interface extended** with `bounceRate: number | null` and `avgDuration: number | null`. `buildSlideData` populates them from `traffic.bounceRate.value` and `traffic.avgSessionDuration.value`.
+
+**`TrafficOverviewSlide.tsx` reverted** — was accidentally modified during the merge exploration, fully restored to original.
+
+**Files changed:**
+- `src/app/(report)/report2/page.tsx` — `SlideData`, `buildSlideData`, `SlideTrend`
+- `src/components/slides/TrafficOverviewSlide.tsx` — restored to original
+
+---
+
+### Track 2 — Viewer shell redesign
+
+**What the user wanted:** A slideshow that looks like reading a PDF on screen — slide centered with breathing room around it (same background, not a different grey), vertical dot progress on the right, keyboard hint controls centered at the bottom. Reference screenshot: Nike AI Visibility Report viewer (centered slide, dots on right, `space` / `return` / `↓` hint at bottom).
+
+**What was built:**
+- `h-screen` shell, no scroll
+- Slide card: `width: min(90%, calc((100vh - 7rem) * 16/9))`, `aspect-ratio: 16/9`, `rounded-2xl`, soft shadow — centered in a flex stage
+- Vertical dot nav: flex column of pill dots (`w-5 h-5` inactive, `w-5 h-22` active), sits as a flex sibling outside the card to the right — never overlaps the card
+- Bottom controls: prev arrow · `space`, `return`, `→` kbd hint · next arrow — centered
+- Top bar: minimal — "Clarix · N/total" left, "Present" button right, `h-11`
+- Aurora background removed from inside the card (was leaking over content in bottom-right)
+- Slide transitions: `motion.div` with `opacity: 0, x: dir * 20` → `opacity: 1, x: 0`
+- Keyboard nav: arrows, space, enter advance; escape exits/back
+- Drag-to-swipe removed (scroll paradigm replaced it)
+
+**Files changed:**
+- `src/app/(report)/report2/page.tsx` — full `Report2Page` component rewritten
+
+---
+
+### Track 3 — Fixed-canvas scale (attempted, incomplete)
+
+**What the user wanted:** Content clips in the 16:9 frame — slides were designed with more vertical space than 720px provides. Agreed on CSS `scale()` approach: author at a fixed canvas size (1440×900), scale the inner canvas to fit the outer card, exactly like Figma/Google Slides present mode.
+
+**What was implemented:**
+- `CANVAS_W = 1440`, `CANVAS_H = 900` constants
+- Outer card: sized by `ResizeObserver` on the stage container, drives `cardSize` state in pixels
+- Inner div: always `1440×900`, `transform: scale(N)` with `transform-origin: top left`
+- `scale = min(availW / 1440, availH / 900)` — tightest axis wins, recomputes on resize
+
+**Current problem:** The scaling is geometrically correct but the slide content (especially `SlideKpis` with 4 large cards) still clips at the bottom. Root cause: the slide components themselves use `min-h-[180px]` / `min-h-[220px]` on KPI cards, and the total content height at 1440px wide exceeds 900px. The canvas isn't tall enough for the content as currently written.
+
+**What needs to happen next:**
+1. Audit each slide component's actual rendered height at 1440px wide. `SlideKpis` is the worst offender — 4 cards with `min-h-[220px]` + heading + gap = ~600-700px, which fits, but padding on the wrapper adds more.
+2. Either: reduce `min-h` on KPI cards (they don't need to be that tall — value + label is enough), or increase `CANVAS_H` to 1000px (ratio becomes ~1.44:1, still reasonable for laptop screens), or reduce inner padding from `py-12` to `py-8`.
+3. Verify the fix by testing slides 2 (KPIs), 3 (Trend — has chart + two side columns + bottom bars), and 6 (Strategic — two-column with AISummary).
+4. After content fits, clean up: the `stageRef` ResizeObserver fires once immediately on mount which should guarantee correct initial scale — but verify this actually works before the first paint (no flash of unscaled content).
+
+**Files changed:**
+- `src/app/(report)/report2/page.tsx` — `CANVAS_W/H` constants, `scale`/`cardSize` state, `stageRef` ResizeObserver, card + inner canvas JSX
+
+---
+
+### clients/page.tsx — syntax fix
+
+Corrupted string literal on line 39 — `style={{ backgroundColor: "var(--charcoal)", color: "var(--pnpm` was never closed, causing 17 TypeScript errors cascading from that line. Fixed by closing the style prop and restoring the button's JSX children (`<Plus />` + "Ny kund").
+
+**File changed:** `src/app/(app)/clients/page.tsx`
+
+---
+
+## Report viewer — fixed-canvas stage overhaul (2026-05-15)
+
+### Goal
+The report viewer was clipping slide content at the bottom on laptop screens and showing too much grey dead space around the slide. Multiple iterations to arrive at a stable, correct implementation.
+
+### Root cause (diagnosed)
+CSS `transform: scale()` changes the **visual size** of an element but not its **layout footprint**. When centering was done via `grid place-items-center`, the browser centered the unscaled 1440×810 layout box, then scaled it visually afterward. On laptop heights, the visual canvas extended outside the stage bounds even though the layout box appeared centered. This caused systematic bottom cutoff.
+
+### Final implementation
+
+**Canvas dimensions:** `CANVAS_W = 1440`, `CANVAS_H = 810` (true 16:9)
+
+**Scale formula:**
+```ts
+const VERTICAL_SAFE = 24;
+const s = Math.min(w / CANVAS_W, Math.max(0, h - VERTICAL_SAFE) / CANVAS_H, 1);
+```
+- Width is fully greedy — no horizontal safe area
+- Height reserves 24px to absorb sub-pixel rounding, DPR scaling, border/shadow, and browser chrome variation
+- Clamped at 1 — never upscales beyond designed size
+
+**Positioning — absolute, not grid-centered:**
+```ts
+left = Math.round((stageW - CANVAS_W * scale) / 2)
+top  = Math.round((stageH - CANVAS_H * scale) / 2)
+```
+Canvas placed at manually computed offsets using the *visual* size (`CANVAS_W * scale`), not the layout footprint. `transformOrigin: "top left"`. This is the critical fix — browser no longer fights itself trying to center an unscaled footprint.
+
+**Stage DOM:**
+- `relative flex-1 min-h-0 overflow-hidden` — takes all space between top bar and bottom controls
+- Canvas is absolutely positioned inside it
+- Dot nav is an absolute overlay on the right edge — no longer a flex sibling stealing horizontal space
+
+**Chrome:**
+- Top bar: `h-10` (40px)
+- Bottom controls: `pb-2 pt-1`
+- Stage background: `oklch(0.97 0.005 270)` — subtle off-white so the white canvas reads as a composed page
+- Slide canvas: white background, `border: 1px solid rgba(20,18,16,0.05)`, very soft shadow, `borderRadius: 4` — restrained page-boundary, not a SaaS card
+
+**Slide transitions:**
+- `motion.div` with `opacity: 0, x: dir * 20` → `opacity: 1, x: 0`
+- Duration 380ms, `ease: [0.16, 1, 0.3, 1]` — smooth, not bouncy
+
+**Files changed:** `src/app/(report)/report2/page.tsx`, `src/app/(report)/layout.tsx`
+
+---
+
+## Report slides — content presence pass (2026-05-15)
+
+### Goal
+With the viewer stage fixed, the slide content itself felt slightly timid on laptop — headings too small, KPI values underscaled, chart too short. A restrained 5–12% presence pass, touching shared primitives first, slide-specific second. No redesign, no template rewrites.
+
+### What was changed
+
+**`SlideHeading` (shared — affects slides 1, 2, 4, 5, 6, 7, 8):**
+- `h1` base size: `text-[2rem]` → `text-[2.6rem]` (was stuck at 2rem because `sm:` / `lg:` breakpoints don't fire meaningfully inside a scaled canvas)
+- Sub-label: `text-base` → `text-[1.05rem]`, removed responsive breakpoint variants
+- `lg:text-[3.2rem]` retained for truly large viewports
+
+**Slide 2 — KPI cards (`SlideKpis`):**
+- Metric value: `text-[2rem]` / `sm:text-[2.8rem]` → `text-[3rem]` flat (breakpoints didn't fire in canvas context)
+- Card min-height: `min-h-[180px]` / `sm:min-h-[220px]` → `min-h-[200px]` (unified, removed dual breakpoint)
+
+**Slide 3 — Traffic overview (`SlideTrend`):**
+- Chart height: `h-[180px]` → `h-[220px]`
+- Per-kanal channel values: `text-xl` → `text-2xl`
+- Standalone `h1` aligned: `text-[2rem]` → `text-[2.6rem]` (was not using `SlideHeading` component)
+
+### What was intentionally left alone
+- `Eyebrow` — `text-[11px]` uppercase is deliberate taste, not timid
+- KPI card label text (`text-sm`) — header labels should stay quiet relative to the value
+- Channel card values on slide 4 (`text-3xl`) — already confident
+- All spacing/gap values — whitespace is part of the premium feeling
+- `AISummary` body text — reading-scale intentional, not hero-scale
+- All viewer/stage/canvas mechanics
+
+**Files changed:** `src/app/(report)/report2/page.tsx`
+
+---
+
+### Next priorities — report sharpening
+
+1. **Internal slide composition pass** — slides feel structurally correct but content density is uneven. Some slides (hero, strategic insight, recap) have too much empty vertical space below content. This is a per-template issue: headings and content blocks need to be distributed across the full canvas height, not stacked at the top and abandoned.
+2. **Chart height (slide 3)** — still hardcoded at 220px. Should grow to fill its card naturally.
+3. **Heading responsiveness** — `SlideHeading` now has a fixed `2.6rem` base. At very small scaled views (small laptop + browser zoom), this may feel too large. Worth testing at ~80% browser zoom.
+4. **Taste sharpening** — colors, type weight, and editorial copy per slide. This is a founder-taste pass, not a code pass — should be driven by explicit direction on what "premium and calm" means per slide.
+
+---
+
+## Channel info-icons + label rewrite — completed 2026-05-17
+
+### Goal
+SME clients don't know what "Direkt", "Organisk social", "Ej tilldelad" mean. Made channel cards self-explanatory: sub-label always visible, purple Clarix ⓘ icon that shows a plain-language tooltip on hover.
+
+### What was built
+
+**`InfoTooltip` component** (`src/components/primitives/InfoTooltip.tsx`) — rewritten to use React `useState` for hover instead of CSS class tricks (Tailwind `group-hover` can't override inline styles, and `eyebrow` `text-transform: uppercase` was bleeding into tooltip text). Pure `onMouseEnter`/`onMouseLeave` state — works in all contexts.
+- Purple Clarix accent (`oklch(0.5 0.18 290)`) on the ⓘ badge
+- `side` prop (`"above"` default / `"below"`) for positioning control
+- Returns `null` when `text` is empty — safe to call unconditionally
+
+**Channel name + info-text map** — added to both `ChannelBreakdown.tsx` and `report2/page.tsx`. Maps every GA4 channel string variant (English keys, Swedish display labels, Swedish GA4 API strings) to a canonical `{ name, sub, info }` object. Covers: `organic / Organisk sökning`, `direct / Direkt`, `social / Organisk social`, `unassigned / Ej tilldelad`, plus paid, referral, email.
+
+**Dashboard `ChannelBreakdown`** (`src/components/dashboard/ChannelBreakdown.tsx`):
+- `getChannelRows` now passes a `channelKey` field — inferred from the raw channel string via fuzzy matching
+- Each row renders: updated channel name → ⓘ icon → sub-label below → number + delta + bar (unchanged)
+- `inferChannelKey()` handles case-insensitive substring matching so all GA4 string variants resolve correctly
+
+**Report2 `SlideChannels`** (`src/app/(report)/report2/page.tsx`):
+- `channelNames` map expanded with `info` field and updated names/subs
+- Fallback mock data updated to use new Swedish copy
+- Both live data path and fallback path include `info` field
+- Card header: name + ⓘ icon inline, sub-label below (unchanged layout)
+- `side="below"` on report2 cards (tooltip opens downward within the slide canvas)
+
+**`SessionsChart` eyebrow** (`src/components/dashboard/SessionsChart.tsx`):
+- `InfoTooltip` moved outside the `eyebrow`-classed element — `text-transform: uppercase` was making tooltip text all-caps
+- Now: eyebrow `<p>` + `InfoTooltip` are siblings inside a flex wrapper div
+
+### Label renames
+- "Totala sessioner" → **"Totala besök"** — in `src/lib/google/mapper-utils.ts` (real GA4 data label) and hardcoded in `report2/page.tsx` trend slide
+- "Direkt" → **"Direkttrafik"**, "Organisk sökning" → **"Google (Obetald söktrafik)"** — in `src/lib/i18n/sv.ts`, `en.ts`, and both channel maps
+- "Organisk social" → **"Sociala medier"** with updated sub-label
+- "Ej tilldelad" → **"Okänd källa"** with explanatory sub-label and hover text
+
+---
+
+## Auth + login page overhaul — completed 2026-05-17
+
+### Auth strategy settled
+- Google OAuth verification is required regardless (GA4/GSC scopes are sensitive). No auth split.
+- **Short-term unblock**: add test users in Google Cloud Console OAuth consent screen (up to 100).
+- **Parallel**: email + password auth added so users can sign in without Google while verification is pending.
+
+### Login page rebuilt
+Two-column layout: 35% form left, 65% visual right.
+
+**Left column:**
+- Headline only — no eyebrow, no description
+- Google OAuth button (unchanged flow)
+- "eller" divider
+- Email + password inputs — hairline bottom-border style, focus transitions to `--charcoal`
+- Submit button matches Google pill exactly
+- Sign-in / sign-up mode toggle (single form, switches on click)
+- Error states: wrong credentials, unconfirmed email, generic fallback
+- Back button top-left (`← Tillbaka`, calls `router.back()`)
+
+**Right column (current — interactive photo reveal):**
+- Full-bleed `cloudmind.jpg` with blur-wipe mechanic and grain overlay (see Login & signup page design section above)
+- Tagline bottom-left with `AuroraText` accents on "klarhet" and "Clarix"
+- Dedicated `/signup` page with identical right panel, adds confirm-password field and client-side validation
+
+**New components created:**
+- `src/components/ui/animated-theme-toggler.tsx` — View Transitions API circle-reveal theme toggle
+- `src/components/ui/dia-text-reveal.tsx` — horizontal color-band sweep reveal for text
+- `src/components/ui/noise-texture.tsx` — SVG `feTurbulence` fractal noise overlay
+- `src/components/ui/aurora-text.tsx` — animated gradient text; `background-position` sweep via `animate-aurora` keyframe; configurable colors and speed
+
+### Theme toggle replaced globally
+- **Sidebar** (`src/components/layout/Sidebar.tsx`) — old `IconMoon`/`IconSun` button replaced with `AnimatedThemeToggler`
+- **Landing header** (`src/components/landing/landing-sections.tsx`) — `ThemeToggle` component rewritten to use `AnimatedThemeToggler`
+- Circle-reveal view transition on every toggle, persists to `localStorage`, reads on mount via MutationObserver
+
+### Dark mode polished
+`--bone` in dark was `#2C2A27` (muddy warm brown) — buttons using it as text color looked boney. Fixed:
+- `--bone` dark: `#ffffff` — buttons now show clean white text
+- Background deepened: `#1A1916` → `#131211`
+- Cards/sidebar stepped to `#1e1c1a` / `#1a1816` for clear depth hierarchy
+- `--slate` bumped for better secondary text legibility on dark backgrounds
+
+### i18n additions
+`t.login` extended in both `en.ts` and `sv.ts`: `divider`, `emailPlaceholder`, `passwordPlaceholder`, `emailCta`, `switchToSignup`, `switchToLogin`, `errorInvalidCredentials`, `errorEmailNotConfirmed`, `errorGeneric`, `successSignup`.
+
+---
+
+## Current priorities (2026-05-17)
+
+1. **Add test users in Google Cloud Console** — go to APIs & Services → OAuth consent screen → Test users. Unblocks real users immediately while verification is pending.
+2. **Submit for Google OAuth verification** — required before public launch. Needs privacy policy URL, app homepage, demo video showing GA4/GSC scope usage.
+3. **Sharpen Rapport 2** — content density pass, slide composition, editorial copy per slide. Remove Rapport 1 (`/report`) — Rapport 2 is the canonical format going forward.
+4. **Polish the rest of the product to login-page standard** — the login/signup page now sets the bar: deliberate typography, layered depth, motion that means something. Apply the same level of craft across the landing page, dashboard, sidebar, integrations, and report pages. Specific angles: landing page hero deserves the same photo/blur/reveal energy; dashboard cards need tighter spacing and more confident type; sidebar transitions should feel as considered as the wipe effect; integrations and settings pages are currently functional but flat. The goal is every screen feeling like it was designed, not assembled.
+5. **UX + feel pass** — overall product polish. Navigation, transitions, micro-interactions, empty states, loading states. Make it feel premium end-to-end.

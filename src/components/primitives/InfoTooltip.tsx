@@ -1,76 +1,61 @@
 "use client";
 
+import { useState } from "react";
+
 interface InfoTooltipProps {
   text: string;
+  side?: "above" | "below";
 }
 
-export function InfoTooltip({ text }: InfoTooltipProps) {
+export function InfoTooltip({ text, side = "above" }: InfoTooltipProps) {
+  const [visible, setVisible] = useState(false);
+  if (!text) return null;
+
   return (
-    <span className="relative inline-flex items-center group" style={{ verticalAlign: "middle" }}>
+    <span
+      style={{ position: "relative", display: "inline-flex", alignItems: "center", verticalAlign: "middle" }}
+      onMouseEnter={() => setVisible(true)}
+      onMouseLeave={() => setVisible(false)}
+    >
+      {/* Icon — solid purple fill, white i */}
       <span
-        className="transition-all duration-150 group-hover:scale-110"
         style={{
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: "14px",
-          height: "14px",
-          borderRadius: "50%",
-          border: "1.5px solid var(--slate-light)",
-          color: "var(--slate-light)",
-          fontSize: "9px",
-          fontFamily: "var(--font-sans)",
-          fontWeight: 600,
-          lineHeight: 1,
-          cursor: "default",
-          flexShrink: 0,
-          transition: "border-color 0.15s ease, color 0.15s ease, transform 0.15s ease",
-        }}
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLElement).style.borderColor = "var(--slate)";
-          (e.currentTarget as HTMLElement).style.color = "var(--slate)";
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLElement).style.borderColor = "var(--slate-light)";
-          (e.currentTarget as HTMLElement).style.color = "var(--slate-light)";
+          display: "inline-flex", alignItems: "center", justifyContent: "center",
+          width: 14, height: 14, borderRadius: "50%", flexShrink: 0, cursor: "default",
+          background: "oklch(0.5 0.18 290)",
+          color: "#fff",
+          fontSize: 9, fontWeight: 700, lineHeight: 1,
+          transform: visible ? "scale(1.12)" : "scale(1)",
+          transition: "transform 0.15s ease",
+          userSelect: "none",
         }}
       >
         i
       </span>
-      <span
-        className="group-hover:opacity-100 group-hover:pointer-events-auto group-hover:translate-y-0"
-        style={{
-          position: "absolute",
-          bottom: "calc(100% + 8px)",
-          left: "50%",
-          transform: "translateX(-50%) translateY(4px)",
-          backgroundColor: "var(--charcoal)",
-          color: "#fff",
-          fontSize: "11px",
-          lineHeight: "1.5",
-          padding: "6px 10px",
-          borderRadius: "6px",
-          width: "220px",
-          opacity: 0,
-          pointerEvents: "none",
-          transition: "opacity 0.15s ease, transform 0.15s ease",
-          zIndex: 50,
-          whiteSpace: "normal",
-        }}
-      >
-        {text}
+
+      {/* Bubble */}
+      {visible && (
         <span
           style={{
             position: "absolute",
-            top: "100%",
-            left: "50%",
-            transform: "translateX(-50%)",
-            borderWidth: "4px",
-            borderStyle: "solid",
-            borderColor: "var(--charcoal) transparent transparent transparent",
+            ...(side === "above" ? { bottom: "calc(100% + 8px)" } : { top: "calc(100% + 8px)" }),
+            left: "50%", marginLeft: -110,
+            width: 220,
+            background: "oklch(0.18 0.01 270)", color: "#fff",
+            fontSize: 11, lineHeight: 1.5, padding: "6px 10px", borderRadius: 6,
+            whiteSpace: "normal", pointerEvents: "none", zIndex: 9999,
           }}
-        />
-      </span>
+        >
+          {text}
+          <span style={{
+            position: "absolute", left: "50%", marginLeft: -4,
+            borderWidth: 4, borderStyle: "solid",
+            ...(side === "above"
+              ? { top: "100%", borderColor: "oklch(0.18 0.01 270) transparent transparent transparent" }
+              : { bottom: "100%", borderColor: "transparent transparent oklch(0.18 0.01 270) transparent" }),
+          }} />
+        </span>
+      )}
     </span>
   );
 }

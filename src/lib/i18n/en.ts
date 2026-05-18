@@ -11,7 +11,6 @@ const en: Translations = {
     items: {
       dashboard: "Dashboard",
       report: "Report",
-      report2: "Report 2",
       integrations: "Integrations",
     },
     user: {
@@ -155,10 +154,12 @@ const en: Translations = {
     },
     channels: {
       eyebrow: "Traffic channels",
-      organicSearch: "Organic search",
+      organicSearch: "Google (Organic search)",
       paidSearch: "Paid search",
-      direct: "Direct",
+      direct: "Direct traffic",
       referral: "Referral",
+      social: "Social media",
+      unassigned: "Unknown source",
     },
     search: {
       eyebrow: "Search visibility",
@@ -232,6 +233,16 @@ const en: Translations = {
     headline: "Your business,\nclearly reported.",
     description: "Connect your Google account to see your traffic, search visibility, and growth — in one clean report.",
     cta: "Continue with Google",
+    divider: "or",
+    emailPlaceholder: "Email address",
+    passwordPlaceholder: "Password",
+    emailCta: "Continue with email",
+    switchToSignup: "No account? Sign up",
+    switchToLogin: "Already have an account? Sign in",
+    errorInvalidCredentials: "Incorrect email or password.",
+    errorEmailNotConfirmed: "Check your inbox to confirm your email before signing in.",
+    errorGeneric: "Something went wrong. Try again.",
+    successSignup: "Account created — check your inbox to confirm your email.",
   },
 
   registry: {

@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useLocale, Locale } from "@/lib/i18n";
-import { useTheme } from "@/lib/theme";
+import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
 import { createClient } from "@/utils/supabase/client";
 import { useDevScenario } from "@/lib/dev-scenario";
 
@@ -18,7 +18,6 @@ const DEV_SCENARIOS = [
 export function Sidebar() {
   const pathname = usePathname();
   const { t, locale, setLocale } = useLocale();
-  const { theme, toggleTheme } = useTheme();
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
   const { activeId, setActiveId } = useDevScenario();
@@ -44,7 +43,6 @@ export function Sidebar() {
       items: [
         { label: t.nav.items.dashboard, href: "/dashboard", icon: IconDashboard },
         { label: t.nav.items.report, href: "/report", icon: IconReport },
-        { label: t.nav.items.report2, href: "/report2", icon: IconReport2 },
       ],
     },
     {
@@ -162,14 +160,11 @@ export function Sidebar() {
             </button>
           ))}
         </div>
-        <button
-          onClick={toggleTheme}
-          className="w-7 h-7 rounded-md flex items-center justify-center transition-colors hover:bg-[var(--bone-dark)]"
-          aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+        <AnimatedThemeToggler
+          variant="circle"
+          className="w-7 h-7 rounded-md flex items-center justify-center transition-colors hover:bg-[var(--bone-dark)] [&>svg]:w-[14px] [&>svg]:h-[14px]"
           style={{ color: "var(--slate-light)" }}
-        >
-          {theme === "light" ? <IconMoon size={14} /> : <IconSun size={14} />}
-        </button>
+        />
       </div>
 
       {/* User */}
@@ -195,35 +190,6 @@ export function Sidebar() {
   );
 }
 
-function IconSun({ size = 16 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
-      <circle cx="8" cy="8" r="3" stroke="currentColor" strokeWidth="1.3" />
-      <line x1="8" y1="1" x2="8" y2="3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-      <line x1="8" y1="13" x2="8" y2="15" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-      <line x1="1" y1="8" x2="3" y2="8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-      <line x1="13" y1="8" x2="15" y2="8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-      <line x1="3.05" y1="3.05" x2="4.46" y2="4.46" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-      <line x1="11.54" y1="11.54" x2="12.95" y2="12.95" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-      <line x1="12.95" y1="3.05" x2="11.54" y2="4.46" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-      <line x1="4.46" y1="11.54" x2="3.05" y2="12.95" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function IconMoon({ size = 16 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
-      <path
-        d="M13.5 9.5A6 6 0 0 1 6.5 2.5a6 6 0 1 0 7 7z"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
 
 function IconDashboard({ size = 16, active }: { size?: number; active?: boolean }) {
   return (
@@ -243,19 +209,6 @@ function IconReport({ size = 16, active }: { size?: number; active?: boolean }) 
       <line x1="5" y1="5" x2="11" y2="5" stroke={active ? "var(--parchment)" : "var(--slate)"} strokeWidth="1.2" strokeLinecap="round" />
       <line x1="5" y1="8" x2="11" y2="8" stroke={active ? "var(--parchment)" : "var(--slate)"} strokeWidth="1.2" strokeLinecap="round" />
       <line x1="5" y1="11" x2="8" y2="11" stroke={active ? "var(--parchment)" : "var(--slate)"} strokeWidth="1.2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function IconReport2({ size = 16, active }: { size?: number; active?: boolean }) {
-  const c = active ? "var(--parchment)" : "var(--slate)";
-  return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
-      <rect x="2" y="1" width="12" height="14" rx="1.5" stroke={c} strokeWidth="1.2" />
-      <line x1="5" y1="5" x2="11" y2="5" stroke={c} strokeWidth="1.2" strokeLinecap="round" />
-      <circle cx="11" cy="5" r="2.5" fill={c} fillOpacity="0.18" stroke={c} strokeWidth="1.1" />
-      <line x1="5" y1="8.5" x2="9" y2="8.5" stroke={c} strokeWidth="1.2" strokeLinecap="round" />
-      <line x1="5" y1="11" x2="7.5" y2="11" stroke={c} strokeWidth="1.2" strokeLinecap="round" />
     </svg>
   );
 }

@@ -7,6 +7,7 @@ import { Metric, ReportData } from "@/types/schema";
 import { useLocale, Translations } from "@/lib/i18n";
 import { formatNumber } from "@/lib/utils/format";
 import { DeltaText } from "@/components/dashboard/metrics";
+import { InfoTooltip } from "@/components/primitives/InfoTooltip";
 
 const EASE_OUT = [0.0, 0.0, 0.2, 1] as const;
 
@@ -18,6 +19,57 @@ export const CHANNEL_COLORS = [
   { stroke: "#0EA5E9", bg: "rgba(14,165,233,0.10)", label: "#0369A1" },
   { stroke: "#6B6760", bg: "rgba(107,103,96,0.10)", label: "#4A4540" },
 ];
+
+const CHANNEL_INFO: Record<string, { name: string; sub: string; info: string }> = {
+  organic: {
+    name: "Google (Obetald söktrafik)",
+    sub: "Besök från Googles vanliga sökresultat",
+    info: "Det här är personer som hittade företaget via Google utan att man betalat för klicket.",
+  },
+  paid: {
+    name: "Google Ads",
+    sub: "Köpt trafik från Google",
+    info: "Besökare som kom via en betald annons i Google Sök eller Display.",
+  },
+  social: {
+    name: "Sociala medier",
+    sub: "Besök från inlägg och delningar i sociala medier",
+    info: "Det här är personer som klickat in från exempelvis LinkedIn, Facebook eller Instagram.",
+  },
+  direct: {
+    name: "Direkttrafik",
+    sub: "Besökare som gick direkt till hemsidan",
+    info: "Det här är personer som redan känner till företaget och själva skrev in webbadressen eller använde ett bokmärke.",
+  },
+  referral: {
+    name: "Referral",
+    sub: "Länkar från andra sajter",
+    info: "Besökare som kommit via en länk på en annan webbplats.",
+  },
+  email: {
+    name: "E-post",
+    sub: "Nyhetsbrev & utskick",
+    info: "Besökare som klickat via ett e-postutskick eller nyhetsbrev.",
+  },
+  unassigned: {
+    name: "Okänd källa",
+    sub: "Trafik som inte kunnat kopplas tydligt till en källa",
+    info: "Ibland saknas tillräcklig information för att systemet ska kunna avgöra exakt var trafiken kom ifrån.",
+  },
+};
+
+// Map display labels (from data) back to a canonical channel key
+function inferChannelKey(rawChannel: string): string {
+  const lower = rawChannel.toLowerCase();
+  if (lower.includes("organic") || lower.includes("organisk") || lower.includes("google seo")) return "organic";
+  if (lower.includes("paid") || lower.includes("betald") || lower.includes("ads")) return "paid";
+  if (lower.includes("social") || lower.includes("sociala")) return "social";
+  if (lower.includes("direct") || lower.includes("direkt")) return "direct";
+  if (lower.includes("referral") || lower.includes("hänvisning")) return "referral";
+  if (lower.includes("email") || lower.includes("e-post") || lower.includes("mail")) return "email";
+  if (lower.includes("unassigned") || lower.includes("ej tilldelad") || lower.includes("okänd")) return "unassigned";
+  return lower;
+}
 
 export function getChannelRows(data: ReportData, t: Translations) {
   const traffic = data.trafficOverview;
@@ -36,18 +88,25 @@ export function getChannelRows(data: ReportData, t: Translations) {
               trendGood: true,
             }
           : undefined;
-      return { label: channel.channel, value: channel.sessions, share: channel.share, metric };
+      return {
+        label: channel.channel,
+        channelKey: inferChannelKey(channel.channel),
+        value: channel.sessions,
+        share: channel.share,
+        metric,
+      };
     });
   }
 
   return [
-    { label: t.dashboard.channels.organicSearch, metric: traffic.organicSessions },
-    { label: t.dashboard.channels.paidSearch, metric: traffic.paidSessions },
-    { label: t.dashboard.channels.direct, metric: traffic.directSessions },
+    { label: t.dashboard.channels.organicSearch, channelKey: "organic", metric: traffic.organicSessions },
+    { label: t.dashboard.channels.paidSearch, channelKey: "paid", metric: traffic.paidSessions },
+    { label: t.dashboard.channels.direct, channelKey: "direct", metric: traffic.directSessions },
   ]
-    .filter((row): row is { label: string; metric: Metric } => Boolean(row.metric))
+    .filter((row): row is { label: string; channelKey: string; metric: Metric } => Boolean(row.metric))
     .map((row) => ({
       label: row.label,
+      channelKey: row.channelKey,
       value: row.metric.value,
       share: traffic.totalSessions.value ? Math.round((row.metric.value / traffic.totalSessions.value) * 100) : 0,
       metric: row.metric,
@@ -163,6 +222,7 @@ export function ChannelBreakdown({ item, data }: { item: AssembledDashboardItem;
             const pct = Math.round(row.share);
             const isActive = hoveredIndex === i;
             const isDimmed = hoveredIndex !== null && !isActive;
+            const info = CHANNEL_INFO[row.channelKey];
             return (
               <div
                 key={row.label}
@@ -178,8 +238,18 @@ export function ChannelBreakdown({ item, data }: { item: AssembledDashboardItem;
               >
                 <span className="shrink-0 rounded-sm" style={{ width: "3px", height: "24px", background: color.stroke, opacity: isDimmed ? 0.5 : 1, borderRadius: "2px" }} />
                 <div className="flex-1 min-w-0">
-                  <p className="truncate" style={{ fontSize: "13px", fontWeight: 500, color: "var(--slate)", lineHeight: 1.2 }}>{row.label}</p>
-                  <div className="flex items-baseline gap-1.5 mt-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <p className="truncate" style={{ fontSize: "13px", fontWeight: 500, color: "var(--slate)", lineHeight: 1.2 }}>
+                      {info?.name ?? row.label}
+                    </p>
+                    {info?.info && <InfoTooltip text={info.info} />}
+                  </div>
+                  {info?.sub && (
+                    <p style={{ fontSize: "11px", color: "var(--slate-light)", lineHeight: 1.3, marginTop: "1px" }}>
+                      {info.sub}
+                    </p>
+                  )}
+                  <div className="flex items-baseline gap-1.5 mt-1">
                     <span style={{ fontFamily: "var(--font-display)", fontSize: "1.35rem", fontWeight: 700, letterSpacing: "-0.03em", color: isActive ? color.label : "var(--charcoal)", lineHeight: 1, fontVariantNumeric: "tabular-nums", transition: "color 0.18s ease" }}>
                       {formatNumber(row.value, "number")}
                     </span>

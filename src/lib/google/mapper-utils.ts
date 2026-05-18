@@ -38,7 +38,7 @@ export const LABELS = {
     position: "Avg. Position",
   },
   sv: {
-    sessions: "Totala sessioner",
+    sessions: "Totala besök",
     totalUsers: "Användare",
     newUsers: "Nya användare",
     bounceRate: "Avvisningsfrekvens",

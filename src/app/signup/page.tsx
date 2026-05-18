@@ -10,15 +10,16 @@ import { DiaTextReveal } from "@/components/ui/dia-text-reveal";
 import { NoiseTexture } from "@/components/ui/noise-texture";
 import { AuroraText } from "@/components/ui/aurora-text";
 
-
-function LoginContent() {
+function SignupContent() {
   const { t } = useLocale();
   const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   async function signInWithGoogle() {
     const supabase = createClient();
@@ -33,25 +34,28 @@ function LoginContent() {
     });
   }
 
-  async function handleEmailAuth(e: React.FormEvent) {
+  async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setLoading(true);
+    setSuccess(null);
 
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      if (error.message.toLowerCase().includes("email not confirmed")) {
-        setError(t.login.errorEmailNotConfirmed);
-      } else if (error.message.toLowerCase().includes("invalid") || error.message.toLowerCase().includes("credentials")) {
-        setError(t.login.errorInvalidCredentials);
-      } else {
-        setError(t.login.errorGeneric);
-      }
-    } else {
-      router.push("/dashboard");
+    if (password !== confirm) {
+      setError("Lösenorden matchar inte.");
+      return;
+    }
+    if (password.length < 8) {
+      setError("Lösenordet måste vara minst 8 tecken.");
+      return;
     }
 
+    setLoading(true);
+    const supabase = createClient();
+    const { error } = await supabase.auth.signUp({ email, password });
+    if (error) {
+      setError(t.login.errorGeneric);
+    } else {
+      setSuccess(t.login.successSignup);
+    }
     setLoading(false);
   }
 
@@ -61,16 +65,16 @@ function LoginContent() {
       {/* Back button */}
       <div className="fixed top-0 left-0 px-8 py-5 z-10">
         <button
-          onClick={() => router.push("/")}
+          onClick={() => router.push("/login")}
           className="flex items-center gap-2 text-xs transition-opacity hover:opacity-60 cursor-pointer"
           style={{ color: "var(--slate)" }}
         >
           <ArrowLeft size={14} />
-          Tillbaka
+          Tillbaka till inloggning
         </button>
       </div>
 
-      {/* Form column — 35% */}
+      {/* Form column */}
       <div className="flex flex-col justify-center px-10 lg:px-14 w-full lg:w-[35%] min-h-dvh">
         <motion.div
           className="flex flex-col gap-8 max-w-[320px]"
@@ -78,89 +82,101 @@ function LoginContent() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
         >
-          <h1
-            className="font-display text-[2rem] leading-[1.15] tracking-tight"
-            style={{ color: "var(--charcoal)" }}
-          >
-            {t.login.headline.split("\n").map((line, i) => (
-              <span key={i}>
-                {line}
-                {i === 0 && <br />}
-              </span>
-            ))}
-          </h1>
-
-          <div className="flex flex-col gap-6">
-            {/* Google */}
-            <button
-              onClick={signInWithGoogle}
-              className="flex items-center justify-center gap-3 w-full px-5 py-3 rounded-full text-sm font-medium transition-opacity hover:opacity-75 cursor-pointer"
-              style={{ backgroundColor: "var(--charcoal)", color: "var(--bone)" }}
+          <div className="flex flex-col gap-1">
+            <h1
+              className="font-display text-[2rem] leading-[1.15] tracking-tight"
+              style={{ color: "var(--charcoal)" }}
             >
-              <GoogleIcon />
-              {t.login.cta}
-            </button>
-
-            {/* Divider */}
-            <div className="flex items-center gap-4">
-              <div className="flex-1 h-px" style={{ backgroundColor: "var(--rule)" }} />
-              <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--slate-light)" }}>
-                {t.login.divider}
-              </span>
-              <div className="flex-1 h-px" style={{ backgroundColor: "var(--rule)" }} />
-            </div>
-
-            {/* Email form */}
-            <form onSubmit={handleEmailAuth} className="flex flex-col gap-4">
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder={t.login.emailPlaceholder}
-                className="w-full text-sm px-0 py-2.5 bg-transparent outline-none border-b transition-colors"
-                style={{ borderColor: "var(--rule)", color: "var(--charcoal)" }}
-                onFocus={(e) => (e.currentTarget.style.borderColor = "var(--charcoal)")}
-                onBlur={(e) => (e.currentTarget.style.borderColor = "var(--rule)")}
-              />
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder={t.login.passwordPlaceholder}
-                className="w-full text-sm px-0 py-2.5 bg-transparent outline-none border-b transition-colors"
-                style={{ borderColor: "var(--rule)", color: "var(--charcoal)" }}
-                onFocus={(e) => (e.currentTarget.style.borderColor = "var(--charcoal)")}
-                onBlur={(e) => (e.currentTarget.style.borderColor = "var(--rule)")}
-              />
-
-              {error && (
-                <p className="text-xs leading-relaxed" style={{ color: "var(--signal-down)" }}>{error}</p>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3 rounded-full text-sm font-medium mt-1 transition-opacity hover:opacity-75 disabled:opacity-40 cursor-pointer"
-                style={{ backgroundColor: "var(--charcoal)", color: "var(--bone)" }}
-              >
-                {loading ? "…" : t.login.emailCta}
-              </button>
-            </form>
+              Skapa konto.
+            </h1>
+            <p className="text-sm" style={{ color: "var(--slate)" }}>
+              Kom igång på under en minut.
+            </p>
           </div>
 
+          {/* Google */}
           <button
-            onClick={() => router.push("/signup")}
+            onClick={signInWithGoogle}
+            className="flex items-center justify-center gap-3 w-full px-5 py-3 rounded-full text-sm font-medium transition-opacity hover:opacity-75 cursor-pointer"
+            style={{ backgroundColor: "var(--charcoal)", color: "var(--bone)" }}
+          >
+            <GoogleIcon />
+            Fortsätt med Google
+          </button>
+
+          {/* Divider */}
+          <div className="flex items-center gap-4">
+            <div className="flex-1 h-px" style={{ backgroundColor: "var(--rule)" }} />
+            <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--slate-light)" }}>
+              eller
+            </span>
+            <div className="flex-1 h-px" style={{ backgroundColor: "var(--rule)" }} />
+          </div>
+
+          {/* Signup form */}
+          <form onSubmit={handleSignup} className="flex flex-col gap-4">
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="E-postadress"
+              className="w-full text-sm px-0 py-2.5 bg-transparent outline-none border-b transition-colors"
+              style={{ borderColor: "var(--rule)", color: "var(--charcoal)" }}
+              onFocus={(e) => (e.currentTarget.style.borderColor = "var(--charcoal)")}
+              onBlur={(e) => (e.currentTarget.style.borderColor = "var(--rule)")}
+            />
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Lösenord (minst 8 tecken)"
+              className="w-full text-sm px-0 py-2.5 bg-transparent outline-none border-b transition-colors"
+              style={{ borderColor: "var(--rule)", color: "var(--charcoal)" }}
+              onFocus={(e) => (e.currentTarget.style.borderColor = "var(--charcoal)")}
+              onBlur={(e) => (e.currentTarget.style.borderColor = "var(--rule)")}
+            />
+            <input
+              type="password"
+              required
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              placeholder="Bekräfta lösenord"
+              className="w-full text-sm px-0 py-2.5 bg-transparent outline-none border-b transition-colors"
+              style={{ borderColor: "var(--rule)", color: "var(--charcoal)" }}
+              onFocus={(e) => (e.currentTarget.style.borderColor = "var(--charcoal)")}
+              onBlur={(e) => (e.currentTarget.style.borderColor = "var(--rule)")}
+            />
+
+            {error && (
+              <p className="text-xs leading-relaxed" style={{ color: "var(--signal-down)" }}>{error}</p>
+            )}
+            {success && (
+              <p className="text-xs leading-relaxed" style={{ color: "var(--signal-up)" }}>{success}</p>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 rounded-full text-sm font-medium mt-1 transition-opacity hover:opacity-75 disabled:opacity-40 cursor-pointer"
+              style={{ backgroundColor: "var(--charcoal)", color: "var(--bone)" }}
+            >
+              {loading ? "…" : "Skapa konto"}
+            </button>
+          </form>
+
+          <button
+            onClick={() => router.push("/login")}
             className="text-xs text-left transition-opacity hover:opacity-60 cursor-pointer"
             style={{ color: "var(--slate)" }}
           >
-            {t.login.switchToSignup}
+            Har du redan ett konto? Logga in
           </button>
         </motion.div>
       </div>
 
-      {/* Right panel — 65% */}
+      {/* Right panel */}
       <RightPanel />
     </main>
   );
@@ -220,10 +236,7 @@ function RightPanel() {
       onMouseMove={onMouseMove}
       onMouseLeave={onMouseLeave}
     >
-      {/* Sharp photo — base layer */}
       <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: PHOTO }} />
-
-      {/* Blurred photo — mask written directly to DOM */}
       <div
         ref={blurredRef}
         className="absolute inset-0 bg-cover bg-center"
@@ -233,9 +246,6 @@ function RightPanel() {
           transform: "scale(1.15)",
         }}
       />
-
-
-      {/* Grain over everything */}
       <NoiseTexture
         className="absolute inset-0 z-10 opacity-[0.18] dark:opacity-[0.18]"
         frequency={0.75}
@@ -243,20 +253,8 @@ function RightPanel() {
         slope={0.5}
         noiseOpacity={1}
       />
-
-      {/* Dark gradient scrim for text legibility */}
-      <div
-        className="absolute inset-0 z-[15] pointer-events-none"
-        style={{
-          background:
-            "linear-gradient(to top, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.2) 40%, transparent 65%)",
-        }}
-      />
-
-      {/* Tagline — bottom left */}
       <div className="absolute bottom-10 left-10 z-20 pointer-events-none">
         <p className="font-display text-[2.6rem] leading-[1.2] tracking-tight text-left text-white">
-          {/* Line 1 */}
           <span>Få </span>
           <AuroraText className="font-semibold"
             colors={["#FF4D9E", "#FF6B55", "#FFB830", "#FF6B55"]}
@@ -280,10 +278,10 @@ function RightPanel() {
   );
 }
 
-export default function LoginPage() {
+export default function SignupPage() {
   return (
     <LocaleProvider>
-      <LoginContent />
+      <SignupContent />
     </LocaleProvider>
   );
 }
