@@ -3,12 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
 import Link from "next/link";
-import { Calendar, Download } from "lucide-react";
+import { Download } from "lucide-react";
 import { localizeMockReportData, scenario1, scenario2, scenario3 } from "@/lib/mock-data";
 import { assembleDashboard } from "@/lib/dashboard/assemble";
 import { useLocale } from "@/lib/i18n";
 import { ShimmerCard } from "@/components/primitives/ShimmerCard";
-import { ConnectableSource, ConnectedSource, currentCalendarMonthRange, mergeReportData } from "@/lib/google/connected-sources";
+import { ConnectableSource, ConnectedSource, mergeReportData } from "@/lib/google/connected-sources";
+import { useDateRange } from "@/lib/google/date-presets";
+import { DateRangePicker } from "@/components/primitives/DateRangePicker";
 import { createClient } from "@/utils/supabase/client";
 import { deriveExecutiveSummary } from "@/lib/engine/derive-executive-summary";
 import { useDevScenario } from "@/lib/dev-scenario";
@@ -49,6 +51,7 @@ function SectionItem({ item, data }: { item: AssembledDashboardItem; data: Repor
 export default function DashboardPage() {
   const { locale, t } = useLocale();
   const { activeId } = useDevScenario();
+  const dateRange = useDateRange();
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [hasConnectedSources, setHasConnectedSources] = useState(false);
   const [connectedSourceTypes, setConnectedSourceTypes] = useState<string[]>([]);
@@ -107,7 +110,6 @@ export default function DashboardPage() {
         return;
       }
 
-      const dateRange = currentCalendarMonthRange();
       const expired: string[] = [];
       const successfulSourceIds: ConnectableSource[] = [];
       const parts = await Promise.all(
@@ -162,7 +164,7 @@ export default function DashboardPage() {
 
     loadRealData();
     return () => controller.abort();
-  }, [fallbackData, locale]);
+  }, [fallbackData, locale, dateRange.startDate, dateRange.endDate]);
 
   const heroItem = dashboard.items.find((item) => item.definition.type === "hero");
   const kpiItems = dashboard.items.filter((item) => item.definition.type === "kpi");
@@ -182,13 +184,7 @@ export default function DashboardPage() {
           </h1>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-colors hover:bg-[var(--bone-dark)]"
-            style={{ border: "1px solid var(--rule)", color: "var(--charcoal)", backgroundColor: "var(--bone)" }}
-          >
-            <Calendar className="h-4 w-4" style={{ color: "var(--slate)" }} />
-            Senaste 30 dagarna
-          </button>
+          <DateRangePicker locale={locale} />
           <button
             className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-80"
             style={{ backgroundColor: "var(--charcoal)", color: "var(--parchment)" }}

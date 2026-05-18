@@ -39,9 +39,9 @@ import { createClient } from "@/utils/supabase/client";
 import {
   ConnectableSource,
   ConnectedSource,
-  currentCalendarMonthRange,
   mergeReportData,
 } from "@/lib/google/connected-sources";
+import { useDateRange } from "@/lib/google/date-presets";
 import { InfoTooltip } from "@/components/primitives/InfoTooltip";
 import { localizeMockReportData, scenario2 } from "@/lib/mock-data";
 import { deriveExecutiveSummary } from "@/lib/engine/derive-executive-summary";
@@ -1179,6 +1179,7 @@ export default function ReportPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const { scale, containerW } = useCardScale(containerRef);
+  const dateRange = useDateRange();
 
   // Load real data
   useEffect(() => {
@@ -1199,7 +1200,6 @@ export default function ReportPage() {
       );
       if (sources.length === 0) { setReportData(fallback); return; }
 
-      const dateRange = currentCalendarMonthRange();
       const parts = await Promise.all(
         sources.map(async (source) => {
           try {
@@ -1222,7 +1222,7 @@ export default function ReportPage() {
     }
     load();
     return () => { cancelled = true; };
-  }, []);
+  }, [dateRange.startDate, dateRange.endDate]);
 
   const slideData = useMemo(() => buildSlideData(reportData), [reportData]);
   const slides = useMemo(() => buildSlides(slideData), [slideData]);

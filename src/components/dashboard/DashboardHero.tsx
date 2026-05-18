@@ -2,6 +2,7 @@
 
 import { motion } from "motion/react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { AssembledDashboardItem } from "@/types/dashboard";
 import { ReportData } from "@/types/schema";
 import { useLocale } from "@/lib/i18n";
@@ -23,10 +24,12 @@ function colorizeNumbers(text: string): React.ReactNode {
 
 export function DashboardHero({ item, data }: { item: AssembledDashboardItem; data: ReportData }) {
   const { t } = useLocale();
+  const params = useSearchParams();
   const summary = data.executiveSummary;
   if (!summary) return null;
 
   const isFull = item.eligibility.variant === "full";
+  const reportHref = `/report${params.toString() ? `?${params.toString()}` : ""}`;
 
   return (
     <motion.div
@@ -83,7 +86,7 @@ export function DashboardHero({ item, data }: { item: AssembledDashboardItem; da
 
         <div className="mt-7">
           <Link
-            href="/report"
+            href={reportHref}
             className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/70 px-5 py-2.5 text-sm font-semibold shadow-sm backdrop-blur transition hover:bg-white"
             style={{ color: "oklch(0.35 0.15 290)", textDecoration: "none" }}
           >
