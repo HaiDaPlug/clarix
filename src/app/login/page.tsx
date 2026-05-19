@@ -27,7 +27,7 @@ function LoginContent() {
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
         scopes:
-          "https://www.googleapis.com/auth/analytics.readonly https://www.googleapis.com/auth/analytics https://www.googleapis.com/auth/webmasters.readonly",
+          "https://www.googleapis.com/auth/analytics.readonly https://www.googleapis.com/auth/webmasters.readonly",
         queryParams: { access_type: "offline", prompt: "consent" },
       },
     });
@@ -157,6 +157,17 @@ function LoginContent() {
           >
             {t.login.switchToSignup}
           </button>
+
+          <p className="text-[10px] leading-relaxed" style={{ color: "var(--slate-light)" }}>
+            Genom att logga in godkänner du vår{" "}
+            <a
+              href="/privacy-policy"
+              className="underline underline-offset-2 transition-opacity hover:opacity-60"
+            >
+              integritetspolicy
+            </a>
+            .
+          </p>
         </motion.div>
       </div>
 

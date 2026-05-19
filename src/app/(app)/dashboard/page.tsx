@@ -58,6 +58,7 @@ export default function DashboardPage() {
   const [isLoadingRealData, setIsLoadingRealData] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
   const [expiredSources, setExpiredSources] = useState<string[]>([]);
+  const [noDataForPeriod, setNoDataForPeriod] = useState(false);
 
   const active = useMemo(() => SCENARIOS.find((s) => s.id === activeId)!, [activeId]);
   const fallbackData = useMemo(() => localizeMockReportData(active.data, locale), [active.data, locale]);
@@ -81,6 +82,7 @@ export default function DashboardPage() {
       setIsLoadingRealData(true);
       setDataError(null);
       setReportData(null);
+      setNoDataForPeriod(false);
 
       const supabase = createClient();
       const { data, error } = await supabase
@@ -105,7 +107,6 @@ export default function DashboardPage() {
       setConnectedSourceTypes([...new Set(sources.map((s) => s.source))]);
 
       if (sources.length === 0) {
-        setReportData(fallbackData);
         setIsLoadingRealData(false);
         return;
       }
@@ -131,9 +132,9 @@ export default function DashboardPage() {
             }
             if (!response.ok) return undefined;
             const data = (await response.json()) as Partial<ReportData>;
-            const hasRealData = Boolean(data.trafficOverview || data.seoOverview);
-            if (hasRealData) successfulSourceIds.push(source.source);
-            return hasRealData ? data : undefined;
+            const isConnected = data.sourceConfidence?.[source.source]?.connected !== false;
+            if (isConnected) successfulSourceIds.push(source.source);
+            return isConnected ? data : undefined;
           } catch (err) {
             if (err instanceof Error && err.name === "AbortError") return undefined;
             return undefined;
@@ -144,18 +145,32 @@ export default function DashboardPage() {
       if (signal.aborted) return;
 
       setExpiredSources(expired);
-      const merged = mergeReportData(fallbackData, parts, successfulSourceIds);
-      if (successfulSourceIds.length > 0) {
-        merged.meta = {
-          ...merged.meta,
-          period: {
-            label: formatDateRangeLabel(dateRange, locale),
-            startDate: dateRange.startDate,
-            endDate: dateRange.endDate,
-          },
-        };
-      }
-      if (!merged.executiveSummary) {
+      const periodLabel = formatDateRangeLabel(dateRange, locale);
+      const emptyBase: ReportData = {
+        ...fallbackData,
+        trafficOverview: undefined,
+        seoOverview: undefined,
+        paidOverview: undefined,
+        conversions: undefined,
+        kpiSnapshot: undefined,
+        topPages: undefined,
+        executiveSummary: undefined,
+        meta: {
+          ...fallbackData.meta,
+          availableSources: [],
+          period: { label: periodLabel, startDate: dateRange.startDate, endDate: dateRange.endDate },
+        },
+      };
+      const merged = mergeReportData(emptyBase, parts, successfulSourceIds);
+      merged.meta = {
+        ...merged.meta,
+        period: { label: periodLabel, startDate: dateRange.startDate, endDate: dateRange.endDate },
+      };
+      const hasMetrics = Boolean(merged.trafficOverview || merged.seoOverview);
+      setNoDataForPeriod(successfulSourceIds.length > 0 && !hasMetrics);
+      if (!hasMetrics) {
+        merged.executiveSummary = undefined;
+      } else if (!merged.executiveSummary) {
         merged.executiveSummary = deriveExecutiveSummary(merged, locale);
       }
       setReportData(merged);
@@ -218,21 +233,40 @@ export default function DashboardPage() {
           </motion.div>
         )}
 
+        {noDataForPeriod && !isLoadingRealData && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: EASING }}
+            className="flex items-center px-6 py-5 rounded-2xl"
+            style={{ backgroundColor: "var(--bone)", border: "1px solid var(--rule)" }}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: "var(--charcoal)" }} />
+              <p style={{ fontSize: "15px", color: "var(--charcoal)" }}>
+                {locale === "sv"
+                  ? "Ingen data hittades för den valda perioden. GA4 var troligtvis inte anslutet då."
+                  : "No data found for the selected period. GA4 was likely not connected at that time."}
+              </p>
+            </div>
+          </motion.div>
+        )}
+
         {((!hasConnectedSources && !isLoadingRealData) || dataError) && (
           <motion.div
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: EASING }}
-            className="flex items-center justify-between px-5 py-3.5 rounded-2xl"
+            className="flex items-center justify-between px-6 py-5 rounded-2xl"
             style={{ backgroundColor: "var(--bone)", border: "1px solid var(--rule)" }}
           >
             <div className="flex items-center gap-3">
-              <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: "#C97B2A" }} />
-              <p style={{ fontSize: "13px", color: "var(--slate)" }}>
+              <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: "#C97B2A" }} />
+              <p style={{ fontSize: "15px", color: "var(--charcoal)" }}>
                 {dataError ?? t.dashboard.sampleBanner.text}{" "}
                 {!hasConnectedSources && !dataError && (
                   <>
-                    <span style={{ color: "var(--charcoal)", fontWeight: 500 }}>{t.dashboard.sampleBanner.cta}</span>{" "}
+                    <span style={{ fontWeight: 600 }}>{t.dashboard.sampleBanner.cta}</span>{" "}
                     {t.dashboard.sampleBanner.suffix}
                   </>
                 )}
@@ -291,10 +325,10 @@ export default function DashboardPage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.25, ease: EASING }}
-            className="flex items-center justify-between px-5 py-3.5 rounded-2xl"
+            className="flex items-center justify-between px-6 py-5 rounded-2xl"
             style={{ backgroundColor: "var(--bone)", border: "1px solid var(--rule)" }}
           >
-            <p style={{ fontSize: "13px", color: "var(--slate)" }}>{dashboard.nudge.message}</p>
+            <p style={{ fontSize: "15px", color: "var(--charcoal)" }}>{dashboard.nudge.message}</p>
             <Link href="/integrations" className="shrink-0 ml-6" style={{ fontSize: "12px", fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--charcoal)", textDecoration: "none" }}>
               {t.dashboard.nudge.link}
             </Link>

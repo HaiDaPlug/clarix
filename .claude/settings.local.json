@@ -36,7 +36,8 @@
       "Skill(frontend-design)",
       "Skill(frontend-design:*)",
       "Skill(framer-motion)",
-      "Skill(framer-motion:*)"
+      "Skill(framer-motion:*)",
+      "PowerShell(git push origin main)"
     ]
   }
 }

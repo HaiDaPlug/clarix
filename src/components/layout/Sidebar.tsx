@@ -49,6 +49,7 @@ export function Sidebar() {
       section: t.nav.sections.data,
       items: [
         { label: t.nav.items.integrations, href: "/integrations", icon: IconIntegrations },
+        { label: "Data", href: "/data", icon: IconData },
         { label: "Kunder", href: "/clients", icon: IconClients },
         { label: "Inställningar", href: "/settings", icon: IconSettings },
       ],
@@ -102,7 +103,7 @@ export function Sidebar() {
                       )}
                       style={{
                         backgroundColor: active ? "var(--charcoal)" : undefined,
-                        color: active ? "var(--parchment)" : "var(--slate)",
+                        color: active ? "var(--parchment)" : "var(--charcoal)",
                       }}
                     >
                       <Icon size={15} active={active} />
@@ -194,10 +195,10 @@ export function Sidebar() {
 function IconDashboard({ size = 16, active }: { size?: number; active?: boolean }) {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
-      <rect x="1" y="1" width="6" height="6" rx="1.5" stroke={active ? "var(--parchment)" : "var(--slate)"} strokeWidth="1.2" />
-      <rect x="9" y="1" width="6" height="6" rx="1.5" stroke={active ? "var(--parchment)" : "var(--slate)"} strokeWidth="1.2" />
-      <rect x="1" y="9" width="6" height="6" rx="1.5" stroke={active ? "var(--parchment)" : "var(--slate)"} strokeWidth="1.2" />
-      <rect x="9" y="9" width="6" height="6" rx="1.5" stroke={active ? "var(--parchment)" : "var(--slate)"} strokeWidth="1.2" />
+      <rect x="1" y="1" width="6" height="6" rx="1.5" stroke={active ? "var(--parchment)" : "var(--charcoal)"} strokeWidth="1.2" />
+      <rect x="9" y="1" width="6" height="6" rx="1.5" stroke={active ? "var(--parchment)" : "var(--charcoal)"} strokeWidth="1.2" />
+      <rect x="1" y="9" width="6" height="6" rx="1.5" stroke={active ? "var(--parchment)" : "var(--charcoal)"} strokeWidth="1.2" />
+      <rect x="9" y="9" width="6" height="6" rx="1.5" stroke={active ? "var(--parchment)" : "var(--charcoal)"} strokeWidth="1.2" />
     </svg>
   );
 }
@@ -205,10 +206,10 @@ function IconDashboard({ size = 16, active }: { size?: number; active?: boolean 
 function IconReport({ size = 16, active }: { size?: number; active?: boolean }) {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
-      <rect x="2" y="1" width="12" height="14" rx="1.5" stroke={active ? "var(--parchment)" : "var(--slate)"} strokeWidth="1.2" />
-      <line x1="5" y1="5" x2="11" y2="5" stroke={active ? "var(--parchment)" : "var(--slate)"} strokeWidth="1.2" strokeLinecap="round" />
-      <line x1="5" y1="8" x2="11" y2="8" stroke={active ? "var(--parchment)" : "var(--slate)"} strokeWidth="1.2" strokeLinecap="round" />
-      <line x1="5" y1="11" x2="8" y2="11" stroke={active ? "var(--parchment)" : "var(--slate)"} strokeWidth="1.2" strokeLinecap="round" />
+      <rect x="2" y="1" width="12" height="14" rx="1.5" stroke={active ? "var(--parchment)" : "var(--charcoal)"} strokeWidth="1.2" />
+      <line x1="5" y1="5" x2="11" y2="5" stroke={active ? "var(--parchment)" : "var(--charcoal)"} strokeWidth="1.2" strokeLinecap="round" />
+      <line x1="5" y1="8" x2="11" y2="8" stroke={active ? "var(--parchment)" : "var(--charcoal)"} strokeWidth="1.2" strokeLinecap="round" />
+      <line x1="5" y1="11" x2="8" y2="11" stroke={active ? "var(--parchment)" : "var(--charcoal)"} strokeWidth="1.2" strokeLinecap="round" />
     </svg>
   );
 }
@@ -216,17 +217,17 @@ function IconReport({ size = 16, active }: { size?: number; active?: boolean }) 
 function IconIntegrations({ size = 16, active }: { size?: number; active?: boolean }) {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
-      <circle cx="3.5" cy="8" r="2" stroke={active ? "var(--parchment)" : "var(--slate)"} strokeWidth="1.2" />
-      <circle cx="12.5" cy="3.5" r="2" stroke={active ? "var(--parchment)" : "var(--slate)"} strokeWidth="1.2" />
-      <circle cx="12.5" cy="12.5" r="2" stroke={active ? "var(--parchment)" : "var(--slate)"} strokeWidth="1.2" />
-      <line x1="5.5" y1="7" x2="10.5" y2="4.5" stroke={active ? "var(--parchment)" : "var(--slate)"} strokeWidth="1.2" strokeLinecap="round" />
-      <line x1="5.5" y1="9" x2="10.5" y2="11.5" stroke={active ? "var(--parchment)" : "var(--slate)"} strokeWidth="1.2" strokeLinecap="round" />
+      <circle cx="3.5" cy="8" r="2" stroke={active ? "var(--parchment)" : "var(--charcoal)"} strokeWidth="1.2" />
+      <circle cx="12.5" cy="3.5" r="2" stroke={active ? "var(--parchment)" : "var(--charcoal)"} strokeWidth="1.2" />
+      <circle cx="12.5" cy="12.5" r="2" stroke={active ? "var(--parchment)" : "var(--charcoal)"} strokeWidth="1.2" />
+      <line x1="5.5" y1="7" x2="10.5" y2="4.5" stroke={active ? "var(--parchment)" : "var(--charcoal)"} strokeWidth="1.2" strokeLinecap="round" />
+      <line x1="5.5" y1="9" x2="10.5" y2="11.5" stroke={active ? "var(--parchment)" : "var(--charcoal)"} strokeWidth="1.2" strokeLinecap="round" />
     </svg>
   );
 }
 
 function IconClients({ size = 16, active }: { size?: number; active?: boolean }) {
-  const c = active ? "var(--parchment)" : "var(--slate)";
+  const c = active ? "var(--parchment)" : "var(--charcoal)";
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
       <circle cx="6" cy="5" r="2.5" stroke={c} strokeWidth="1.2" />
@@ -237,8 +238,19 @@ function IconClients({ size = 16, active }: { size?: number; active?: boolean })
   );
 }
 
+function IconData({ size = 16, active }: { size?: number; active?: boolean }) {
+  const c = active ? "var(--parchment)" : "var(--charcoal)";
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+      <ellipse cx="8" cy="4" rx="5.5" ry="2" stroke={c} strokeWidth="1.2" />
+      <path d="M2.5 4v4c0 1.1 2.46 2 5.5 2s5.5-.9 5.5-2V4" stroke={c} strokeWidth="1.2" />
+      <path d="M2.5 8v4c0 1.1 2.46 2 5.5 2s5.5-.9 5.5-2V8" stroke={c} strokeWidth="1.2" />
+    </svg>
+  );
+}
+
 function IconSettings({ size = 16, active }: { size?: number; active?: boolean }) {
-  const c = active ? "var(--parchment)" : "var(--slate)";
+  const c = active ? "var(--parchment)" : "var(--charcoal)";
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
       <circle cx="8" cy="8" r="2" stroke={c} strokeWidth="1.2" />

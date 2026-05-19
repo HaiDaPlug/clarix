@@ -675,7 +675,7 @@ export function LandingFooter() {
           <span>© 2025</span>
         </div>
         <div className="flex gap-6">
-          <a href="#" className="transition-colors hover:text-foreground">Integritet</a>
+          <a href="/privacy-policy" className="transition-colors hover:text-foreground">Integritet</a>
           <a href="#" className="transition-colors hover:text-foreground">Villkor</a>
           <a href="#" className="transition-colors hover:text-foreground">Kontakt</a>
         </div>

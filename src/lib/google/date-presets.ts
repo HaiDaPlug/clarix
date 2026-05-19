@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { currentCalendarMonthRange } from "./connected-sources";
 import { isIsoDate } from "./date-range";
 
-export type DatePresetId = "this-month" | "last-month" | "last-30" | "last-90";
+export type DatePresetId = "this-month" | "all-time";
 
 export interface DatePreset {
   id: DatePresetId;
@@ -13,10 +13,8 @@ export interface DatePreset {
 }
 
 export const DATE_PRESETS: DatePreset[] = [
-  { id: "this-month", labelSv: "Denna månad",       labelEn: "This month" },
-  { id: "last-month", labelSv: "Förra månaden",      labelEn: "Last month" },
-  { id: "last-30",    labelSv: "Senaste 30 dagarna", labelEn: "Last 30 days" },
-  { id: "last-90",    labelSv: "Senaste 90 dagarna", labelEn: "Last 90 days" },
+  { id: "this-month", labelSv: "Denna månad", labelEn: "This month" },
+  { id: "all-time",   labelSv: "Sen start",   labelEn: "Since start" },
 ];
 
 function toIso(date: Date): string {
@@ -37,23 +35,8 @@ export function presetToRange(
     case "this-month":
       return currentCalendarMonthRange(today);
 
-    case "last-month": {
-      const firstOfLast = new Date(y, mo - 1, 1);
-      const lastOfLast = new Date(y, mo, 0);
-      return { startDate: toIso(firstOfLast), endDate: toIso(lastOfLast) };
-    }
-
-    case "last-30": {
-      const start = new Date(today);
-      start.setDate(today.getDate() - 29);
-      return { startDate: toIso(start), endDate: toIso(today) };
-    }
-
-    case "last-90": {
-      const start = new Date(today);
-      start.setDate(today.getDate() - 89);
-      return { startDate: toIso(start), endDate: toIso(today) };
-    }
+    case "all-time":
+      return { startDate: "2020-01-01", endDate: toIso(today) };
   }
 }
 

@@ -28,7 +28,7 @@ function SignupContent() {
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
         scopes:
-          "https://www.googleapis.com/auth/analytics.readonly https://www.googleapis.com/auth/analytics https://www.googleapis.com/auth/webmasters.readonly",
+          "https://www.googleapis.com/auth/analytics.readonly https://www.googleapis.com/auth/webmasters.readonly",
         queryParams: { access_type: "offline", prompt: "consent" },
       },
     });
@@ -173,6 +173,17 @@ function SignupContent() {
           >
             Har du redan ett konto? Logga in
           </button>
+
+          <p className="text-[10px] leading-relaxed" style={{ color: "var(--slate-light)" }}>
+            Genom att skapa ett konto godkänner du vår{" "}
+            <a
+              href="/privacy-policy"
+              className="underline underline-offset-2 transition-opacity hover:opacity-60"
+            >
+              integritetspolicy
+            </a>
+            .
+          </p>
         </motion.div>
       </div>
 

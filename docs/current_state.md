@@ -8,7 +8,7 @@ It is not agency software. The end user is a business owner who logs in, connect
 
 The product has two layers:
 - **Dashboard** — always-on home base. Narrative metric cards, traffic chart, channel breakdown. Designed to answer "how are we doing?" at a glance.
-- **Report** — the depth layer. Two report formats now exist side-by-side: Rapport 1 (editorial, narrative-driven slide deck assembled dynamically from real data) and Rapport 2 (cinematic scroll-surface presentation — 10 floating cards on a grey surface, smooth spring scroll, keyboard nav, fullscreen present mode).
+- **Report** — the depth layer. The cinematic scroll-surface presentation: 10 floating white cards on a grey surface, smooth spring scroll, keyboard nav, fullscreen present mode. This is now the only report format at `/report` — Rapport 1 (the old narrative slide deck) has been retired.
 
 The design language is Barlow (headings) + Satoshi (body), pure white background, deliberate whitespace. Every block is expected to answer "so what?" — not just display a number.
 
@@ -48,12 +48,17 @@ src/app/
 │   ├── layout.tsx                    # App shell — renders Sidebar + content area
 │   ├── dashboard/page.tsx            # Dashboard overview (narrative cards, chart, channels)
 │   ├── integrations/page.tsx         # Connect GA4 / GSC / Ads — V2 shell + real auth logic
+│   ├── data/page.tsx                 # GA4 Explorer — drag-and-drop data canvas (see below)
 │   ├── clients/page.tsx              # Client workspace grid
 │   └── settings/page.tsx            # Settings with tabbed sidebar nav
 ├── (report)/
 │   ├── layout.tsx                    # Isolated report layout — no sidebar, clean canvas
-│   ├── report/page.tsx               # Rapport 1 — narrative slide deck, real data wired
-│   └── report2/page.tsx              # Rapport 2 — cinematic presentation shell (Clarix traffic report design)
+│   └── report/page.tsx               # Cinematic slide viewer — 10 floating cards, spring scroll, keyboard nav, fullscreen
+├── api/
+│   ├── ga4/route.ts                  # GA4 data for dashboard/report
+│   ├── gsc/route.ts                  # GSC data for dashboard/report
+│   └── ga4-explorer/route.ts         # Full GA4 data dump for the Explorer canvas
+├── privacy-policy/page.tsx           # Privacy policy page (required for Google OAuth verification)
 ```
 
 The `(app2)` parallel design system route group has been fully merged into `(app)` and deleted.
@@ -66,7 +71,7 @@ Auth is fully wired and enforced via `src/proxy.ts` (Next.js 16's equivalent of 
 
 1. User hits `/` (landing page — always public)
 2. Clicks "Logga in" → hits `/login`
-3. Google OAuth: `signInWithOAuth` fires with `access_type: offline` + `prompt: consent` — forces Google to return a `refresh_token`
+3. Google OAuth: `signInWithOAuth` fires with scopes `analytics.readonly` + `webmasters.readonly`, `access_type: offline` + `prompt: consent` — forces Google to return a `refresh_token`
 4. Supabase redirects to Google OAuth consent screen
 5. Google sends user back to `/auth/callback?code=...`
 6. `route.ts` exchanges code for session via `supabase.auth.exchangeCodeForSession()`
@@ -104,16 +109,25 @@ Supabase clients:
 
 [src/app/(app)/dashboard/page.tsx](../src/app/(app)/dashboard/page.tsx)
 
-Currently powered by `scenario2` mock data (or real data when sources are connected). Structure:
+Source-driven — renders real GA4/GSC data when connected, falls back to mock only when **no sources are connected at all**. Structure:
 
-1. **Sticky header** — period label + "Senaste 30 dagarna" date pill + "Exportera" dark button (replaced period toggle tabs)
-2. **Sample data / expiry banner** — shown when not connected or token expired, links to integrations
+1. **Sticky header** — period label + date range picker + "Exportera" dark button
+2. **Banners (stacked, shown as needed):**
+   - *Token expired* — orange dot, source name, "Reconnect" link
+   - *No data for period* — shown when GA4 is connected but has no data for the selected date range (e.g. connected after last month). Black text, Clarix-styled. No mock data ever shown when a source is connected.
+   - *Sample data* — shown only when zero sources connected, with "Anslut källor" CTA
+   - *GSC nudge* — when GA4 is connected but GSC is not
 3. **AI Summary hero** — purple gradient card, "Insikter från proffset" eyebrow, wavy SVG underline on headline, colorized numbers inline, "Läs hela rapporten" CTA
 4. **Narrative KPI cards** (3-column grid) — large number + inline delta arrow, educational headline + insight line, flush sparkline strip at bottom
 5. **Traffic chart** — dual area series (Besök + Besökare), dark tooltip, legend
 6. **Channel breakdown** — SVG donut diagram with interactive arc segments; legend rows show channel name, bold session count, delta arrow, percentage pill. Hover cross-highlights arc + row.
 7. **Search visibility** — 2×2 grid of GSC metrics with deltas
 8. **Nästa steg card** — derived from real data (ROAS, SEO position, bounce rate, missing paid), max 3 steps with Effort/Vinst badges
+
+**Data loading behavior:**
+- When sources are connected, an empty base (no mock numbers) is used as the merge base — real zeros show instead of fake data
+- `noDataForPeriod` state: set when GA4 confirms connection (`connected: true`) but returns no rows for the date range. Suppresses `executiveSummary` and all KPI cards. Shows the "no data for period" banner.
+- Mock data is shown **only** when `reportData === null` (no sources connected), via `activeData = reportData ?? fallbackData`
 
 ---
 
@@ -152,6 +166,40 @@ Viewer: [src/components/report/ReportViewer.tsx](../src/components/report/Report
 
 ---
 
+## GA4 Explorer — `/data`
+
+[src/app/(app)/data/page.tsx](../src/app/(app)/data/page.tsx)  
+[src/app/api/ga4-explorer/route.ts](../src/app/api/ga4-explorer/route.ts)
+
+A drag-and-drop data canvas for exploring everything GA4 returns. Purpose: see all available data at a glance, verify new event tracking (e.g. AI search), and decide what's worth promoting to the dashboard or report.
+
+**Canvas** — bone/parchment background (`#F5F3EF`) with a subtle dot-grid pattern. Cards float freely, draggable anywhere via Framer Motion `drag` with `dragMomentum={false}`. Positions persist to `localStorage` per session key `dr-data-canvas-v2`.
+
+**Cards (7):**
+| Card | Data | Metric |
+|------|------|--------|
+| Översikt | All summary metrics | Sessions, Users, New Users, Pageviews, Engagement Rate, Bounce Rate, Avg Session Duration, Conversions, Conversion Rate, Engagement Time |
+| Kanaler | `sessionDefaultChannelGroup` | Sessions per channel |
+| Enheter | `deviceCategory` | Sessions per device |
+| Länder | `country` | Sessions per country (top 10) |
+| Landningssidor | `landingPage` | Sessions per landing page (top 10) |
+| Toppade sidor | `pagePath` | Pageviews per page (top 10) |
+| Händelser | `eventName` | Event count per event (top 15, sorted desc) |
+
+Each card shows current value + delta vs prior period (same duration, immediately preceding). New GA4 events (e.g. `ai_search`) appear automatically in the Händelser card — no code changes needed.
+
+**Property switcher** — pill toggle in the header showing all connected GA4 properties by display name. Switching property refetches all data for that property. Works for multi-property accounts (e.g. one property per client).
+
+**Shared date range** — uses the same URL-driven `useDateRange()` hook as the dashboard. Same picker, same `?from=&to=` params.
+
+**Floating toolbar** — pinned bottom-center. Toggle each card on/off (pill highlighted in card's accent color when visible). "Återställ" resets positions and visibility to defaults.
+
+**Design** — Clarix design language: white cards, `var(--bone-dark)` canvas, charcoal text, `#1A1916` card borders, Barlow font. Signal colors `#2D6A4F` / `#9B2335` for positive/negative deltas.
+
+**Workflow:** When a new GA4 event or property appears in the Explorer, tell Claude which card/metric to promote and it will be implemented in the dashboard or report.
+
+---
+
 ## Integrations page
 
 [src/app/(app)/integrations/page.tsx](../src/app/(app)/integrations/page.tsx)
@@ -166,11 +214,11 @@ V2 visual shell fully wired to real auth logic.
 
 **Connect flow** — inline property picker expands below each card with `AnimatePresence` height animation. Loads available GA4 properties and GSC sites from `/api/google/properties`. Disconnect removes the row. `needs_refresh` surfaces a re-auth prompt. All loading/error states handled.
 
-## Rapport 2
+## Report
 
-[src/app/(report)/report2/page.tsx](../src/app/(report)/report2/page.tsx)
+[src/app/(report)/report/page.tsx](../src/app/(report)/report/page.tsx)
 
-A cinematic scroll-surface report viewer. All 10 slides rendered as floating white cards stacked vertically on a grey surface (`oklch(0.965 0.005 270)`). No slideshow transitions — free mouse scroll with a spring damping effect, arrow keys snap-center to each card.
+The cinematic scroll-surface report viewer — previously "Rapport 2", now the sole report format at `/report`. The old narrative slide deck (Rapport 1) has been retired and removed. All 10 slides rendered as floating white cards stacked vertically on a grey surface (`oklch(0.965 0.005 270)`). No slideshow transitions — free mouse scroll with a spring damping effect, arrow keys snap-center to each card.
 
 **Canvas system** — each card is `1280×720` (logical canvas) scaled down via CSS `transform: scale()`. Scale factor computed from container width × `0.86` multiplier, so cards float with visible surface on both sides. `fontSize: 20` on the canvas root makes all `rem`-based type scale linearly together.
 
@@ -179,21 +227,50 @@ A cinematic scroll-surface report viewer. All 10 slides rendered as floating whi
 - Arrow keys / space / enter: `scrollTo` with exact center math (`offsetTop - viewHeight/2 + cardHeight/2`)
 - Dot nav (right edge): `IntersectionObserver` tracks which card is most centered, dots reflect reality, click to jump
 - Bottom frosted glass pill: left/right arrows + `↑↓` keyboard hints + `1 / 10` counter. `backdrop-blur-md`, 55% white background, white border
-- Top bar: back link, slide counter, Present button (fullscreen toggle)
+- Top bar: back link, slide counter, date range picker (center), Present button (fullscreen toggle)
+
+**Date range picker** — dropdown in the top bar. Left column: 2 presets — "Denna månad" and "Sen start" (all-time from 2020-01-01). Right column: flight-booker style two-month calendar — click start date then end date, hover shows range preview, edges rendered as purple pills with soft fill between. Defaults to current calendar month (1st → today). Selecting any range pushes `?from=&to=` to the URL; `useDateRange` reads it and triggers a fresh fetch.
 
 **Slides (10):**
-1. Sammanfattning (Hero) — centered headline, trend pill + subtitle row, tag pills, full-width AI summary card below
-2. Nyckeltal — 2×2 KPI cards with large display numbers
-3. Trafiköversikt — area chart + per-channel right column + channel bar breakdown
-4. Trafikkällor — 3-col channel cards with icons, percentages, deltas
-5. Bästa sidor — 3-col page rank cards with colored rank badges
-6. Strategisk bedömning — centered heading + full-width Clarix executive insight card, "Bottom line" purple accent pill
-7. Rekommendationer — 3-col action cards (Skala / Fixa / Bygg)
-8. Konvertering — 3 metric cards if conversions exist, else upsell layout
-9. AI-synlighet — left text + right 2×2 AI source status grid
-10. Kort summerat — bullet list left + booking CTA card right
+1. **Sammanfattning (Hero)** — headline top-center, large inline traffic delta in subtext (green/red/grey depending on data), full-width AI summary card pinned to bottom. No pills. Layout: `justify-between py-12 mt-16`.
+2. **Nyckeltal** — 2×2 KPI cards with large display numbers and grey `—` pill when no prior period data.
+3. **Trafiköversikt** — "Totala besök" label at `18px`, number at `3.8rem`. TrendPill moved inside chart card header (inline with number, right-aligned). Area chart + per-channel right column + kanalfördelning bars baked into chart card footer. "Senaste perioden" subhead at `21px`.
+4. **Trafikkällor** — 2-col channel cards. Icon containers use the aurora gradient (`linear-gradient(135deg, #FF4D9E, #FF6B55, #FFB830)`) with white icon color.
+5. **Bästa sidor** — 3-col page rank cards with colored rank badges.
+6. **Strategisk bedömning** — centered heading + full-width Clarix executive insight card, "Bottom line" accent pill.
+7. **Rekommendationer** — 3-col action cards (Skala / Fixa / Bygg).
+8. **Konvertering** — 3 metric cards if conversions exist, else upsell layout.
+9. **AI-synlighet** — left text + right 2×2 AI source status grid.
+10. **Kort summerat** — bullet list left + booking CTA card right.
 
-**Data:** same real GA4/GSC pipeline as Rapport 1 — fetches from `/api/ga4` and `/api/gsc`, merges with `scenario2` mock fallback via `mergeReportData`.
+**TrendPill — null state:** All delta calculations return `null` (not `0`) when no prior period data exists. `TrendPill` renders a grey `—` pill for `null`. Negative deltas render red, positive green. Zero is treated as no meaningful change (grey).
+
+**Gradient cards (`AISummary` + standalone cards):** Deep pink→coral→amber gradient (`linear-gradient(135deg, #e8336d, #ff6b35, #ffb830)`) with SVG `feTurbulence` grain at `mixBlendMode: overlay, opacity: 0.35` for an organic film texture. Text is white. Label eyebrow is `text-white/70`. All spans inside (including `pos()`/`neg()` values) forced to `text-white font-bold` via `[&_span]` selector. Used on: AI summary, AI source status card, booking CTA card.
+
+**Design details:**
+- All headlines end with a coral dot (`#FF6B55`) — appended automatically by `SlideHeading`, added manually to bare `<h1>` headings
+- `InfoTooltip` card lightened: background `#fdfcfb`, shadow `rgba(0,0,0,0.10)`, border `rgba(0,0,0,0.05)`
+- `AISummary` sparkle icon block fully removed — gradient card has no icon, content starts immediately
+
+**Data loading:**
+- `loading: true` on mount → 4 shimmer skeleton cards rendered at correct canvas scale while fetching
+- No mock fallback — all hardcoded placeholder numbers removed from `buildSlideData`
+- If no sources connected or API returns empty → "Ingen data för den här perioden" state with link to Integrations
+- Real data only: fetches from `/api/ga4` and `/api/gsc`, merges via `mergeReportData`
+
+**InfoTooltip** — unified API: accepts either `text="..."` (plain, used by dashboard) or `title` + `body` + `example` (rich, used by report). Previously dashboard callers passed `text` but component only accepted `title`+`body` — those were silently empty. Now both work. Tooltip opens downward-right, has a single BorderBeam cycling `#FF4D9E → #FFB830` around the card border. `src/components/ui/border-beam.tsx` added as a new primitive.
+
+---
+
+## Privacy & Google OAuth verification
+
+[src/app/privacy-policy/page.tsx](../src/app/privacy-policy/page.tsx)
+
+Privacy policy page added at `/privacy-policy` in preparation for Google OAuth verification. Covers: what's stored (tokens only — GA4/GSC data is never persisted), the two scopes requested, Google Limited Use policy compliance, GDPR rights, Supabase + Google Cloud as the only subprocessors.
+
+**OAuth scopes** are now minimal: `analytics.readonly` + `webmasters.readonly` only. The write scope (`analytics`) was removed from both login and signup. These must match exactly what's declared in Google Cloud Console → OAuth consent screen.
+
+Privacy policy link is wired in the landing footer ("Integritet"), and a consent notice appears below the form on both `/login` and `/signup`.
 
 ---
 
@@ -256,7 +333,7 @@ Shared components: [src/components/landing/](../src/components/landing/) (brand 
 
 ### What changed
 
-**Sidebar** — "Design v2" section removed. Kunder (`/clients`) and Inställningar (`/settings`) added to the Data section with bespoke SVG icons.
+**Sidebar** — "Design v2" section removed. Kunder (`/clients`), Inställningar (`/settings`), and Data (`/data`) added to the DATA section with bespoke SVG icons. Inactive nav item text changed from `var(--slate)` to `var(--charcoal)` (full black) for legibility. All banner and nudge card text also bumped to `var(--charcoal)` and larger font sizes.
 
 **Dashboard header** — Period tab switcher (This month / Last month / Custom) replaced with "Senaste 30 dagarna" date pill + "Exportera" dark button, matching V2 screenshot.
 
