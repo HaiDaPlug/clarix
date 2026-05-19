@@ -15,13 +15,12 @@ import {
   Lightbulb,
   Mail,
   Maximize2,
-  Minimize2,
   Megaphone,
+  Minimize2,
   MousePointerClick,
   PenSquare,
   Plug,
   Search as SearchIcon,
-  Sparkles,
   Target,
   TrendingUp,
   Zap,
@@ -35,15 +34,16 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import {
   ConnectableSource,
   ConnectedSource,
   mergeReportData,
 } from "@/lib/google/connected-sources";
-import { useDateRange } from "@/lib/google/date-presets";
+import { useDateRange, DATE_PRESETS, presetToRange, type DatePresetId } from "@/lib/google/date-presets";
 import { InfoTooltip } from "@/components/primitives/InfoTooltip";
-import { localizeMockReportData, scenario2 } from "@/lib/mock-data";
+import { NoiseTexture } from "@/components/ui/noise-texture";
 import { deriveExecutiveSummary } from "@/lib/engine/derive-executive-summary";
 import type { ReportData } from "@/types/schema";
 
@@ -55,6 +55,40 @@ const TREND_POS_BG = "oklch(0.74 0.17 155 / 0.14)";
 const TREND_NEG_BG = "oklch(0.7 0.18 22 / 0.14)";
 const ACCENT = "oklch(0.5 0.18 290)";
 
+/* ─── Shimmer ────────────────────────────────────────────────────────────── */
+
+function Shimmer({ className, style }: { className?: string; style?: React.CSSProperties }) {
+  return (
+    <div
+      className={className}
+      style={{
+        borderRadius: 10,
+        background: "linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)",
+        backgroundSize: "200% 100%",
+        animation: "shimmer 1.4s infinite",
+        ...style,
+      }}
+    />
+  );
+}
+
+function SlideShimmer() {
+  return (
+    <div className="flex flex-col gap-6 h-full">
+      <style>{`@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }`}</style>
+      <Shimmer style={{ height: 52, width: "55%", borderRadius: 12 }} />
+      <Shimmer style={{ height: 20, width: "20%", borderRadius: 8 }} />
+      <div className="flex gap-4 flex-1">
+        <div className="flex-1 flex flex-col gap-3">
+          <Shimmer style={{ height: "60%", borderRadius: 16 }} />
+          <Shimmer style={{ height: "35%", borderRadius: 16 }} />
+        </div>
+        <Shimmer style={{ width: 196, borderRadius: 16 }} />
+      </div>
+    </div>
+  );
+}
+
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 
 const fmtNum = (n: number) =>
@@ -64,7 +98,8 @@ const fmtNum = (n: number) =>
       ? (n / 1_000).toFixed(1).replace(".", ",") + " k"
       : n.toLocaleString("sv-SE");
 
-const sign = (n: number) => (n >= 0 ? `+${n}%` : `−${Math.abs(n)}%`);
+const sign = (n: number | null): string | null =>
+  n === null ? null : n >= 0 ? `+${n}%` : `−${Math.abs(n)}%`;
 
 /* ─── Primitives ─────────────────────────────────────────────────────────── */
 
@@ -73,7 +108,7 @@ function TrendPill({
   positive,
   size = "md",
 }: {
-  delta: string;
+  delta: string | null;
   positive: boolean;
   size?: "sm" | "md" | "lg";
 }) {
@@ -84,6 +119,18 @@ function TrendPill({
   } as const;
   const icon =
     size === "lg" ? "h-5 w-5" : size === "md" ? "h-4 w-4" : "h-3.5 w-3.5";
+
+  if (delta === null) {
+    return (
+      <span
+        className={`inline-flex items-center rounded-full font-semibold tabular-nums ${sizes[size]}`}
+        style={{ color: "oklch(0.6 0.01 270)", background: "oklch(0.94 0.005 270)" }}
+      >
+        —
+      </span>
+    );
+  }
+
   return (
     <span
       className={`inline-flex items-center rounded-full font-semibold tabular-nums ${sizes[size]}`}
@@ -104,7 +151,7 @@ function TrendPill({
 
 function Eyebrow({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[13px] font-semibold uppercase tracking-[0.26em] text-muted-foreground">
+    <p className="text-[13px] font-semibold uppercase tracking-[0.26em] text-foreground/80">
       {children}
     </p>
   );
@@ -120,10 +167,10 @@ function SlideHeading({
   return (
     <div className="max-w-3xl">
       <h1 className="font-display text-[3.1rem] font-bold leading-[1.05] tracking-tight lg:text-[3.8rem]">
-        {children}
+        {children}<span style={{ color: "#FF6B55" }}>.</span>
       </h1>
       {sub ? (
-        <p className="mt-3 text-[1.05rem] text-foreground">{sub}</p>
+        <p className="mt-3 text-[21px] text-foreground">{sub}</p>
       ) : null}
     </div>
   );
@@ -138,29 +185,23 @@ function AISummary({
 }) {
   return (
     <div
-      className="relative overflow-hidden rounded-3xl border border-white/50 p-6 shadow-[0_24px_60px_-26px_rgba(99,102,241,0.45)] sm:p-8 dark:border-white/10"
-      style={{
-        background:
-          "linear-gradient(135deg, oklch(0.97 0.04 280) 0%, oklch(0.96 0.05 250) 55%, oklch(0.97 0.04 220) 100%)",
-      }}
+      className="relative overflow-hidden rounded-3xl border border-white/20 p-6 shadow-[0_24px_60px_-26px_rgba(255,107,85,0.45)] sm:p-8"
+      style={{ background: "linear-gradient(135deg, #e8336d 0%, #ff6b35 50%, #ffb830 100%)" }}
     >
-      <div className="flex items-start gap-4">
-        <div
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-white shadow-lg"
-          style={{
-            background:
-              "linear-gradient(135deg, oklch(0.55 0.2 290), oklch(0.6 0.18 250))",
-          }}
-        >
-          <Sparkles className="h-5 w-5" />
-        </div>
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[oklch(0.45_0.18_280)]">
-            {label}
-          </p>
-          <div className="mt-2 space-y-3 text-[1.2rem] leading-[1.6] tracking-[-0.005em] text-[oklch(0.2_0.03_280)] sm:text-[1.3rem]">
-            {children}
-          </div>
+      {/* Grain — overlay blend makes it sink into the gradient naturally */}
+      <svg className="pointer-events-none absolute inset-0 z-0 h-full w-full" xmlns="http://www.w3.org/2000/svg" style={{ mixBlendMode: "overlay", opacity: 0.35 }}>
+        <filter id="grain-card">
+          <feTurbulence type="fractalNoise" baseFrequency="0.72" numOctaves="4" stitchTiles="stitch" />
+          <feColorMatrix type="saturate" values="0" />
+        </filter>
+        <rect width="100%" height="100%" filter="url(#grain-card)" />
+      </svg>
+      <div className="relative z-10">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/70">
+          {label}
+        </p>
+        <div className="mt-2 space-y-3 text-[1.15rem] font-medium leading-[1.6] tracking-[-0.01em] text-white/95 sm:text-[1.25rem] [&_span]:text-white [&_span]:font-bold">
+          {children}
         </div>
       </div>
     </div>
@@ -183,12 +224,12 @@ const neg = (s: string) => (
 interface SlideData {
   visits: number;
   prevVisits: number;
-  trafficDelta: number;
+  trafficDelta: number | null;
   people: number;
-  peopleDelta: number;
-  timeDelta: number;
+  peopleDelta: number | null;
+  timeDelta: number | null;
   leads: number;
-  leadsDelta: number;
+  leadsDelta: number | null;
   period: string;
   bounceRate: number | null;
   avgDuration: number | null;
@@ -198,11 +239,11 @@ interface SlideData {
     tip: { title: string; body: string; example?: string };
     pct: number;
     visits: number;
-    delta: number;
+    delta: number | null;
     icon: React.ElementType;
     featured?: boolean;
   }[];
-  topPages: { p: string; v: number; d: number }[];
+  topPages: { p: string; v: number; d: number | null }[];
   timeSeries: { date: string; sessions: number }[];
   hasConversions: boolean;
 }
@@ -212,22 +253,22 @@ function buildSlideData(reportData: ReportData | null): SlideData {
   const kpi = reportData?.kpiSnapshot;
   const period = reportData?.meta?.period?.label ?? "Senaste perioden";
 
-  // Sessions / visits
-  const visits = traffic?.totalSessions?.value ?? 18400;
-  const prevVisits = traffic?.totalSessions?.previousValue ?? 16140;
-  const trafficRaw =
-    prevVisits > 0 ? ((visits - prevVisits) / prevVisits) * 100 : 0;
-  const trafficDelta = Math.round(trafficRaw);
+  // Sessions / visits — no fake fallbacks
+  const visits = traffic?.totalSessions?.value ?? 0;
+  const prevVisits = traffic?.totalSessions?.previousValue ?? 0;
+  const trafficDelta =
+    prevVisits > 0
+      ? Math.round(((visits - prevVisits) / prevVisits) * 100)
+      : null;
 
-  // Users (use organicSessions as proxy when users not available)
+  // Users
   const organicVal = traffic?.organicSessions?.value;
-  const people = organicVal != null ? organicVal : Math.round(visits * 0.72);
-  const prevPeople =
-    traffic?.organicSessions?.previousValue ?? Math.round(prevVisits * 0.72);
+  const people = organicVal ?? 0;
+  const prevPeople = traffic?.organicSessions?.previousValue ?? 0;
   const peopleDelta =
     prevPeople > 0
       ? Math.round(((people - prevPeople) / prevPeople) * 100)
-      : 8;
+      : null;
 
   // Engagement / bounce
   const bounceNow = traffic?.bounceRate?.value ?? null;
@@ -235,17 +276,17 @@ function buildSlideData(reportData: ReportData | null): SlideData {
   const timeDelta =
     bounceNow != null && bouncePrev != null && bouncePrev > 0
       ? Math.round(((bounceNow - bouncePrev) / bouncePrev) * 100)
-      : -6;
+      : null;
   const avgDuration = traffic?.avgSessionDuration?.value ?? null;
 
   // Leads / conversions
   const conv = reportData?.conversions;
-  const leads = conv?.totalConversions?.value ?? 43;
-  const prevLeads = conv?.totalConversions?.previousValue ?? 41;
+  const leads = conv?.totalConversions?.value ?? 0;
+  const prevLeads = conv?.totalConversions?.previousValue ?? 0;
   const leadsDelta =
     prevLeads > 0
       ? Math.round(((leads - prevLeads) / prevLeads) * 100)
-      : 4;
+      : null;
 
   // Channels
   const rawChannels = traffic?.channelBreakdown ?? [];
@@ -260,6 +301,7 @@ function buildSlideData(reportData: ReportData | null): SlideData {
     referral: Globe, "Referral": Globe, "Hänvisningar": Globe,
     email: Mail, "Email": Mail, "E-post": Mail,
   };
+
   const ORGANIC = { name: "Google (Obetald söktrafik)", sub: "Besök från Googles vanliga sökresultat", tip: { title: "Vad är obetald söktrafik?", body: "Personer som hittade er via Googles vanliga sökresultat — utan att ni betalat för klicket.", example: "Ni rankar högt på 'redovisningsbyrå Stockholm' → någon klickar → ett organiskt besök." } };
   const PAID    = { name: "Google Ads", sub: "Köpt trafik från Google", tip: { title: "Vad är Google Ads-trafik?", body: "Besökare som kom via en betald annons i Google Sök eller Display-nätverket.", example: "Ni betalar per klick. Stoppar ni budgeten → slutar trafiken direkt." } };
   const SOCIAL  = { name: "Sociala medier", sub: "Besök från inlägg och delningar i sociala medier", tip: { title: "Vad är social trafik?", body: "Besökare som klickat in från sociala plattformar som LinkedIn, Facebook eller Instagram.", example: "Ett LinkedIn-inlägg som delas vidare kan ge en pik av social trafik." } };
@@ -287,66 +329,31 @@ function buildSlideData(reportData: ReportData | null): SlideData {
     "Ej tilldelad": UNKNOWN, "ej tilldelad": UNKNOWN,
   };
 
-  const topChannels =
-    rawChannels.length > 0
-      ? rawChannels.slice(0, 6).map((c, i) => {
-          const prev = c.previousSessions ?? 0;
-          const curr = c.sessions ?? 0;
-          const delta =
-            prev > 0 ? Math.round(((curr - prev) / prev) * 100) : 0;
-          return {
-            name: channelNames[c.channel]?.name ?? c.channel,
-            sub: channelNames[c.channel]?.sub ?? "",
-            tip: channelNames[c.channel]?.tip ?? { title: c.channel, body: "" },
-            pct: Math.round((curr / totalVisits) * 100),
-            visits: curr,
-            delta,
-            icon: channelIcons[c.channel] ?? Globe,
-            featured: i === 0,
-          };
-        })
-      : [
-          { name: "Google (Obetald söktrafik)", sub: "Besök från Googles vanliga sökresultat", tip: ORGANIC.tip, pct: 58, visits: 10672, delta: 14, icon: SearchIcon, featured: true },
-          { name: "Direkttrafik", sub: "Besökare som gick direkt till hemsidan", tip: DIRECT.tip, pct: 14, visits: 2576, delta: 3, icon: MousePointerClick },
-          { name: "Sociala medier", sub: "Besök från inlägg och delningar i sociala medier", tip: SOCIAL.tip, pct: 11, visits: 2024, delta: -8, icon: Megaphone },
-          { name: "Google Ads", sub: "Köpt trafik från Google", tip: PAID.tip, pct: 9, visits: 1656, delta: 6, icon: Globe },
-          { name: "Referral", sub: "Länkar från andra sajter", tip: REFERRAL.tip, pct: 5, visits: 920, delta: 2, icon: Globe },
-          { name: "E-post", sub: "Nyhetsbrev & utskick", tip: EMAIL.tip, pct: 3, visits: 552, delta: -1, icon: Mail },
-        ];
+  const topChannels = rawChannels.slice(0, 6).map((c, i) => {
+    const prev = c.previousSessions ?? 0;
+    const curr = c.sessions ?? 0;
+    const delta = prev > 0 ? Math.round(((curr - prev) / prev) * 100) : null;
+    return {
+      name: channelNames[c.channel]?.name ?? c.channel,
+      sub: channelNames[c.channel]?.sub ?? "",
+      tip: channelNames[c.channel]?.tip ?? { title: c.channel, body: "" },
+      pct: totalVisits > 0 ? Math.round((curr / totalVisits) * 100) : 0,
+      visits: curr,
+      delta,
+      icon: channelIcons[c.channel] ?? Globe,
+      featured: i === 0,
+    };
+  });
 
-  // Time series — TrafficOverview.timeSeries uses { date, value } (value = sessions)
   const rawSeries = traffic?.timeSeries ?? [];
-  const timeSeries =
-    rawSeries.length > 0
-      ? rawSeries.map((p) => ({ date: p.date, sessions: p.value }))
-      : [
-          { date: "1 mar", sessions: 4200 },
-          { date: "5 mar", sessions: 4680 },
-          { date: "9 mar", sessions: 5120 },
-          { date: "13 mar", sessions: 4980 },
-          { date: "17 mar", sessions: 5640 },
-          { date: "21 mar", sessions: 6210 },
-          { date: "25 mar", sessions: 6780 },
-          { date: "29 mar", sessions: 7240 },
-        ];
+  const timeSeries = rawSeries.map((p) => ({ date: p.date, sessions: p.value }));
 
-  // Top pages — TopPages.pages[]
   const rawPages = reportData?.topPages?.pages ?? [];
-  const topPages =
-    rawPages.length > 0
-      ? rawPages.slice(0, 6).map((p) => ({
-          p: p.url,
-          v: p.sessions ?? p.clicks ?? 0,
-          d: 0, // no prior value in schema
-        }))
-      : [
-          { p: "/seo-guide", v: 4200, d: 32 },
-          { p: "/tjänster", v: 2900, d: 5 },
-          { p: "/blogg/2025-trender", v: 1850, d: 18 },
-          { p: "/produkter/aurora", v: 1540, d: 12 },
-          { p: "/priser", v: 1320, d: 9 },
-          { p: "/kontakt", v: 1200, d: -3 },
-        ];
+  const topPages = rawPages.slice(0, 6).map((p) => ({
+    p: p.url,
+    v: p.sessions ?? p.clicks ?? 0,
+    d: null,
+  }));
 
   // KPI snapshot — find metrics by label substring
   const kpiMetrics = kpi?.metrics ?? [];
@@ -379,41 +386,39 @@ function buildSlideData(reportData: ReportData | null): SlideData {
 /* ─── Slides ─────────────────────────────────────────────────────────────── */
 
 function SlideHero({ d }: { d: SlideData }) {
+  const hasData = d.trafficDelta !== null;
+  const isPos = (d.trafficDelta ?? 0) > 0;
+  const isNeg = (d.trafficDelta ?? 0) < 0;
+
+  const pillColor = !hasData
+    ? { color: "oklch(0.55 0.01 270)", bg: "oklch(0.94 0.005 270)" }
+    : isPos
+    ? { color: TREND_POS, bg: TREND_POS_BG }
+    : { color: TREND_NEG, bg: TREND_NEG_BG };
+
   return (
-    <div className="flex h-full flex-col justify-center gap-6">
-      <div className="space-y-4 text-center">
-        <div className="mx-auto max-w-5xl space-y-3">
-          <h1 className="font-display text-[3.1rem] font-bold leading-[1.05] tracking-tight lg:text-[3.8rem] whitespace-nowrap">
-            Din digitala synlighet går åt rätt håll
-          </h1>
-          <div className="flex items-center justify-center gap-3">
-            <TrendPill
-              delta={sign(d.trafficDelta)}
-              positive={d.trafficDelta >= 0}
-              size="lg"
-            />
-            <p className="text-[1.05rem] text-foreground">En tydlig riktning — drivet av Google.</p>
-          </div>
-        </div>
-        <div className="flex flex-wrap justify-center gap-2.5 pt-1">
-          {[
-            { l: `+${Math.abs(d.trafficDelta)}% trafik`, positive: d.trafficDelta >= 0 },
-            { l: "Google starkaste kanal", positive: true },
-            { l: "Kontaktsidan tappar trafik", positive: false },
-          ].map((b) => (
-            <span
-              key={b.l}
-              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/80 px-3.5 py-1.5 text-sm font-medium shadow-sm"
-            >
-              <span
-                className="h-1.5 w-1.5 rounded-full"
-                style={{ background: b.positive ? TREND_POS : TREND_NEG }}
-              />
-              {b.l}
-            </span>
-          ))}
-        </div>
+    <div className="flex h-full flex-col justify-between py-12">
+      {/* Top: headline + stat */}
+      <div className="text-center space-y-5 mt-16">
+        <h1 className="font-display text-[3.1rem] font-bold leading-[1.05] tracking-tight lg:text-[3.8rem] whitespace-nowrap">
+          Din digitala synlighet går åt rätt håll<span style={{ color: "#FF6B55" }}>.</span>
+        </h1>
+        <p className="text-[1.6rem] leading-[1.4] text-foreground/70">
+          {!hasData ? (
+            "Ingen föregående period med data finns att jämföra."
+          ) : (
+            <>
+              Trafiken under perioden har {isPos ? "gått upp" : "gått ner"}{" "}
+              <span className="font-bold tabular-nums" style={{ color: pillColor.color }}>
+                {sign(d.trafficDelta)!}
+              </span>{" "}
+              under perioden.
+            </>
+          )}
+        </p>
       </div>
+
+      {/* Bottom: AI summary card */}
       <AISummary>
         <p>
           Den här perioden fick din hemsida {pos(fmtNum(d.visits))} besök —
@@ -422,7 +427,7 @@ function SlideHero({ d }: { d: SlideData }) {
         </p>
         <p>
           Google var din starkaste trafikkälla och växte mest (
-          {pos(sign(d.trafficDelta))}). Samtidigt tappade kontaktsidan trafik,
+          {d.trafficDelta != null ? pos(sign(d.trafficDelta)!) : "—"}). Samtidigt tappade kontaktsidan trafik,
           vilket är viktigt eftersom leads ofta kommer därifrån.
         </p>
       </AISummary>
@@ -436,28 +441,28 @@ function SlideKpis({ d }: { d: SlideData }) {
       l: "Besök",
       v: fmtNum(d.visits),
       d: sign(d.trafficDelta),
-      p: d.trafficDelta >= 0,
+      p: (d.trafficDelta ?? 0) >= 0,
       tip: { title: "Vad är ett besök?", body: "Varje gång någon laddar sidan räknas det som ett besök — oavsett om de har varit inne förut.", example: "Samma person som besöker tre gånger = 3 besök." },
     },
     {
       l: "Antal personer",
       v: fmtNum(d.people),
       d: sign(d.peopleDelta),
-      p: d.peopleDelta >= 0,
+      p: (d.peopleDelta ?? 0) >= 0,
       tip: { title: "Vad betyder antal personer?", body: "En person räknas bara en gång, även om den besöker flera gånger.", example: "1 person som går in 3 gånger = 3 besök, men bara 1 person här." },
     },
     {
       l: "Tid på sidan",
       v: "2 min 14 s",
       d: sign(d.timeDelta),
-      p: d.timeDelta >= 0,
+      p: (d.timeDelta ?? 0) >= 0,
       tip: { title: "Genomsnittlig besökstid", body: "Hur länge en genomsnittlig besökare stannar. Längre tid betyder att folk hittar det de söker.", example: "2 min 14 s innebär att besökarna läser — inte bara studsar vidare." },
     },
     {
       l: "Leads",
       v: fmtNum(d.leads),
       d: sign(d.leadsDelta),
-      p: d.leadsDelta >= 0,
+      p: (d.leadsDelta ?? 0) >= 0,
       tip: { title: "Vad räknas som ett lead?", body: "Varje registrerad konvertering — t.ex. ifyllt kontaktformulär, telefonklick eller köp.", example: "Kräver att konverteringsspårning är aktiverat i Google Analytics." },
     },
   ];
@@ -474,12 +479,12 @@ function SlideKpis({ d }: { d: SlideData }) {
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-1.5">
-                <p className="text-sm font-semibold sm:text-base">{k.l}</p>
+                <p className="text-[20px] font-semibold sm:text-[22px]">{k.l}</p>
                 <InfoTooltip title={k.tip.title} body={k.tip.body} example={k.tip.example} side="above" />
               </div>
               <TrendPill delta={k.d} positive={k.p} size="md" />
             </div>
-            <p className="mt-auto pt-6 font-display text-[3.6rem] font-semibold leading-none tracking-tight tabular-nums">
+            <p className="mt-auto pt-6 font-display text-[4.2rem] font-semibold leading-none tracking-tight tabular-nums">
               {k.v}
             </p>
           </div>
@@ -494,162 +499,116 @@ function SlideTrend({ d }: { d: SlideData }) {
 
   // Top 3 channels by visit count + engagement metrics
   const topThree = d.topChannels.slice(0, 3);
-  const rightStats: { label: string; value: string; delta?: number }[] = [
+  const rightStats: { label: string; value: string; delta?: number | null }[] = [
     ...topThree.map((c) => ({ label: c.name, value: c.visits.toLocaleString("sv-SE"), delta: c.delta })),
     ...(d.bounceRate != null ? [{ label: "Avvisningsfrekvens", value: `${d.bounceRate.toFixed(1)}%` }] : []),
     ...(d.avgDuration != null ? [{ label: "Genomsn. besökstid", value: `${Math.round(d.avgDuration)}s` }] : []),
   ];
 
   return (
-    <div className="space-y-4">
-      {/* Header row */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="font-display text-[3.1rem] font-bold leading-[1.05] tracking-tight">
-            Så hittar besökarna till er
-          </h1>
-          <p className="mt-1.5 text-sm text-foreground">Föregående månad</p>
-        </div>
-        <TrendPill
-          delta={sign(d.trafficDelta)}
-          positive={d.trafficDelta >= 0}
-          size="lg"
-        />
+    <div className="flex flex-col gap-5 h-full">
+      {/* Header */}
+      <div className="shrink-0">
+        <h1 className="font-display text-[2.6rem] font-bold leading-[1.05] tracking-tight">
+          Så hittar besökarna till er<span style={{ color: "#FF6B55" }}>.</span>
+        </h1>
+        <p className="mt-1 text-[21px] text-foreground/80">{d.period}</p>
       </div>
 
-      {/* Chart + right stats */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_200px]">
-        {/* Chart card */}
-        <div className="rounded-3xl border border-border/60 bg-background/70 p-4">
-          {/* Totala sessioner inside the card, stacked */}
-          <div className="mb-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">Totala besök</p>
-            <p className="mt-0.5 font-display text-[2.6rem] font-semibold leading-none tracking-tight tabular-nums">
-              {d.visits.toLocaleString("sv-SE")}
-            </p>
-          </div>
-          <div className="h-[220px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={d.timeSeries}
-                  margin={{ top: 4, right: 4, left: 0, bottom: 0 }}
-                >
-                  <defs>
-                    <linearGradient id="r2-t-blue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={blue} stopOpacity={0.12} />
-                      <stop offset="100%" stopColor={blue} stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid
-                    stroke="var(--border)"
-                    strokeDasharray="3 3"
-                    vertical={false}
-                  />
-                  <XAxis
-                    dataKey="date"
-                    tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={(v) => {
-                      const d = new Date(v);
-                      if (isNaN(d.getTime())) return v;
-                      return d.toLocaleDateString("sv-SE", { month: "short", day: "numeric" });
-                    }}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
-                    tickLine={false}
-                    axisLine={false}
-                    width={28}
-                  />
-                  <ReTooltip
-                    contentStyle={{
-                      background: "var(--popover)",
-                      border: "1px solid var(--border)",
-                      borderRadius: 12,
-                      fontSize: 12,
-                    }}
-                    formatter={(value) => [typeof value === "number" ? value.toLocaleString("sv-SE") : value, "Sessioner"]}
-                    labelFormatter={(v) => {
-                      const d = new Date(v);
-                      if (isNaN(d.getTime())) return v;
-                      return d.toLocaleDateString("sv-SE", { weekday: "short", month: "short", day: "numeric" });
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="sessions"
-                    stroke={blue}
-                    strokeWidth={1.5}
-                    fill="url(#r2-t-blue)"
-                    dot={false}
-                    activeDot={{ r: 3, fill: blue, strokeWidth: 0 }}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-          </div>
-        </div>
+      {/* Main row: chart left, stats right */}
+      <div className="grid grid-cols-[1fr_196px] gap-4 flex-1 min-h-0">
 
-        {/* Per kanal — right column */}
-        {rightStats.length > 0 && (
-          <div className="rounded-3xl border border-border/60 bg-background/70 px-4 py-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground mb-3">
-              Per kanal
-            </p>
+        {/* Chart card */}
+        <div className="rounded-2xl border border-border/60 bg-background/70 p-5 flex flex-col min-h-0">
+          <div className="flex items-center justify-between gap-4 mb-3 shrink-0">
             <div>
-              {rightStats.map((s, i) => (
-                <div key={s.label}>
-                  <div className="py-2.5">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-1">
-                      {s.label}
-                    </p>
-                    <div className="flex items-baseline gap-2">
-                      <p className="font-display text-2xl font-semibold leading-none tracking-tight tabular-nums">
-                        {s.value}
-                      </p>
-                      {s.delta != null && s.delta !== 0 && (
-                        <TrendPill
-                          delta={sign(s.delta)}
-                          positive={s.delta >= 0}
-                          size="sm"
-                        />
-                      )}
+              <p className="text-[18px] font-semibold uppercase tracking-[0.2em] text-foreground/80">Totala besök</p>
+              <p className="font-display text-[3.3rem] font-bold leading-none tracking-tight tabular-nums mt-0.5">
+                {d.visits.toLocaleString("sv-SE")}
+              </p>
+            </div>
+            <TrendPill delta={sign(d.trafficDelta)} positive={(d.trafficDelta ?? 0) >= 0} size="lg" />
+          </div>
+          <div className="flex-1 min-h-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={d.timeSeries} margin={{ top: 4, right: 4, left: -8, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="r2-t-blue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={blue} stopOpacity={0.14} />
+                    <stop offset="100%" stopColor={blue} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(v) => {
+                    const d = new Date(v);
+                    if (isNaN(d.getTime())) return v;
+                    return d.toLocaleDateString("sv-SE", { month: "short", day: "numeric" });
+                  }}
+                />
+                <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={false} width={28} />
+                <ReTooltip
+                  contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 12, fontSize: 12 }}
+                  formatter={(value) => [typeof value === "number" ? value.toLocaleString("sv-SE") : value, "Sessioner"]}
+                  labelFormatter={(v) => {
+                    const d = new Date(v);
+                    if (isNaN(d.getTime())) return v;
+                    return d.toLocaleDateString("sv-SE", { weekday: "short", month: "short", day: "numeric" });
+                  }}
+                />
+                <Area type="monotone" dataKey="sessions" stroke={blue} strokeWidth={2} fill="url(#r2-t-blue)" dot={false} activeDot={{ r: 4, fill: blue, strokeWidth: 0 }} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Kanalfördelning baked into chart card footer */}
+          {d.topChannels.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-border/50 shrink-0">
+              <div className="flex gap-5">
+                {d.topChannels.slice(0, 5).map((ch) => (
+                  <div key={ch.name} className="flex-1 min-w-0">
+                    <div className="flex items-baseline justify-between gap-1 mb-1.5">
+                      <span className="truncate text-[13px] text-foreground/80">{ch.name}</span>
+                      <span className="shrink-0 text-[14px] font-bold tabular-nums">{ch.pct}%</span>
+                    </div>
+                    <div className="h-[4px] rounded-full bg-border/50 overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width: `${ch.pct}%`, background: blue }} />
                     </div>
                   </div>
-                  {i < rightStats.length - 1 && (
-                    <div className="h-px bg-border/60" />
-                  )}
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
 
-      {/* Kanalfördelning — bottom bars */}
-      {d.topChannels.length > 0 && (
-        <div className="rounded-3xl border border-border/60 bg-background/70 px-4 py-4">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground mb-3">
-            Kanalfördelning
+        {/* Right stats column */}
+        <div className="rounded-2xl border border-border/60 bg-background/70 px-5 py-5 flex flex-col min-h-0 overflow-hidden">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-foreground/80 mb-3 shrink-0">
+            Per kanal
           </p>
-          <div className="flex gap-5">
-            {d.topChannels.slice(0, 5).map((ch) => (
-              <div key={ch.name} className="flex-1 min-w-0">
-                <div className="flex items-end justify-between mb-1.5 gap-1">
-                  <span className="truncate text-[11px] text-muted-foreground">{ch.name}</span>
-                  <span className="shrink-0 text-[12px] font-semibold tabular-nums">{ch.pct}%</span>
-                </div>
-                <div className="h-1.5 rounded-full bg-border/60 overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-700"
-                    style={{ width: `${ch.pct}%`, background: blue }}
-                  />
+          <div className="flex flex-col flex-1 min-h-0 divide-y divide-border/50 overflow-hidden">
+            {rightStats.map((s) => (
+              <div key={s.label} className="flex flex-col justify-center py-2.5">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-foreground/80 mb-1 leading-tight">
+                  {s.label}
+                </p>
+                <div className="flex items-baseline gap-2">
+                  <p className="font-display text-[1.7rem] font-bold leading-none tracking-tight tabular-nums">
+                    {s.value}
+                  </p>
+                  {s.delta !== undefined && (
+                    <TrendPill delta={sign(s.delta ?? null)} positive={(s.delta ?? 0) >= 0} size="sm" />
+                  )}
                 </div>
               </div>
             ))}
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -673,23 +632,26 @@ function SlideChannels({ d }: { d: SlideData }) {
               }`}
             >
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-foreground/70">
+                <div
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white"
+                  style={{ background: "linear-gradient(135deg, #FF4D9E 0%, #FF6B55 50%, #FFB830 100%)" }}
+                >
                   <Icon className="h-4 w-4" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
-                    <p className="font-semibold leading-tight">{c.name}</p>
+                    <p className="text-[22px] font-semibold leading-tight">{c.name}</p>
                     {c.tip.title && <InfoTooltip title={c.tip.title} body={c.tip.body} example={c.tip.example} side="above" />}
                   </div>
-                  <p className="truncate text-xs text-muted-foreground">{c.sub}</p>
+                  <p className="truncate text-[20px] text-foreground/80">{c.sub}</p>
                 </div>
               </div>
               <div className="mt-4 flex items-end justify-between gap-3">
                 <div>
-                  <p className="font-display text-3xl font-semibold tabular-nums">{c.pct}%</p>
-                  <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">{fmtNum(c.visits)} besök</p>
+                  <p className="font-display text-[38px] font-semibold tabular-nums">{c.pct}%</p>
+                  <p className="mt-0.5 text-[20px] tabular-nums text-foreground/80">{fmtNum(c.visits)} besök</p>
                 </div>
-                <TrendPill delta={sign(c.delta)} positive={c.delta >= 0} size="sm" />
+                <TrendPill delta={sign(c.delta)} positive={(c.delta ?? 0) >= 0} size="sm" />
               </div>
             </div>
           );
@@ -715,7 +677,7 @@ function SlidePages({ d }: { d: SlideData }) {
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {d.topPages.map((row, i) => {
-          const positive = row.d >= 0;
+          const positive = (row.d ?? 0) >= 0;
           const r = i < 3 ? rankColors[i] : neutral;
           return (
             <div
@@ -735,14 +697,14 @@ function SlidePages({ d }: { d: SlideData }) {
                   size="sm"
                 />
               </div>
-              <p className="mt-4 truncate font-display text-lg font-semibold tracking-tight">
+              <p className="mt-4 truncate font-display text-[24px] font-semibold tracking-tight">
                 {row.p}
               </p>
               <div className="mt-1 flex items-baseline gap-1.5">
-                <p className="font-display text-2xl font-semibold tabular-nums">
+                <p className="font-display text-[30px] font-semibold tabular-nums">
                   {fmtNum(row.v)}
                 </p>
-                <span className="text-sm font-medium text-muted-foreground">besök</span>
+                <span className="text-[20px] font-medium text-foreground/80">besök</span>
                 <InfoTooltip title="Vad räknas som ett sidbesök?" body="Antal gånger den här sidan laddades under perioden." example="En besökare som återkommer tre gånger bidrar med 3 sidbesök." side="above" />
               </div>
             </div>
@@ -829,14 +791,14 @@ function SlideRecommendations() {
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted text-foreground/75">
                   <Icon className="h-5 w-5" />
                 </div>
-                <span className="rounded-full border border-border bg-background px-3 py-1 text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
+                <span className="rounded-full border border-border bg-background px-3 py-1 text-[10px] font-bold uppercase tracking-[0.22em] text-foreground/80">
                   {a.tag}
                 </span>
               </div>
-              <h3 className="mt-6 font-display text-xl font-semibold leading-tight tracking-tight sm:text-2xl">
+              <h3 className="mt-6 font-display text-[22px] font-semibold leading-tight tracking-tight sm:text-[26px]">
                 {a.t}
               </h3>
-              <p className="mt-3 text-[15px] leading-relaxed text-foreground/75">
+              <p className="mt-3 text-[21px] leading-relaxed text-foreground/75">
                 {a.b}
               </p>
             </div>
@@ -866,7 +828,7 @@ function SlideConversion({ d }: { d: SlideData }) {
               key={m.l}
               className="rounded-3xl border border-border bg-background/85 p-6"
             >
-              <p className="text-sm text-muted-foreground">{m.l}</p>
+              <p className="text-sm text-foreground/80">{m.l}</p>
               <p className="mt-2 font-display text-3xl tracking-tight">{m.v}</p>
               {m.dd && (
                 <p className="mt-1 text-xs font-medium" style={{ color: TREND_POS }}>
@@ -885,7 +847,7 @@ function SlideConversion({ d }: { d: SlideData }) {
         <SlideHeading sub="Just nu mäter vi besök — men inte vad de leder till.">
           Du ser trafiken — men inte affären
         </SlideHeading>
-        <p className="max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+        <p className="max-w-xl text-base leading-relaxed text-foreground/80 sm:text-lg">
           Konverteringsspårning är inte aktiverat ännu. Med spårning på plats
           kan vi koppla varje besök till leads, samtal och köp — och visa exakt
           vilka kanaler som faktiskt driver affärer.
@@ -933,7 +895,7 @@ function SlideAIVisibility() {
         <SlideHeading sub="ChatGPT, Perplexity och Gemini skickar redan trafik — men syns inte i vanliga rapporter.">
           AI-synligheten är just nu okänd
         </SlideHeading>
-        <ul className="space-y-2.5 text-base text-muted-foreground sm:text-lg">
+        <ul className="space-y-2.5 text-base text-foreground/80 sm:text-lg">
           {[
             "ChatGPT-trafik är inte spårad",
             "Perplexity-hänvisningar mäts inte",
@@ -957,30 +919,36 @@ function SlideAIVisibility() {
         </button>
       </div>
       <div
-        className="relative overflow-hidden rounded-3xl border border-white/50 p-7 shadow-[0_24px_60px_-26px_rgba(99,102,241,0.4)]"
-        style={{
-          background:
-            "linear-gradient(135deg, oklch(0.96 0.06 290) 0%, oklch(0.97 0.04 245) 100%)",
-        }}
+        className="relative overflow-hidden rounded-3xl border border-white/20 p-7 shadow-[0_24px_60px_-26px_rgba(255,107,85,0.45)]"
+        style={{ background: "linear-gradient(135deg, #e8336d 0%, #ff6b35 50%, #ffb830 100%)" }}
       >
-        <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[oklch(0.45_0.18_280)]">
-          Status per AI-källa
-        </p>
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          {sources.map((s) => (
-            <div
-              key={s.n}
-              className="rounded-2xl border border-white/60 bg-white/70 p-4 backdrop-blur"
-            >
-              <p className="text-sm font-semibold">{s.n}</p>
-              <p className="mt-2 font-display text-2xl font-semibold tracking-tight text-muted-foreground">
-                —
-              </p>
-              <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-[oklch(0.5_0.18_290)]">
-                {s.state}
-              </p>
-            </div>
-          ))}
+        <svg className="pointer-events-none absolute inset-0 z-0 h-full w-full" xmlns="http://www.w3.org/2000/svg" style={{ mixBlendMode: "overlay", opacity: 0.35 }}>
+          <filter id="grain-ai">
+            <feTurbulence type="fractalNoise" baseFrequency="0.72" numOctaves="4" stitchTiles="stitch" />
+            <feColorMatrix type="saturate" values="0" />
+          </filter>
+          <rect width="100%" height="100%" filter="url(#grain-ai)" />
+        </svg>
+        <div className="relative z-10">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/70">
+            Status per AI-källa
+          </p>
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            {sources.map((s) => (
+              <div
+                key={s.n}
+                className="rounded-2xl border border-white/20 bg-white/15 p-4 backdrop-blur"
+              >
+                <p className="text-sm font-semibold text-white">{s.n}</p>
+                <p className="mt-2 font-display text-2xl font-semibold tracking-tight text-white/80">
+                  —
+                </p>
+                <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-white/60">
+                  {s.state}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
@@ -1033,44 +1001,50 @@ function SlideRecap({ d }: { d: SlideData }) {
               </span>
               <div>
                 <p className="font-semibold">{b.t}</p>
-                <p className="mt-1 text-sm text-muted-foreground">{b.b}</p>
+                <p className="mt-1 text-sm text-foreground/80">{b.b}</p>
               </div>
             </li>
           ))}
         </ul>
       </div>
       <div
-        className="flex flex-col justify-between gap-6 rounded-3xl border border-white/50 p-8 shadow-[0_24px_60px_-26px_rgba(99,102,241,0.4)]"
-        style={{
-          background:
-            "linear-gradient(135deg, oklch(0.97 0.04 280) 0%, oklch(0.96 0.05 250) 55%, oklch(0.97 0.04 220) 100%)",
-        }}
+        className="relative overflow-hidden flex flex-col justify-between gap-6 rounded-3xl border border-white/20 p-8 shadow-[0_24px_60px_-26px_rgba(255,107,85,0.45)]"
+        style={{ background: "linear-gradient(135deg, #e8336d 0%, #ff6b35 50%, #ffb830 100%)" }}
       >
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[oklch(0.45_0.18_280)]">
-            Vill du ha hjälp att gå från insikt till handling?
-          </p>
-          <h2 className="mt-4 font-display text-4xl tracking-tight sm:text-5xl">
-            Boka en kort genomgång — vi går igenom rapporten tillsammans.
-          </h2>
-          <p className="mt-3 text-sm text-muted-foreground">
-            30 minuter. Inga säljpitcher. Bara konkreta nästa steg för din sida.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          <button
-            className="inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold text-white shadow-lg"
-            style={{ background: ACCENT }}
-          >
-            <Lightbulb className="h-4 w-4" />
-            Boka strategigenomgång
-          </button>
-          <Link
-            href="/report"
-            className="inline-flex items-center gap-2 rounded-full border border-border bg-background/80 px-5 py-3 text-sm font-semibold hover:bg-muted"
-          >
-            Se detaljerad rapport
-          </Link>
+        <svg className="pointer-events-none absolute inset-0 z-0 h-full w-full" xmlns="http://www.w3.org/2000/svg" style={{ mixBlendMode: "overlay", opacity: 0.35 }}>
+          <filter id="grain-cta">
+            <feTurbulence type="fractalNoise" baseFrequency="0.72" numOctaves="4" stitchTiles="stitch" />
+            <feColorMatrix type="saturate" values="0" />
+          </filter>
+          <rect width="100%" height="100%" filter="url(#grain-cta)" />
+        </svg>
+        <div className="relative z-10 flex flex-col justify-between gap-6 flex-1">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/70">
+              Vill du ha hjälp att gå från insikt till handling?
+            </p>
+            <h2 className="mt-4 font-display text-4xl tracking-tight text-white sm:text-5xl">
+              Boka en kort genomgång — vi går igenom rapporten tillsammans.
+            </h2>
+            <p className="mt-3 text-sm text-white/80">
+              30 minuter. Inga säljpitcher. Bara konkreta nästa steg för din sida.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <button
+              className="inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold text-white shadow-lg"
+              style={{ background: ACCENT }}
+            >
+              <Lightbulb className="h-4 w-4" />
+              Boka strategigenomgång
+            </button>
+            <Link
+              href="/report"
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-background/80 px-5 py-3 text-sm font-semibold hover:bg-muted"
+            >
+              Se detaljerad rapport
+            </Link>
+          </div>
         </div>
       </div>
     </div>
@@ -1173,19 +1147,25 @@ function SlideCard({ slide, scale, innerRef }: {
 
 export default function ReportPage() {
   const [reportData, setReportData] = useState<ReportData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [noSources, setNoSources] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isFs, setIsFs] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const { scale, containerW } = useCardScale(containerRef);
   const dateRange = useDateRange();
+  const router = useRouter();
 
-  // Load real data
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setNoSources(false);
+    setReportData(null);
+
     async function load() {
-      const fallback = localizeMockReportData(scenario2, "sv");
       const supabase = createClient();
       const { data, error } = await supabase
         .from("connected_sources")
@@ -1193,12 +1173,23 @@ export default function ReportPage() {
         .in("source", ["ga4", "gsc"])
         .neq("property_id", "_pending");
 
-      if (cancelled || error) { if (!cancelled) setReportData(fallback); return; }
+      if (cancelled) return;
 
-      const sources = (data ?? []).filter(
+      if (error || !data || data.length === 0) {
+        setNoSources(true);
+        setLoading(false);
+        return;
+      }
+
+      const sources = data.filter(
         (s): s is ConnectedSource => s.source === "ga4" || s.source === "gsc",
       );
-      if (sources.length === 0) { setReportData(fallback); return; }
+
+      if (sources.length === 0) {
+        setNoSources(true);
+        setLoading(false);
+        return;
+      }
 
       const parts = await Promise.all(
         sources.map(async (source) => {
@@ -1215,11 +1206,24 @@ export default function ReportPage() {
       );
 
       if (cancelled) return;
+
+      const realParts = parts.filter((p): p is Partial<ReportData> => p !== undefined);
+      if (realParts.length === 0) {
+        setNoSources(true);
+        setLoading(false);
+        return;
+      }
+
       const connectedIds = sources.map((s) => s.source) as ConnectableSource[];
-      const merged = mergeReportData(fallback, parts, connectedIds);
+      const base = realParts[0] as ReportData;
+      const merged = realParts.length > 1
+        ? mergeReportData(base, realParts.slice(1), connectedIds)
+        : { ...base, meta: { ...base.meta, availableSources: connectedIds } };
       if (!merged.executiveSummary) merged.executiveSummary = deriveExecutiveSummary(merged, "sv");
       setReportData(merged);
+      setLoading(false);
     }
+
     load();
     return () => { cancelled = true; };
   }, [dateRange.startDate, dateRange.endDate]);
@@ -1294,24 +1298,65 @@ export default function ReportPage() {
     else document.exitFullscreen?.();
   };
 
+  // Date preset picker — sets ?from=&to= on URL
+  const applyPreset = (id: DatePresetId) => {
+    const r = presetToRange(id);
+    router.push(`?from=${r.startDate}&to=${r.endDate}`);
+    setShowDatePicker(false);
+  };
+
+  const currentLabel = DATE_PRESETS.find((p) => {
+    const r = presetToRange(p.id);
+    return r.startDate === dateRange.startDate && r.endDate === dateRange.endDate;
+  })?.labelSv ?? `${dateRange.startDate} – ${dateRange.endDate}`;
+
   return (
     <div className="relative flex h-dvh flex-col overflow-hidden bg-[oklch(0.965_0.005_270)] text-foreground print:bg-white">
 
       {/* ── Top bar ───────────────────────────────────────────── */}
-      <header className="print:hidden shrink-0 z-20 flex h-10 items-center justify-between px-6">
-        <div className="flex items-center gap-2">
+      <header className="print:hidden shrink-0 z-20 flex h-12 items-center justify-between px-6">
+        <div className="flex items-center gap-3">
           <Link
             href="/dashboard"
-            className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs font-medium text-foreground/80 hover:bg-muted transition-colors"
           >
             <ArrowLeft className="h-3 w-3" />
             Avsluta
           </Link>
-          <span className="tabular-nums text-xs text-muted-foreground/70">{activeIndex + 1} / {total}</span>
+          <span className="tabular-nums text-xs text-foreground/50">{activeIndex + 1} / {total}</span>
         </div>
+
+        {/* Date picker */}
+        <div className="relative">
+          <button
+            onClick={() => setShowDatePicker((v) => !v)}
+            className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-4 py-1.5 text-xs font-semibold text-foreground/80 hover:bg-muted transition-colors"
+          >
+            {currentLabel}
+            <ArrowRight className="h-3 w-3 rotate-90" />
+          </button>
+          {showDatePicker && (
+            <div
+              className="absolute top-full right-0 mt-2 w-48 rounded-2xl border border-border/60 bg-background shadow-xl overflow-hidden z-50"
+              onMouseLeave={() => setShowDatePicker(false)}
+            >
+              {DATE_PRESETS.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => applyPreset(p.id)}
+                  className="w-full text-left px-4 py-3 text-sm hover:bg-muted transition-colors font-medium"
+                  style={{ color: p.id === (DATE_PRESETS.find(x => presetToRange(x.id).startDate === dateRange.startDate)?.id) ? "#FF6B55" : undefined }}
+                >
+                  {p.labelSv}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         <button
           onClick={togglePresent}
-          className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
+          className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs font-medium text-foreground/80 hover:bg-muted transition-colors"
         >
           {isFs ? <Minimize2 className="h-3 w-3" /> : <Maximize2 className="h-3 w-3" />}
           {isFs ? "Avsluta" : "Present"}
@@ -1325,19 +1370,60 @@ export default function ReportPage() {
         style={{ scrollbarWidth: "none" }}
       >
         <div ref={containerRef} className="mx-auto w-full max-w-[1400px] px-8">
+
+          {/* No sources state */}
+          {!loading && noSources && (
+            <div className="flex flex-col items-center justify-center h-full min-h-[60vh] gap-4 text-center">
+              <p className="text-2xl font-display font-bold">Ingen data för den här perioden<span style={{ color: "#FF6B55" }}>.</span></p>
+              <p className="text-sm text-foreground/60 max-w-sm">Koppla ihop Google Analytics eller Search Console under Integrationer för att se din rapport.</p>
+              <Link href="/integrations" className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-white" style={{ background: "#FF6B55" }}>
+                Gå till Integrationer
+              </Link>
+            </div>
+          )}
+
           <div
             className="flex flex-col items-center"
             style={{ gap: SLIDE_GAP, paddingTop: SLIDE_GAP, paddingBottom: SLIDE_GAP * 4 }}
           >
-            {slides.map((slide, i) => (
-              <SlideCard
-                key={slide.id}
-                slide={slide}
-                scale={scale}
-                containerW={containerW}
-                innerRef={(el) => { cardRefs.current[i] = el; }}
-              />
-            ))}
+            {loading
+              ? Array.from({ length: 4 }).map((_, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      height: CANVAS_H * scale,
+                      width: CANVAS_W * scale,
+                      borderRadius: 6,
+                      overflow: "hidden",
+                      background: "#ffffff",
+                      boxShadow: "0 2px 4px rgba(20,18,16,0.04), 0 12px 40px rgba(20,18,16,0.08)",
+                      border: "1px solid rgba(20,18,16,0.05)",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: CANVAS_W,
+                        height: CANVAS_H,
+                        transform: `scale(${scale})`,
+                        transformOrigin: "top left",
+                        padding: "48px 64px",
+                      }}
+                    >
+                      <SlideShimmer />
+                    </div>
+                  </div>
+                ))
+              : !noSources && slides.map((slide, i) => (
+                  <SlideCard
+                    key={slide.id}
+                    slide={slide}
+                    scale={scale}
+                    containerW={containerW}
+                    innerRef={(el) => { cardRefs.current[i] = el; }}
+                  />
+                ))
+            }
           </div>
         </div>
 
