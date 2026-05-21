@@ -40,10 +40,11 @@ export function InfoTooltip(props: InfoTooltipProps) {
         style={{
           display: "inline-flex", alignItems: "center", justifyContent: "center",
           width: 16, height: 16, borderRadius: "50%", flexShrink: 0, cursor: "default",
-          background: visible ? "oklch(0.42 0.2 290)" : "oklch(0.5 0.18 290)",
-          color: "#fff",
+          background: visible ? "oklch(0.88 0.005 270)" : "oklch(0.93 0.005 270)",
+          border: "1px solid oklch(0.82 0.008 270)",
+          color: visible ? "oklch(0.30 0.01 270)" : "oklch(0.45 0.01 270)",
           fontSize: 10, fontWeight: 800, lineHeight: 1,
-          transition: "background 0.15s ease",
+          transition: "background 0.15s ease, color 0.15s ease",
           userSelect: "none",
           fontStyle: "italic",
           fontFamily: "Georgia, serif",
@@ -110,7 +111,7 @@ export function InfoTooltip(props: InfoTooltipProps) {
               borderRadius: 10,
               padding: "9px 12px",
               fontSize: 13,
-              color: "#3a3830",
+              color: "#1e1c18",
               lineHeight: 1.55,
             }}>
               <span style={{ fontWeight: 700 }}>Exempel: </span>

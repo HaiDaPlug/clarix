@@ -368,8 +368,10 @@ export function hasSufficientData(
       return (data.trafficOverview?.totalSessions?.value ?? 0) > 0;
 
     case "slide_insight":
-      // Needs a previous period to compare — otherwise there's nothing to analyse
-      return (data.trafficOverview?.totalSessions?.previousValue ?? 0) > 0;
+      // Current traffic is enough — AI can summarize even without a prior period.
+      // All-time ranges have no previousValue but still have meaningful current data.
+      return (data.trafficOverview?.totalSessions?.value ?? 0) > 0 ||
+        (data.trafficOverview?.channelBreakdown ?? []).length > 0;
 
     case "slide_recs":
       return forSurface.some(

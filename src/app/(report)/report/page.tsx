@@ -49,13 +49,9 @@ import { deriveInsights } from "@/lib/engine/derive-insights";
 import { deriveSlideHeadline } from "@/lib/engine/slide-headlines";
 import {
   AI_INSIGHTS_FALLBACK_TEXT,
-  AiInsightsPayloadSchema,
   type AiInsightsPayload,
 } from "@/lib/ai-insights/types";
-import {
-  hashAiInsightMetrics,
-  isFreshAiInsightsCache,
-} from "@/lib/ai-insights/cache";
+import { useAiInsights } from "@/lib/hooks/useAiInsights";
 import type { ReportData } from "@/types/schema";
 
 /* ─── Design tokens ──────────────────────────────────────────────────────── */
@@ -217,6 +213,13 @@ const neg = (s: string) => (
     {s}
   </span>
 );
+// Direction-aware span: positive delta → green, negative → red, null → neutral
+const trendSpan = (delta: number | null, formatted: string | null) => {
+  if (formatted === null || delta === null) return formatted ?? "—";
+  if (delta > 0) return pos(formatted);
+  if (delta < 0) return neg(formatted);
+  return <span className="font-semibold">{formatted}</span>;
+};
 
 /* ─── Slide data shape (driven by real data where available) ─────────────── */
 
@@ -328,7 +331,7 @@ function buildSlideData(reportData: ReportData | null): SlideData {
     "Ej tilldelad": UNKNOWN, "ej tilldelad": UNKNOWN,
   };
 
-  const topChannels = rawChannels.slice(0, 6).map((c, i) => {
+  const topChannels = rawChannels.map((c, i) => {
     const prev = c.previousSessions ?? 0;
     const curr = c.sessions ?? 0;
     const delta = prev > 0 ? Math.round(((curr - prev) / prev) * 100) : null;
@@ -396,14 +399,7 @@ function SlideHero({
 }) {
   const hasData = d.trafficDelta !== null;
   const isPos = (d.trafficDelta ?? 0) > 0;
-  const isNeg = (d.trafficDelta ?? 0) < 0;
   const aiHero = aiInsights?.slide_hero;
-
-  const pillColor = !hasData
-    ? { color: "oklch(0.55 0.01 270)", bg: "oklch(0.94 0.005 270)" }
-    : isPos
-    ? { color: TREND_POS, bg: TREND_POS_BG }
-    : { color: TREND_NEG, bg: TREND_NEG_BG };
 
   return (
     <div className="flex h-full flex-col justify-between py-12">
@@ -418,7 +414,7 @@ function SlideHero({
           ) : (
             <>
               Trafiken under perioden har {isPos ? "gått upp" : "gått ner"}{" "}
-              <span className="font-bold tabular-nums" style={{ color: pillColor.color }}>
+              <span className="font-bold tabular-nums" style={{ color: isPos ? TREND_POS : TREND_NEG }}>
                 {sign(d.trafficDelta)!}
               </span>{" "}
               under perioden.
@@ -467,7 +463,7 @@ function SlideHero({
             </p>
             <p>
               Google var din starkaste trafikkälla och växte mest (
-              {d.trafficDelta != null ? pos(sign(d.trafficDelta)!) : "—"}). Samtidigt tappade kontaktsidan trafik,
+              {trendSpan(d.trafficDelta, sign(d.trafficDelta))}). Samtidigt tappade kontaktsidan trafik,
               vilket är viktigt eftersom leads ofta kommer därifrån.
             </p>
           </>
@@ -536,15 +532,22 @@ function SlideKpis({ d }: { d: SlideData }) {
   );
 }
 
+function formatDuration(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = Math.round(seconds % 60);
+  if (m === 0) return `${s}s`;
+  return `${m} min ${s.toString().padStart(2, "0")} s`;
+}
+
 function SlideTrend({ d }: { d: SlideData }) {
-  const blue = "oklch(0.62 0.16 245)";
+  const accent = "#FF6B55";
 
   // Top 3 channels by visit count + engagement metrics
   const topThree = d.topChannels.slice(0, 3);
   const rightStats: { label: string; value: string; delta?: number | null }[] = [
     ...topThree.map((c) => ({ label: c.name, value: c.visits.toLocaleString("sv-SE"), delta: c.delta })),
     ...(d.bounceRate != null ? [{ label: "Avvisningsfrekvens", value: `${d.bounceRate.toFixed(1)}%` }] : []),
-    ...(d.avgDuration != null ? [{ label: "Genomsn. besökstid", value: `${Math.round(d.avgDuration)}s` }] : []),
+    ...(d.avgDuration != null ? [{ label: "Genomsn. besökstid", value: formatDuration(d.avgDuration) }] : []),
   ];
 
   return (
@@ -575,9 +578,9 @@ function SlideTrend({ d }: { d: SlideData }) {
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={d.timeSeries} margin={{ top: 4, right: 4, left: -8, bottom: 0 }}>
                 <defs>
-                  <linearGradient id="r2-t-blue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={blue} stopOpacity={0.14} />
-                    <stop offset="100%" stopColor={blue} stopOpacity={0} />
+                  <linearGradient id="r2-t-accent" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={accent} stopOpacity={0.18} />
+                    <stop offset="100%" stopColor={accent} stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
@@ -586,6 +589,7 @@ function SlideTrend({ d }: { d: SlideData }) {
                   tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
                   tickLine={false}
                   axisLine={false}
+                  interval={Math.max(0, Math.floor(d.timeSeries.length / 7) - 1)}
                   tickFormatter={(v) => {
                     const d = new Date(v);
                     if (isNaN(d.getTime())) return v;
@@ -602,23 +606,32 @@ function SlideTrend({ d }: { d: SlideData }) {
                     return d.toLocaleDateString("sv-SE", { weekday: "short", month: "short", day: "numeric" });
                   }}
                 />
-                <Area type="monotone" dataKey="sessions" stroke={blue} strokeWidth={2} fill="url(#r2-t-blue)" dot={false} activeDot={{ r: 4, fill: blue, strokeWidth: 0 }} />
+                <Area type="monotone" dataKey="sessions" stroke={accent} strokeWidth={2.5} fill="url(#r2-t-accent)" dot={false} activeDot={{ r: 4, fill: accent, strokeWidth: 0 }} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
 
-          {/* Kanalfördelning baked into chart card footer */}
+          {/* Channel share footer — real readout, not tiny metadata */}
           {d.topChannels.length > 0 && (
             <div className="mt-4 pt-4 border-t border-border/50 shrink-0">
-              <div className="flex gap-5">
-                {d.topChannels.slice(0, 5).map((ch) => (
+              <div className="flex gap-4">
+                {d.topChannels.slice(0, 5).map((ch, i) => (
                   <div key={ch.name} className="flex-1 min-w-0">
-                    <div className="flex items-baseline justify-between gap-1 mb-1.5">
-                      <span className="truncate text-[13px] text-foreground">{ch.name}</span>
-                      <span className="shrink-0 text-[14px] font-bold tabular-nums">{ch.pct}%</span>
+                    <div className="flex items-baseline justify-between gap-1 mb-2">
+                      <span className={`truncate ${i === 0 ? "text-[14px] font-semibold" : "text-[13px] text-foreground"}`}>{ch.name}</span>
+                      <span className={`shrink-0 tabular-nums ${i === 0 ? "text-[16px] font-bold" : "text-[14px] font-semibold"}`}>{ch.pct}%</span>
                     </div>
-                    <div className="h-[4px] rounded-full bg-border/50 overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width: `${ch.pct}%`, background: blue }} />
+                    <div className={`rounded-full bg-border/40 overflow-hidden ${i === 0 ? "h-[6px]" : "h-[4px]"}`}>
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${ch.pct}%`,
+                          background: i === 0
+                            ? "linear-gradient(90deg, #FF4D9E 0%, #FF6B55 50%, #FFB830 100%)"
+                            : "linear-gradient(90deg, #FF6B55 0%, #FFB830 100%)",
+                          opacity: i === 0 ? 1 : 0.65,
+                        }}
+                      />
                     </div>
                   </div>
                 ))}
@@ -664,19 +677,24 @@ function SlideChannels({ d }: { d: SlideData }) {
         </SlideHeading>
       </div>
       <div className="grid grid-cols-2 gap-3">
-        {d.topChannels.map((c) => {
+        {d.topChannels.map((c, i) => {
           const Icon = c.icon;
+          const isLastOdd = d.topChannels.length % 2 !== 0 && i === d.topChannels.length - 1;
           return (
             <div
               key={c.name}
               className={`relative flex flex-col rounded-2xl border bg-background/90 p-5 shadow-[0_2px_4px_rgba(15,23,42,0.03),0_14px_36px_-22px_rgba(15,23,42,0.18)] ${
                 c.featured ? "border-foreground/15 ring-1 ring-foreground/5" : "border-border"
-              }`}
+              } ${isLastOdd ? "col-span-2" : ""}`}
             >
               <div className="flex items-center gap-3">
                 <div
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white"
-                  style={{ background: "linear-gradient(135deg, #FF4D9E 0%, #FF6B55 50%, #FFB830 100%)" }}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+                  style={{
+                    background: "oklch(0.97 0.012 30)",
+                    border: "1px solid oklch(0.90 0.02 30)",
+                    color: "oklch(0.48 0.10 30)",
+                  }}
                 >
                   <Icon className="h-4 w-4" />
                 </div>
@@ -1291,7 +1309,7 @@ export default function ReportPage() {
 
 function ReportPageInner() {
   const [reportData, setReportData] = useState<ReportData | null>(null);
-  const [aiInsights, setAiInsights] = useState<AiInsightsPayload | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [noSources, setNoSources] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -1304,6 +1322,15 @@ function ReportPageInner() {
   const dateRange = useDateRange();
   const router = useRouter();
 
+  const periodLabel = reportData?.meta?.period?.label ?? "Senaste perioden";
+  const { insights: aiInsights } = useAiInsights(
+    reportData,
+    userId,
+    dateRange.startDate,
+    dateRange.endDate,
+    periodLabel,
+  );
+
   useEffect(() => {
     let cancelled = false;
 
@@ -1311,7 +1338,6 @@ function ReportPageInner() {
       setLoading(true);
       setNoSources(false);
       setReportData(null);
-      setAiInsights(null);
 
       const supabase = createClient();
       const { data, error } = await supabase
@@ -1368,27 +1394,10 @@ function ReportPageInner() {
         : { ...base, meta: { ...base.meta, availableSources: connectedIds } };
       if (!merged.executiveSummary) merged.executiveSummary = deriveExecutiveSummary(merged, "sv");
 
-      const metricsHash = hashAiInsightMetrics(merged);
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      let cached: { insights: unknown; metrics_hash: string; generated_at: string } | null = null;
-
-      if (user) {
-        const { data } = await supabase
-          .from("ai_report_cache")
-          .select("insights, metrics_hash, generated_at")
-          .eq("user_id", user.id)
-          .eq("period_start", dateRange.startDate)
-          .eq("period_end", dateRange.endDate)
-          .maybeSingle();
-        cached = data;
-      }
-
-      if (!cancelled && isFreshAiInsightsCache(cached, metricsHash)) {
-        const parsed = AiInsightsPayloadSchema.safeParse(cached?.insights);
-        setAiInsights(parsed.success ? parsed.data : null);
-      }
+      if (!cancelled && user) setUserId(user.id);
 
       setReportData(merged);
       setLoading(false);

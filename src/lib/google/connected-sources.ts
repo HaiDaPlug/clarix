@@ -20,17 +20,29 @@ export type GooglePropertiesResponse = {
   };
 };
 
+/** Returns yesterday as a Date — the last fully-completed reporting day. */
+export function lastCompletedDay(today = new Date()): Date {
+  const d = new Date(today);
+  d.setDate(d.getDate() - 1);
+  return d;
+}
+
 export function currentCalendarMonthRange(today = new Date()): {
   startDate: string;
   endDate: string;
 } {
   const year = today.getFullYear();
   const month = today.getMonth();
-  const lastOfMonth = new Date(year, month + 1, 0);
+  const firstOfMonth = new Date(year, month, 1);
+  const yesterday = lastCompletedDay(today);
+
+  // If today is the 1st, yesterday falls in the previous month.
+  // Return a single-day range on yesterday rather than a backwards range.
+  const startDate = yesterday < firstOfMonth ? yesterday : firstOfMonth;
 
   return {
-    startDate: toLocalIsoDate(new Date(year, month, 1)),
-    endDate: toLocalIsoDate(lastOfMonth < today ? lastOfMonth : today),
+    startDate: toLocalIsoDate(startDate),
+    endDate: toLocalIsoDate(yesterday),
   };
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { currentCalendarMonthRange } from "./connected-sources";
+import { currentCalendarMonthRange, lastCompletedDay } from "./connected-sources";
 import { isIsoDate } from "./date-range";
 
 export type DatePresetId = "this-month" | "all-time";
@@ -28,15 +28,12 @@ export function presetToRange(
   id: DatePresetId,
   today = new Date(),
 ): { startDate: string; endDate: string } {
-  const y = today.getFullYear();
-  const mo = today.getMonth();
-
   switch (id) {
     case "this-month":
       return currentCalendarMonthRange(today);
 
     case "all-time":
-      return { startDate: "2020-01-01", endDate: toIso(today) };
+      return { startDate: "2020-01-01", endDate: toIso(lastCompletedDay(today)) };
   }
 }
 
@@ -45,8 +42,13 @@ export function rangeFromSearchParams(
 ): { startDate: string; endDate: string } {
   const from = params.get("from") ?? "";
   const to = params.get("to") ?? "";
+  const yesterday = toIso(lastCompletedDay());
   if (isIsoDate(from) && isIsoDate(to) && from <= to) {
-    return { startDate: from, endDate: to };
+    // Clamp endDate to yesterday so partial-day data is excluded
+    const clampedTo = to > yesterday ? yesterday : to;
+    if (from <= clampedTo) {
+      return { startDate: from, endDate: clampedTo };
+    }
   }
   return currentCalendarMonthRange();
 }
@@ -55,21 +57,16 @@ export function labelFromSearchParams(
   params: URLSearchParams,
   locale: string,
 ): string {
-  const from = params.get("from") ?? "";
-  const to = params.get("to") ?? "";
-  if (!isIsoDate(from) || !isIsoDate(to)) {
-    return locale === "sv" ? "Denna månad" : "This month";
-  }
-  // Try to match a preset
+  // Use the clamped effective range so the label always matches what the data fetches.
+  const { startDate, endDate } = rangeFromSearchParams(params);
   const today = new Date();
   for (const preset of DATE_PRESETS) {
     const r = presetToRange(preset.id, today);
-    if (r.startDate === from && r.endDate === to) {
+    if (r.startDate === startDate && r.endDate === endDate) {
       return locale === "sv" ? preset.labelSv : preset.labelEn;
     }
   }
-  // Custom range — show dates
-  return `${from} – ${to}`;
+  return `${startDate} – ${endDate}`;
 }
 
 export function useDateRange(): { startDate: string; endDate: string } {

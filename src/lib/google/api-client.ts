@@ -29,33 +29,45 @@ export class GoogleApiError extends Error {
   }
 }
 
+const EMPTY_GA4_RESPONSE: Ga4RunReportResponse = {};
+
+/** Fetch one optional GA4 sub-report; return an empty response on any error
+ *  so a single failing dimension request doesn't kill the whole report set. */
+async function fetchGa4Optional(
+  endpoint: string,
+  accessToken: string,
+  body: unknown,
+): Promise<Ga4RunReportResponse> {
+  try {
+    return await postGoogleJson<Ga4RunReportResponse>(endpoint, accessToken, body);
+  } catch (err) {
+    // Re-throw auth errors — those mean the whole token is dead.
+    if (err instanceof GoogleApiError && (err.status === 401 || err.status === 403)) {
+      throw err;
+    }
+    return EMPTY_GA4_RESPONSE;
+  }
+}
+
 export async function fetchGa4ReportSet(params: {
   accessToken: string;
   propertyId: string;
   dateRange: DateRange;
 }): Promise<Ga4ResponseSet> {
   const endpoint = ga4Endpoint(params.propertyId);
+
+  // summary is required — let it throw if it fails.
+  // channels, timeSeries, and topPages are optional: a failure returns an empty
+  // response so the report still shows core session/bounce metrics.
   const [summary, channels, timeSeries, topPages] = await Promise.all([
     postGoogleJson<Ga4RunReportResponse>(
       endpoint,
       params.accessToken,
       buildGa4SummaryRequest(params.dateRange),
     ),
-    postGoogleJson<Ga4RunReportResponse>(
-      endpoint,
-      params.accessToken,
-      buildGa4ChannelRequest(params.dateRange),
-    ),
-    postGoogleJson<Ga4RunReportResponse>(
-      endpoint,
-      params.accessToken,
-      buildGa4TimeSeriesRequest(params.dateRange),
-    ),
-    postGoogleJson<Ga4RunReportResponse>(
-      endpoint,
-      params.accessToken,
-      buildGa4TopPagesRequest(params.dateRange),
-    ),
+    fetchGa4Optional(endpoint, params.accessToken, buildGa4ChannelRequest(params.dateRange)),
+    fetchGa4Optional(endpoint, params.accessToken, buildGa4TimeSeriesRequest(params.dateRange)),
+    fetchGa4Optional(endpoint, params.accessToken, buildGa4TopPagesRequest(params.dateRange)),
   ]);
 
   return { summary, channels, timeSeries, topPages };

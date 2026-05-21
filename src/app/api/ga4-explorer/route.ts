@@ -72,6 +72,9 @@ export async function POST(request: Request) {
 
     const endpoint = ga4Endpoint(propertyId);
 
+    // summary + priorSummary are required — let them throw on failure.
+    // All dimension breakdowns are optional: a quota/size error on a long range
+    // returns empty rows rather than killing the entire explorer response.
     const [
       summary, priorSummary,
       devices, priorDevices,
@@ -83,18 +86,18 @@ export async function POST(request: Request) {
     ] = await Promise.all([
       ga4Report(endpoint, accessToken, summaryRequest(dateRange)),
       ga4Report(endpoint, accessToken, summaryRequest(priorRange)),
-      ga4Report(endpoint, accessToken, dimensionRequest(dateRange, "deviceCategory", "sessions")),
-      ga4Report(endpoint, accessToken, dimensionRequest(priorRange, "deviceCategory", "sessions")),
-      ga4Report(endpoint, accessToken, dimensionRequest(dateRange, "country", "sessions", 10)),
-      ga4Report(endpoint, accessToken, dimensionRequest(priorRange, "country", "sessions", 10)),
-      ga4Report(endpoint, accessToken, dimensionRequest(dateRange, "sessionDefaultChannelGroup", "sessions")),
-      ga4Report(endpoint, accessToken, dimensionRequest(priorRange, "sessionDefaultChannelGroup", "sessions")),
-      ga4Report(endpoint, accessToken, dimensionRequest(dateRange, "landingPage", "sessions", 10)),
-      ga4Report(endpoint, accessToken, dimensionRequest(priorRange, "landingPage", "sessions", 10)),
-      ga4Report(endpoint, accessToken, dimensionRequest(dateRange, "eventName", "eventCount", 15)),
-      ga4Report(endpoint, accessToken, dimensionRequest(priorRange, "eventName", "eventCount", 15)),
-      ga4Report(endpoint, accessToken, topPagesRequest(dateRange)),
-      ga4Report(endpoint, accessToken, topPagesRequest(priorRange)),
+      ga4ReportOptional(endpoint, accessToken, dimensionRequest(dateRange, "deviceCategory", "sessions")),
+      ga4ReportOptional(endpoint, accessToken, dimensionRequest(priorRange, "deviceCategory", "sessions")),
+      ga4ReportOptional(endpoint, accessToken, dimensionRequest(dateRange, "country", "sessions", 10)),
+      ga4ReportOptional(endpoint, accessToken, dimensionRequest(priorRange, "country", "sessions", 10)),
+      ga4ReportOptional(endpoint, accessToken, dimensionRequest(dateRange, "sessionDefaultChannelGroup", "sessions")),
+      ga4ReportOptional(endpoint, accessToken, dimensionRequest(priorRange, "sessionDefaultChannelGroup", "sessions")),
+      ga4ReportOptional(endpoint, accessToken, dimensionRequest(dateRange, "landingPage", "sessions", 10)),
+      ga4ReportOptional(endpoint, accessToken, dimensionRequest(priorRange, "landingPage", "sessions", 10)),
+      ga4ReportOptional(endpoint, accessToken, dimensionRequest(dateRange, "eventName", "eventCount", 15)),
+      ga4ReportOptional(endpoint, accessToken, dimensionRequest(priorRange, "eventName", "eventCount", 15)),
+      ga4ReportOptional(endpoint, accessToken, topPagesRequest(dateRange)),
+      ga4ReportOptional(endpoint, accessToken, topPagesRequest(priorRange)),
     ]);
 
     const row0 = ga4Rows(summary)[0];
@@ -185,6 +188,19 @@ async function ga4Report(endpoint: string, accessToken: string, body: unknown): 
     throw new GoogleApiError(`GA4 ${res.status}`, res.status, text);
   }
   return res.json();
+}
+
+const EMPTY_RESPONSE: Ga4RunReportResponse = {};
+
+/** Optional variant — returns empty response on non-auth errors so one failing
+ *  dimension request (e.g. quota on a long date range) doesn't kill the explorer. */
+async function ga4ReportOptional(endpoint: string, accessToken: string, body: unknown): Promise<Ga4RunReportResponse> {
+  try {
+    return await ga4Report(endpoint, accessToken, body);
+  } catch (err) {
+    if (err instanceof GoogleApiError && (err.status === 401 || err.status === 403)) throw err;
+    return EMPTY_RESPONSE;
+  }
 }
 
 type Ga4Row = NonNullable<Ga4RunReportResponse["rows"]>[number];

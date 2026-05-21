@@ -6,21 +6,42 @@
 
 ### Done this session
 
-- **Slide 3 duration** — `avgSessionDuration` is now rendered as a guaranteed last item in the right column, always visible regardless of how many channel rows precede it. Uses a scoped `formatDuration()` (`m:ss`) — the global `formatNumber` for `seconds` was intentionally left as `"Ns"` to avoid wrong abstraction.
-- **Slide 3 channel dots** — each channel row (organic, paid, direct, referral) gets a soft colored dot on the left keyed to the channel type. Non-channel metrics have no dot.
-- **Dashboard channel breakdown** — soft coral/warm palette: coral → amber-coral → blush → terracotta → sand → sage. Replaces the vivid primary colors.
-- **KPI card source badges** — each dashboard KPI card shows a small logo chip (GA4 / GSC / Ads) top-right, so the data source is immediately clear.
-- **Property indicator** — sidebar shows a coral-dot chip with the connected GA4 `display_name` below the brand name. Dashboard shows "Välkommen, **[property]**" as a standalone line above the hero card.
-- **Connect modal UX** — property list has fixed `max-h-56` with scroll. Per-row pending state: only the clicked row turns dark + shows a spinner. All others dim. "Ansluter" label appears inline under that row only.
-- **InfoTooltip** — BorderBeam animation removed, scale transform removed from trigger icon, example box background darkened (`oklch 0.90`).
-- **Build fixes** — all three pages using `useSearchParams` (`/dashboard`, `/data`, `/report`) wrapped in `<Suspense>` shells to fix Vercel static prerender failures.
+**Trust + calm report polish pass**
+- **Date ranges end on yesterday** — `lastCompletedDay()` helper added to `connected-sources.ts`. All presets (`this-month`, `all-time`) and `rangeFromSearchParams` clamp `endDate` to yesterday. Partial-day data no longer creates FOMO dips at the end of charts. `labelFromSearchParams` uses the clamped range so the label always matches the data fetched.
+- **`currentCalendarMonthRange` cleaned up** — removed the redundant `endDate = yesterday < firstOfMonth ? yesterday : yesterday` tautology. Logic is now clear and handles the 1st-of-month edge case correctly.
+- **Negative percentage now renders red** — `trendSpan(delta, formatted)` helper added. `pos(sign(trafficDelta))` replaced with direction-aware color in the hero slide narrative and AISummary fallback copy.
+- **AI insights wired into report page** — `ReportPageInner` now uses `useAiInsights` hook (same as dashboard) instead of cache-only read. `userId` stored in state, passed to hook. Removed manual `hashAiInsightMetrics` / `isFreshAiInsightsCache` / `AiInsightsPayloadSchema` imports. Report now calls `/api/generate-insights` when cache is cold.
+- **`slide_insight` sufficiency gate relaxed** — now passes when `currentSessions > 0 || channels.length > 0`. Previously required `previousValue > 0`, which blocked all-time ranges from getting AI copy. `AI_INSIGHTS_PROMPT_VERSION` bumped to `ai-insights-v3` to invalidate stale null caches.
+- **Slide 3 visual hierarchy** — sparkline changed from blue to Clarix accent (`#FF6B55`). Channel footer bars use Clarix gradient; top channel bar is taller (`h-[6px]`) and bolder. Duration formatted as `m min ss s` (was raw `Ns`) via scoped `formatDuration()`. `format.ts` global `seconds` format intentionally unchanged.
+- **Slide 4 channel icon chips softened** — replaced saturated full Clarix gradient with light coral-tinted neutral (`oklch(0.97 0.012 30)` bg, subtle border, muted coral icon). Cards and delta badges unchanged.
+- **InfoTooltip quieter** — trigger icon changed from deep purple to light grey/bone with subtle border and charcoal `i`. Example box text darkened to `#1e1c18`.
+- **All traffic channels now shown** — removed `slice(0, 6)` cap on `topChannels` in `buildSlideData`. GA4 returns all channel groups; all now appear in slide 4.
+- **Odd-channel grid layout fixed** — last card in slide 4 gets `col-span-2` when the channel count is odd, so 3 or 5 channels never leaves an orphaned empty cell.
+- **X-axis tick density fixed** — interval set to `Math.max(0, Math.floor(dataLength / 7) - 1)` so slide 3 always shows ~7 evenly-spaced date labels regardless of range length. Eliminates the appearance of "missing" days.
 
-### Still open / to bounce
+**GA4 resilience**
+- **Main GA4 route resilient** (`api-client.ts`) — `fetchGa4Optional()` wrapper added. `summary` still required (throws on failure). `channels`, `timeSeries`, `topPages` use optional path: non-auth errors return `{}` instead of killing the whole report. Auth errors (401/403) still propagate.
+- **GA4 Explorer resilient** (`ga4-explorer/route.ts`) — same pattern. `summary` + `priorSummary` required. All 12 dimension breakdown requests use `ga4ReportOptional()`. Long date ranges ("Sen start") no longer blank out the explorer when one dimension quota fails.
 
-- **Slide 3 — core idea ownership.** The duration and colors are fixed, but the original complaint ("nothing demands attention") is not fully resolved. The layout has a large sessions number + chart on the left and a list on the right — this may need a stronger visual hierarchy decision, not just cosmetic polish. To be bounced.
-- **Slide 4 (KPI Snapshot) — competing attention.** Complaint is too much vying for attention. Decision: badges stay (red/green) but something else is causing the crowding. To be bounced — need to look at it together.
-- **Custom GA4 channel groups not appearing.** The mapper uses `sessionDefaultChannelGroup` (Google's hardcoded grouping). Custom channel groups are a separate GA4 dimension. Needs investigation before implementation.
+**Date label integrity**
+- `labelFromSearchParams` now delegates to `rangeFromSearchParams` for its effective range before matching presets, so the displayed label is always consistent with the data actually fetched.
+
+### Next priorities
+
+1. **AI insights quality** — generated copy needs to actually say something. Prompt tuning: more specific, more Swedish, more advisor-voice. Add real client dataset test. Review each surface's output against the "so what?" bar.
+2. **LLM copy into more surfaces** — currently only hero, insight, recs, recap. Boring cards (KPI snapshot, pages) could have a one-line AI commentary. Define which cards benefit and wire them up.
+3. **AI insights card colors** — the gradient cards that hold AI copy (hero, strategic insight, recommendations) are all the same Clarix gradient. Needs visual differentiation or a calmer treatment for the "thinking" surfaces vs the "summary" surfaces.
+4. **Dashboard text fine-tuning** — hero copy, KPI labels, and period labels need a Swedish copy pass. Some labels are technical (e.g. "Avvisningsfrekvens" may need a softer framing for SME owners).
+5. **Property picker on dashboard** — currently the property name shows as a static label. Should be interactive: click to switch between connected GA4 properties without going to Integrations.
+6. **UI / visual bugs** — slide-by-slide review needed. Known: slide 3 right column can overflow if many channels + bounce + duration; slide 4 "featured" border treatment needs re-evaluation now that icon chips are softer.
+7. **Date range debugging** — the "yesterday" clamp is in place but needs end-to-end verification with real data across timezones. Edge: user in UTC+2 at midnight will compute a different "yesterday" than the GA4 API (which uses property timezone). Needs a dedicated investigation pass.
+
+### Still open / deferred
+
+- **Slide 3 — core idea ownership.** Duration and colors fixed, but original "nothing demands attention" complaint is not fully resolved. Layout decision deferred.
+- **Custom GA4 channel groups not appearing.** Mapper uses `sessionDefaultChannelGroup` (Google hardcoded). Custom groups are a separate dimension. Needs investigation.
 - **KPI quiz / onboarding** — deferred. Design the quiz flow first. No code until then.
+- **Cold report** — user opening `/report` before dashboard gets deterministic fallbacks. Future: cron pre-warm or on-demand generate button.
 
 ---
 
