@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import {
@@ -1282,6 +1282,14 @@ function SlideCard({ slide, scale, innerRef }: {
 }
 
 export default function ReportPage() {
+  return (
+    <Suspense>
+      <ReportPageInner />
+    </Suspense>
+  );
+}
+
+function ReportPageInner() {
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [aiInsights, setAiInsights] = useState<AiInsightsPayload | null>(null);
   const [loading, setLoading] = useState(true);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import { motion } from "motion/react";
 import { createClient } from "@/utils/supabase/client";
 import { useDateRange } from "@/lib/google/date-presets";
@@ -424,6 +424,14 @@ function getCardData(def: CardDef, data: Ga4ExplorerData): CardData {
 }
 
 export default function DataPage() {
+  return (
+    <Suspense>
+      <DataPageInner />
+    </Suspense>
+  );
+}
+
+function DataPageInner() {
   const { locale } = useLocale();
   const dateRange = useDateRange();
   const [explorerData, setExplorerData] = useState<Ga4ExplorerData | null>(null);
