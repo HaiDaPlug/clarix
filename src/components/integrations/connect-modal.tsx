@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { Check, Loader2, Lock, ShieldCheck, X } from "lucide-react";
 import type {
   ConnectableSource,
@@ -100,7 +100,7 @@ export function ConnectModal({
   connectedSource,
   options,
   loadingProperties,
-  pendingSource,
+  pendingOptionId,
   copy,
   onClose,
   onConnect,
@@ -110,14 +110,14 @@ export function ConnectModal({
   connectedSource: ConnectedSource | undefined;
   options: PropertyOption[];
   loadingProperties: boolean;
-  pendingSource: ConnectableSource | null;
+  pendingOptionId: string | null;
   copy: ConnectModalCopy;
   onClose: () => void;
   onConnect: (option: PropertyOption) => void;
   onDisconnect: () => void;
 }) {
   const isConnected = Boolean(connectedSource);
-  const isPending = pendingSource !== null;
+  const isPending = pendingOptionId !== null;
 
   return (
     <motion.div
@@ -203,7 +203,7 @@ export function ConnectModal({
             <ConnectState
               options={options}
               loadingProperties={loadingProperties}
-              isPending={isPending}
+              pendingOptionId={pendingOptionId}
               copy={copy}
               onClose={onClose}
               onConnect={onConnect}
@@ -314,18 +314,20 @@ function ConnectedState({
 function ConnectState({
   options,
   loadingProperties,
-  isPending,
+  pendingOptionId,
   copy,
   onClose,
   onConnect,
 }: {
   options: PropertyOption[];
   loadingProperties: boolean;
-  isPending: boolean;
+  pendingOptionId: string | null;
   copy: ConnectModalCopy;
   onClose: () => void;
   onConnect: (option: PropertyOption) => void;
 }) {
+  const anyPending = pendingOptionId !== null;
+
   return (
     <div>
       <h2
@@ -344,59 +346,168 @@ function ConnectState({
         {loadingProperties ? copy.loadingProperties : copy.choose}
       </p>
 
-      {loadingProperties && (
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--slate-light)" }} />
-        </div>
-      )}
-
-      {!loadingProperties && options.length === 0 && (
-        <div
-          className="rounded-xl p-4"
-          style={{ backgroundColor: "var(--bone)", border: "1px solid var(--rule)" }}
-        >
-          <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--charcoal)", marginBottom: "6px" }}>
-            Inga egendomar hittades
-          </p>
-          <p style={{ fontSize: "13px", color: "var(--slate)", lineHeight: "1.5" }}>
-            Kontot du loggade in med har ingen GA4-egendom kopplad. Du behöver logga in med Google-kontot som äger din GA4-egendom.
-          </p>
-          <p style={{ fontSize: "12px", color: "var(--slate-light)", lineHeight: "1.5", marginTop: "6px" }}>
-            Du loggas ut från ditt nuvarande konto och kan sedan välja ett annat Google-konto.
-          </p>
-          <a
-            href="/login"
-            className="inline-block mt-3 rounded-full px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-80"
-            style={{ backgroundColor: "var(--charcoal)", color: "var(--parchment)" }}
+      {/* Loading state */}
+      <AnimatePresence mode="wait">
+        {loadingProperties && (
+          <motion.div
+            key="loading"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="flex flex-col items-center justify-center gap-3 py-10"
           >
-            Logga in med annat konto
-          </a>
-        </div>
-      )}
-
-      {!loadingProperties && options.length > 0 && (
-        <div className="flex flex-col gap-2 mb-4">
-          {options.map((option) => (
-            <button
-              key={option.id}
-              onClick={() => onConnect(option)}
-              disabled={isPending}
-              className="w-full text-left rounded-xl px-3.5 py-3 transition-colors disabled:opacity-50"
-              style={{ backgroundColor: "var(--bone)", border: "1px solid var(--rule)", color: "var(--charcoal)" }}
+            <div
+              style={{
+                width: 40, height: 40, borderRadius: "50%",
+                background: "var(--bone)",
+                border: "1px solid var(--rule)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}
             >
-              <span style={{ display: "block", fontSize: "13px", fontWeight: 600 }}>
-                {isPending ? copy.connecting : option.displayName}
-              </span>
-              <span style={{ display: "block", fontSize: "11px", color: "var(--slate)" }}>
-                {option.id}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
+              <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--slate)" }} />
+            </div>
+            <p style={{ fontSize: "13px", color: "var(--slate-light)" }}>
+              {copy.loadingProperties}
+            </p>
+          </motion.div>
+        )}
+
+        {/* Empty state */}
+        {!loadingProperties && options.length === 0 && (
+          <motion.div
+            key="empty"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.22 }}
+            className="rounded-2xl p-5 mb-4"
+            style={{ backgroundColor: "var(--bone)", border: "1px solid var(--rule)" }}
+          >
+            <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--charcoal)", marginBottom: "6px" }}>
+              Inga egendomar hittades
+            </p>
+            <p style={{ fontSize: "13px", color: "var(--slate)", lineHeight: "1.5" }}>
+              Kontot du loggade in med har ingen GA4-egendom kopplad. Logga in med Google-kontot som äger egendomen.
+            </p>
+            <a
+              href="/login"
+              className="inline-flex items-center gap-1.5 mt-4 rounded-full px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-80"
+              style={{ backgroundColor: "var(--charcoal)", color: "var(--parchment)" }}
+            >
+              Logga in med annat konto
+            </a>
+          </motion.div>
+        )}
+
+        {/* Property list */}
+        {!loadingProperties && options.length > 0 && (
+          <motion.div
+            key="list"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.22 }}
+            className="flex flex-col gap-2 mb-4 overflow-y-auto pr-0.5"
+            style={{ maxHeight: "224px" }}
+          >
+            {options.map((option, i) => {
+              const isThisPending = pendingOptionId === option.id;
+              const isDimmed = anyPending && !isThisPending;
+              return (
+                <motion.button
+                  key={option.id}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2, delay: i * 0.04 }}
+                  onClick={() => onConnect(option)}
+                  disabled={anyPending}
+                  className="w-full text-left rounded-2xl px-4 py-3.5 transition-all group"
+                  style={{
+                    backgroundColor: isThisPending ? "var(--charcoal)" : "var(--bone)",
+                    border: isThisPending
+                      ? "1px solid var(--charcoal)"
+                      : "1px solid var(--rule)",
+                    opacity: isDimmed ? 0.4 : 1,
+                    cursor: anyPending ? "default" : "pointer",
+                  }}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <span
+                        style={{
+                          display: "block",
+                          fontSize: "13px",
+                          fontWeight: 600,
+                          color: isThisPending ? "var(--parchment)" : "var(--charcoal)",
+                          lineHeight: 1.3,
+                        }}
+                      >
+                        {option.displayName}
+                      </span>
+                      <span
+                        style={{
+                          display: "block",
+                          fontSize: "11px",
+                          color: isThisPending ? "rgba(255,255,255,0.55)" : "var(--slate-light)",
+                          marginTop: "2px",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {option.id}
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        background: isThisPending
+                          ? "rgba(255,255,255,0.15)"
+                          : "var(--parchment)",
+                        border: isThisPending ? "none" : "1px solid var(--rule)",
+                        transition: "background 0.2s ease",
+                      }}
+                    >
+                      {isThisPending ? (
+                        <Loader2
+                          className="h-3.5 w-3.5 animate-spin"
+                          style={{ color: "var(--parchment)" }}
+                        />
+                      ) : (
+                        <span
+                          style={{
+                            fontSize: "10px", fontWeight: 700,
+                            color: "var(--slate)",
+                            fontFamily: "var(--font-display)",
+                          }}
+                        >
+                          →
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {isThisPending && (
+                    <p
+                      style={{
+                        fontSize: "11px",
+                        color: "rgba(255,255,255,0.6)",
+                        marginTop: "6px",
+                      }}
+                    >
+                      {copy.connecting}
+                    </p>
+                  )}
+                </motion.button>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div
-        className="flex items-start gap-2 rounded-xl px-3 py-2.5"
+        className="flex items-start gap-2 rounded-xl px-3 py-2.5 mt-1"
         style={{ backgroundColor: "var(--bone)", border: "1px solid var(--rule)" }}
       >
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" style={{ color: "var(--signal-up)" }} />
@@ -409,7 +520,8 @@ function ConnectState({
       <div className="flex justify-end mt-4">
         <button
           onClick={onClose}
-          className="rounded-full px-4 py-2 text-sm font-medium transition-colors"
+          disabled={anyPending}
+          className="rounded-full px-4 py-2 text-sm font-medium transition-all disabled:opacity-40"
           style={{ border: "1px solid var(--rule)", color: "var(--slate)", backgroundColor: "transparent" }}
         >
           Avbryt

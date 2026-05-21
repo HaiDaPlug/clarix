@@ -10,12 +10,28 @@ import { AssembledDashboardItem, DashboardItemId } from "@/types/dashboard";
 import { Metric, ReportData } from "@/types/schema";
 import { useLocale } from "@/lib/i18n";
 import {
+  GoogleAnalyticsLogo,
+  GoogleSearchConsoleLogo,
+  GoogleAdsLogo,
+} from "@/components/landing/brand-logos";
+import {
   getMetric,
   getChangeState,
   getKpiLabel,
   getRegistryHeadline,
   getRegistryInsight,
 } from "@/components/dashboard/metrics";
+
+type SourceLogoComponent = (props: { className?: string }) => React.ReactElement;
+
+const KPI_SOURCE_LOGO: Partial<Record<DashboardItemId, SourceLogoComponent>> = {
+  "traffic-kpi":        GoogleAnalyticsLogo,
+  "organic-reach-kpi":  GoogleAnalyticsLogo,
+  "engagement-kpi":     GoogleAnalyticsLogo,
+  "conversions-kpi":    GoogleAnalyticsLogo,
+  "search-clicks-kpi":  GoogleSearchConsoleLogo,
+  "paid-efficiency-kpi": GoogleAdsLogo,
+};
 
 const EASE_OUT = [0.0, 0.0, 0.2, 1] as const;
 const CARD_ENTER = (i: number) => ({ duration: 0.45, ease: EASE_OUT, delay: 0.06 + i * 0.05 });
@@ -142,6 +158,7 @@ export function KpiCard({
   const state = getChangeState(metric, item.itemId);
   const sparkData = getSparkData(item.itemId, data);
   const sparkId = `spark-kpi-${item.itemId}`;
+  const SourceLogo = KPI_SOURCE_LOGO[item.itemId];
 
   return (
     <motion.div
@@ -151,14 +168,29 @@ export function KpiCard({
       className="relative overflow-hidden rounded-2xl flex flex-col"
       style={{
         background: "var(--bone)",
-        border: loading ? "1px solid oklch(0.62 0.22 280 / 0.18)" : "1px solid var(--rule)",
+        border: "1px solid var(--rule)",
         boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 8px 24px -8px rgba(0,0,0,0.06)",
       }}
     >
       <div className="px-5 pt-5 pb-4 flex flex-col gap-3">
-        <p className="eyebrow" style={{ color: "var(--slate)", letterSpacing: "0.1em" }}>
-          {getKpiLabel(item.itemId, metric, t)}
-        </p>
+        <div className="flex items-center justify-between">
+          <p className="eyebrow" style={{ color: "var(--slate)", letterSpacing: "0.1em" }}>
+            {getKpiLabel(item.itemId, metric, t)}
+          </p>
+          {SourceLogo && (
+            <span
+              style={{
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                width: 22, height: 22, borderRadius: 6,
+                background: "var(--parchment)",
+                border: "1px solid var(--rule)",
+                flexShrink: 0,
+              }}
+            >
+              <SourceLogo className="h-3.5 w-3.5" />
+            </span>
+          )}
+        </div>
 
         <div className="flex items-baseline gap-3">
           <NumberFlash delay={0.1 + index * 0.05}>

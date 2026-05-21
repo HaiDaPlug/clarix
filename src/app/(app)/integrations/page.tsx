@@ -140,6 +140,7 @@ export default function IntegrationsPage() {
   const [loadingConnections, setLoadingConnections] = useState(true);
   const [loadingProperties, setLoadingProperties] = useState(false);
   const [pendingSource, setPendingSource] = useState<ConnectableSource | null>(null);
+  const [pendingOptionId, setPendingOptionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [propertiesRefreshKey, setPropertiesRefreshKey] = useState(0);
 
@@ -227,6 +228,7 @@ export default function IntegrationsPage() {
 
   async function connectSource(source: ConnectableSource, option: PropertyOption) {
     setPendingSource(source);
+    setPendingOptionId(option.id);
     setError(null);
     try {
       const response = await fetch("/api/google/connect", {
@@ -262,6 +264,7 @@ export default function IntegrationsPage() {
       );
     } finally {
       setPendingSource(null);
+      setPendingOptionId(null);
     }
   }
 
@@ -762,7 +765,7 @@ export default function IntegrationsPage() {
                 : []
             }
             loadingProperties={loadingProperties}
-            pendingSource={pendingSource}
+            pendingOptionId={pendingOptionId}
             copy={copy}
             onClose={() => setActiveModal(null)}
             onConnect={(option) =>

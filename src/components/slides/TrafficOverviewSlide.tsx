@@ -10,6 +10,24 @@ import { cn } from "@/lib/utils";
 import { Rule } from "@/components/primitives/Rule";
 import { useLocale } from "@/lib/i18n";
 
+// Soft coral/warm channel palette — mirrors dashboard ChannelBreakdown
+const SLIDE_CHANNEL_COLORS: Record<string, string> = {
+  organic:  "#E8826A",
+  paid:     "#F2A07B",
+  direct:   "#D98FA8",
+  referral: "#C4917A",
+};
+
+function inferChannelKey(unit: string | undefined, label: string): string | null {
+  if (unit === "percent" || unit === "seconds") return null;
+  const l = label.toLowerCase();
+  if (l.includes("organic") || l.includes("organisk")) return "organic";
+  if (l.includes("paid") || l.includes("betald") || l.includes("ads")) return "paid";
+  if (l.includes("direct") || l.includes("direkt")) return "direct";
+  if (l.includes("referral") || l.includes("hänvisning")) return "referral";
+  return null;
+}
+
 function MiniMetric({ metric, delay = 0 }: { metric: Metric; delay?: number }) {
   const change = metric.previousValue !== undefined
     ? formatChange(metric.value, metric.previousValue)
@@ -19,28 +37,41 @@ function MiniMetric({ metric, delay = 0 }: { metric: Metric; delay?: number }) {
       (change.direction === "down" && metric.trendGood === false)
     : null;
 
+  const channelKey = inferChannelKey(metric.unit, metric.label);
+  const dotColor = channelKey ? SLIDE_CHANNEL_COLORS[channelKey] : null;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, delay, ease: [0.16, 1, 0.3, 1] }}
-      className="py-4"
+      className="py-4 flex items-start gap-3"
     >
-      <p className="eyebrow mb-2">{metric.label}</p>
-      <p className="font-display text-2xl leading-none text-[var(--charcoal)]">
-        {formatNumber(metric.value, metric.unit)}
-      </p>
-      {change && change.direction !== "flat" && (
-        <p
-          className={cn(
-            "text-[11px] font-medium mt-1",
-            isGood === true && "text-[var(--signal-up)]",
-            isGood === false && "text-[var(--signal-down)]"
-          )}
-        >
-          {change.sign}{change.value}
-        </p>
+      {dotColor && (
+        <span
+          style={{
+            width: 8, height: 8, borderRadius: "50%",
+            background: dotColor, flexShrink: 0, marginTop: 6,
+          }}
+        />
       )}
+      <div className={cn(!dotColor && "pl-[20px]")}>
+        <p className="eyebrow mb-2">{metric.label}</p>
+        <p className="font-display text-2xl leading-none text-[var(--charcoal)]">
+          {formatNumber(metric.value, metric.unit)}
+        </p>
+        {change && change.direction !== "flat" && (
+          <p
+            className={cn(
+              "text-[11px] font-medium mt-1",
+              isGood === true && "text-[var(--signal-up)]",
+              isGood === false && "text-[var(--signal-down)]"
+            )}
+          >
+            {change.sign}{change.value}
+          </p>
+        )}
+      </div>
     </motion.div>
   );
 }

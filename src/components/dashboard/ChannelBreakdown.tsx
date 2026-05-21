@@ -12,12 +12,12 @@ import { InfoTooltip } from "@/components/primitives/InfoTooltip";
 const EASE_OUT = [0.0, 0.0, 0.2, 1] as const;
 
 export const CHANNEL_COLORS = [
-  { stroke: "#E8524A", bg: "rgba(232,82,74,0.10)", label: "#C0392B" },
-  { stroke: "#8B5CF6", bg: "rgba(139,92,246,0.10)", label: "#7C3AED" },
-  { stroke: "#F5A623", bg: "rgba(245,166,35,0.10)", label: "#D4870F" },
-  { stroke: "#2D6A4F", bg: "rgba(45,106,79,0.10)", label: "#1E4D39" },
-  { stroke: "#0EA5E9", bg: "rgba(14,165,233,0.10)", label: "#0369A1" },
-  { stroke: "#6B6760", bg: "rgba(107,103,96,0.10)", label: "#4A4540" },
+  { stroke: "#E8826A", bg: "rgba(232,130,106,0.12)", label: "#B85A42" }, // coral
+  { stroke: "#F2A07B", bg: "rgba(242,160,123,0.12)", label: "#C07A3A" }, // amber-coral
+  { stroke: "#D98FA8", bg: "rgba(217,143,168,0.12)", label: "#A05878" }, // blush
+  { stroke: "#C4917A", bg: "rgba(196,145,122,0.12)", label: "#8C5B43" }, // terracotta
+  { stroke: "#BFA882", bg: "rgba(191,168,130,0.12)", label: "#8A7050" }, // sand
+  { stroke: "#9BA89E", bg: "rgba(155,168,158,0.12)", label: "#5C726A" }, // sage
 ];
 
 const CHANNEL_INFO: Record<string, { name: string; sub: string; info: string }> = {
