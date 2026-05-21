@@ -3,6 +3,9 @@
 import { motion } from "motion/react";
 import { ReportData } from "@/types/schema";
 import { formatNumber } from "@/lib/utils/format";
+import type { AiInsightsPayload } from "@/lib/hooks/useAiInsights";
+import { FALLBACK_TEXT } from "@/lib/hooks/useAiInsights";
+import { ShimmerCard } from "@/components/primitives/ShimmerCard";
 
 type Effort = "låg" | "medel" | "hög";
 type Reward = "låg" | "medel" | "hög";
@@ -76,7 +79,15 @@ function deriveNextSteps(data: ReportData): NextStep[] {
   return steps.slice(0, 3);
 }
 
-export function NextStepsCard({ data }: { data: ReportData }) {
+export function NextStepsCard({
+  data,
+  aiInsights,
+  loading,
+}: {
+  data: ReportData;
+  aiInsights: AiInsightsPayload | null;
+  loading: boolean;
+}) {
   const steps = deriveNextSteps(data);
   if (!steps.length) return null;
 
@@ -122,7 +133,17 @@ export function NextStepsCard({ data }: { data: ReportData }) {
             </span>
             <div className="flex-1 min-w-0">
               <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--charcoal)", lineHeight: 1.35, marginBottom: "3px" }}>{step.action}</p>
-              <p style={{ fontSize: "12.5px", color: "var(--slate)", lineHeight: 1.5 }}>{step.rationale}</p>
+              {loading ? (
+                <ShimmerCard
+                  loading
+                  height={18}
+                  style={{ border: "none", borderRadius: 999, backgroundColor: "color-mix(in oklch, var(--rule) 70%, white)" }}
+                />
+              ) : (
+                <p style={{ fontSize: "12.5px", color: "var(--slate)", lineHeight: 1.5 }}>
+                  {aiInsights?.next_steps?.[i]?.rationale ?? FALLBACK_TEXT}
+                </p>
+              )}
             </div>
             <div className="shrink-0 flex flex-col items-end gap-1.5 mt-0.5">
               <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5" style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", background: `color-mix(in oklch, ${EFFORT_COLOR[step.effort]} 12%, transparent)`, color: EFFORT_COLOR[step.effort] }}>

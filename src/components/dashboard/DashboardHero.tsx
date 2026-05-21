@@ -3,85 +3,92 @@
 import { motion } from "motion/react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { AssembledDashboardItem } from "@/types/dashboard";
 import { ReportData } from "@/types/schema";
 import { useLocale } from "@/lib/i18n";
+import { NoiseTexture } from "@/components/ui/noise-texture";
+import type { AiInsightsPayload } from "@/lib/hooks/useAiInsights";
+import { FALLBACK_TEXT } from "@/lib/hooks/useAiInsights";
+import { ShimmerOverlay } from "@/components/primitives/ShimmerCard";
 
 const HERO_ENTER = { duration: 0.5, ease: [0.0, 0.0, 0.2, 1] as const, delay: 0 };
 
-function colorizeNumbers(text: string): React.ReactNode {
-  const parts = text.split(/([-+]?\d[\d\s.,]*\s*(?:%|kr|SEK|k|K|mn)?)/g);
-  return parts.map((part, i) => {
-    if (!/\d/.test(part)) return part;
-    const isNegative = part.trimStart().startsWith("-");
-    return (
-      <span key={i} style={{ color: isNegative ? "#B91C1C" : "#16a34a", fontWeight: 800 }}>
-        {part}
-      </span>
-    );
-  });
-}
-
-export function DashboardHero({ item, data }: { item: AssembledDashboardItem; data: ReportData }) {
+export function DashboardHero({
+  data,
+  aiInsights,
+  loading,
+}: {
+  data: ReportData;
+  aiInsights: AiInsightsPayload | null;
+  loading: boolean;
+}) {
   const { t } = useLocale();
   const params = useSearchParams();
   const summary = data.executiveSummary;
   if (!summary) return null;
 
-  const isFull = item.eligibility.variant === "full";
   const reportHref = `/report${params.toString() ? `?${params.toString()}` : ""}`;
+  const headline = aiInsights?.dashboard_hero?.headline ?? FALLBACK_TEXT;
+  const sub = aiInsights?.dashboard_hero?.sub ?? null;
+  const noData = aiInsights?.dashboard_hero === null;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={HERO_ENTER}
-      className="relative overflow-hidden rounded-3xl border p-8 shadow-[0_20px_60px_-20px_rgba(139,92,246,0.35)] sm:p-10"
-      style={{
-        background: "linear-gradient(135deg, oklch(0.97 0.04 300) 0%, oklch(0.96 0.05 260) 45%, oklch(0.97 0.04 350) 100%)",
-        borderColor: "rgba(139,92,246,0.25)",
-      }}
+      className="relative overflow-hidden rounded-3xl border border-white/20 p-8 shadow-[0_24px_60px_-26px_rgba(255,107,85,0.45)] sm:p-10"
+      style={{ background: "linear-gradient(135deg, #e8336d 0%, #ff6b35 50%, #ffb830 100%)" }}
     >
-      <div className="pointer-events-none absolute -left-16 -top-24 h-64 w-64 rounded-full opacity-60 blur-3xl" style={{ background: "radial-gradient(circle, oklch(0.85 0.16 300 / 0.55), transparent 70%)" }} />
-      <div className="pointer-events-none absolute -bottom-24 -right-10 h-72 w-72 rounded-full opacity-60 blur-3xl" style={{ background: "radial-gradient(circle, oklch(0.86 0.14 220 / 0.5), transparent 70%)" }} />
-      <div className="pointer-events-none absolute right-1/3 top-10 h-40 w-40 rounded-full opacity-50 blur-3xl" style={{ background: "radial-gradient(circle, oklch(0.88 0.12 350 / 0.5), transparent 70%)" }} />
-
-      <div className="relative flex flex-col">
+      <NoiseTexture preset="cinematic" blendMode="overlay" />
+      {loading && <ShimmerOverlay />}
+      <div className="relative z-10 flex flex-col">
         <div className="flex items-center gap-2">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em]" style={{ color: "oklch(0.45 0.18 290)" }}>
-            Insikter från proffset
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em]" style={{ color: "rgba(255,255,255,0.7)" }}>
+            {loading ? "Analyserar data" : "Insikter från proffset"}
           </p>
-          <span className="text-[11px]" style={{ color: "oklch(0.45 0.18 290)" }}>—</span>
-          <span className="text-[11px] font-semibold uppercase tracking-[0.22em]" style={{ color: "oklch(0.45 0.18 290)" }}>
+          <span className="text-[11px]" style={{ color: "rgba(255,255,255,0.7)" }}>—</span>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.22em]" style={{ color: "rgba(255,255,255,0.7)" }}>
             {data.meta.period.label}
           </span>
         </div>
 
-        <p className="mt-5 text-[2rem] font-semibold leading-[1.25] tracking-[-0.02em] sm:text-[2.4rem]" style={{ color: "oklch(0.14 0.02 280)" }}>
-          <span className="relative inline">
-            {colorizeNumbers(summary.headline)}
-            <svg
-              viewBox="0 0 300 10"
-              preserveAspectRatio="none"
-              aria-hidden
-              className="absolute left-0 right-0"
-              style={{ bottom: "-10px", height: "10px", width: "100%" }}
-            >
-              <path
-                d="M0,6 C20,1 40,9 60,5 C80,1 100,9 120,5 C140,1 160,9 180,5 C200,1 220,9 240,5 C260,1 280,9 300,5"
-                fill="none"
-                stroke="oklch(0.62 0.22 295)"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              />
-            </svg>
-          </span>
-        </p>
+        {loading ? (
+          <div className="mt-6 flex flex-col gap-3" aria-label="AI-insikt laddas">
+            <div className="h-9 w-[82%] rounded-full bg-white/35" />
+            <div className="h-9 w-[58%] rounded-full bg-white/25" />
+            <div className="mt-3 h-5 w-[70%] rounded-full bg-white/20" />
+          </div>
+        ) : (
+          <>
+            <p className="mt-5 text-[2rem] font-semibold leading-[1.25] tracking-[-0.02em] sm:text-[2.4rem]" style={{ color: "rgba(255,255,255,0.95)" }}>
+              <span className="relative inline">
+                {headline}
+                {!noData && (
+                  <svg
+                    viewBox="0 0 300 10"
+                    preserveAspectRatio="none"
+                    aria-hidden
+                    className="absolute left-0 right-0"
+                    style={{ bottom: "-10px", height: "10px", width: "100%" }}
+                  >
+                    <path
+                      d="M0,6 C20,1 40,9 60,5 C80,1 100,9 120,5 C140,1 160,9 180,5 C200,1 220,9 240,5 C260,1 280,9 300,5"
+                      fill="none"
+                      stroke="rgba(255,255,255,0.4)"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                )}
+              </span>
+            </p>
 
-        {isFull && summary.subheadline && (
-          <p className="mt-6 text-lg font-normal leading-relaxed" style={{ color: "oklch(0.38 0.06 280)" }}>
-            {colorizeNumbers(summary.subheadline)}
-          </p>
+            {!noData && sub && (
+              <p className="mt-6 text-lg font-normal leading-relaxed" style={{ color: "rgba(255,255,255,0.85)" }}>
+                {sub}
+              </p>
+            )}
+          </>
         )}
 
         <div className="mt-7">

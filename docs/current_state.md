@@ -117,8 +117,8 @@ Source-driven — renders real GA4/GSC data when connected, falls back to mock o
    - *No data for period* — shown when GA4 is connected but has no data for the selected date range (e.g. connected after last month). Black text, Clarix-styled. No mock data ever shown when a source is connected.
    - *Sample data* — shown only when zero sources connected, with "Anslut källor" CTA
    - *GSC nudge* — when GA4 is connected but GSC is not
-3. **AI Summary hero** — purple gradient card, "Insikter från proffset" eyebrow, wavy SVG underline on headline, colorized numbers inline, "Läs hela rapporten" CTA
-4. **Narrative KPI cards** (3-column grid) — large number + inline delta arrow, educational headline + insight line, flush sparkline strip at bottom
+3. **AI Summary hero** — pink→coral→amber gradient card (`linear-gradient(135deg, #e8336d88, #ff6b3588, #ffb83088)` over `#fff5f3` base), `NoiseTexture` grain overlay, "Insikter från proffset" eyebrow, wavy SVG underline on headline, white text, "Läs hela rapporten" CTA
+4. **Narrative KPI cards** (3-column grid) — large number + inline delta arrow, educational headline + insight line, flush sparkline strip at bottom using `#FF6B55` matching the report sparkline color. Each KPI routes to its own time series (sessions, organic, SEO clicks, bounce inverted, conversions, paid)
 5. **Traffic chart** — dual area series (Besök + Besökare), dark tooltip, legend
 6. **Channel breakdown** — SVG donut diagram with interactive arc segments; legend rows show channel name, bold session count, delta arrow, percentage pill. Hover cross-highlights arc + row.
 7. **Search visibility** — 2×2 grid of GSC metrics with deltas
@@ -232,20 +232,22 @@ The cinematic scroll-surface report viewer — previously "Rapport 2", now the s
 **Date range picker** — dropdown in the top bar. Left column: 2 presets — "Denna månad" and "Sen start" (all-time from 2020-01-01). Right column: flight-booker style two-month calendar — click start date then end date, hover shows range preview, edges rendered as purple pills with soft fill between. Defaults to current calendar month (1st → today). Selecting any range pushes `?from=&to=` to the URL; `useDateRange` reads it and triggers a fresh fetch.
 
 **Slides (10):**
-1. **Sammanfattning (Hero)** — headline top-center, large inline traffic delta in subtext (green/red/grey depending on data), full-width AI summary card pinned to bottom. No pills. Layout: `justify-between py-12 mt-16`.
-2. **Nyckeltal** — 2×2 KPI cards with large display numbers and grey `—` pill when no prior period data.
-3. **Trafiköversikt** — "Totala besök" label at `18px`, number at `3.8rem`. TrendPill moved inside chart card header (inline with number, right-aligned). Area chart + per-channel right column + kanalfördelning bars baked into chart card footer. "Senaste perioden" subhead at `21px`.
-4. **Trafikkällor** — 2-col channel cards. Icon containers use the aurora gradient (`linear-gradient(135deg, #FF4D9E, #FF6B55, #FFB830)`) with white icon color.
-5. **Bästa sidor** — 3-col page rank cards with colored rank badges.
+1. **Sammanfattning (Hero)** — headline top-center, large inline traffic delta in subtext (green/red/grey depending on data), full-width coral sparkline (from `trafficOverview.timeSeries`) in the middle, AI summary card pinned to bottom. Layout: `justify-between py-12 mt-16`.
+2. **Nyckeltal** — 2×2 KPI cards. Label `text-[20px]/text-[22px]`, value `text-[4.2rem]`. Grey `—` pill when no prior period data.
+3. **Trafiköversikt** — headline matches all others at `3.1rem/3.8rem`. "Totala besök" label at `18px`, number at `3.3rem`. Area chart + per-channel right column + kanalfördelning bars baked into chart card footer. Period subhead at `21px`.
+4. **Trafikkällor** — 2-col channel cards. Icon containers use the aurora gradient (`linear-gradient(135deg, #FF4D9E, #FF6B55, #FFB830)`). Text sizes: name `22px`, description `20px`, percentage `38px`, visit count `20px`.
+5. **Dina mest besökta sidor** — 3-col page rank cards with colored rank badges. URL `24px`, visit number `30px`, "besök" `20px`. Subtitle: "De mest besökta sidorna under perioden, topp 6 ser du nedan."
 6. **Strategisk bedömning** — centered heading + full-width Clarix executive insight card, "Bottom line" accent pill.
-7. **Rekommendationer** — 3-col action cards (Skala / Fixa / Bygg).
-8. **Konvertering** — 3 metric cards if conversions exist, else upsell layout.
+7. **Rekommendationer** — 3-col action cards (Skala / Fixa / Bygg). Icon containers use aurora gradient. Headline `text-[22px]/sm:text-[26px]`, subtext `text-[21px]`.
+8. **Konvertering** — 3 metric cards if conversions exist, else upsell layout. "Vad du får" card is a standalone gradient card (not `AISummary`), content vertically centered, list items `text-[22px] font-semibold text-white`.
 9. **AI-synlighet** — left text + right 2×2 AI source status grid.
-10. **Kort summerat** — bullet list left + booking CTA card right.
+10. **Kort summerat** — bullet list left (subtext `text-[20px]`) + booking CTA card right (pink→coral→amber gradient). Eyebrow `text-[16px] text-white`, tagline `text-[20px] text-white`.
 
 **TrendPill — null state:** All delta calculations return `null` (not `0`) when no prior period data exists. `TrendPill` renders a grey `—` pill for `null`. Negative deltas render red, positive green. Zero is treated as no meaningful change (grey).
 
-**Gradient cards (`AISummary` + standalone cards):** Deep pink→coral→amber gradient (`linear-gradient(135deg, #e8336d, #ff6b35, #ffb830)`) with SVG `feTurbulence` grain at `mixBlendMode: overlay, opacity: 0.35` for an organic film texture. Text is white. Label eyebrow is `text-white/70`. All spans inside (including `pos()`/`neg()` values) forced to `text-white font-bold` via `[&_span]` selector. Used on: AI summary, AI source status card, booking CTA card.
+**Gradient cards (`AISummary` + standalone cards):** Deep pink→coral→amber gradient (`linear-gradient(135deg, #e8336d, #ff6b35, #ffb830)`) with `<NoiseTexture preset="cinematic" blendMode="overlay" />` grain (opacity `0.6`, `fractalNoise` at `0.72` baseFrequency, 4 octaves, unique filter ID per instance via `useId()`). Text is white. Label eyebrow is `text-white/70`. All spans inside (including `pos()`/`neg()` values) forced to `text-white font-bold` via `[&_span]` selector. Used on: AI summary, AI source status card, booking CTA card.
+
+**`fmtNum` helper:** Numbers below 10 000 display exactly (e.g. "1 234"), 10 000+ abbreviate to `k`, 1 000 000+ to `mn`. Threshold raised from 1 000 to 10 000 to avoid showing "1,0 k" for small traffic numbers.
 
 **Design details:**
 - All headlines end with a coral dot (`#FF6B55`) — appended automatically by `SlideHeading`, added manually to bare `<h1>` headings
@@ -324,6 +326,22 @@ One unified design system. The `(app2)` parallel system has been merged in and t
 Dark mode remaps all tokens via `.dark { ... }` block — warm inverted palette.
 
 Shared components: [src/components/landing/](../src/components/landing/) (brand logos, showcase visuals, animated counter), [src/components/layout2/](../src/components/layout2/) (AppShell2, KpiCard2 — still used by landing page visuals).
+
+### `NoiseTexture` — `src/components/ui/noise-texture.tsx`
+
+World-class reusable SVG grain component. Uses `feTurbulence fractalNoise` with unique filter ID per instance (via `useId()`) so multiple instances never clash. Zero dependencies, resolution-independent, no images.
+
+**Props:**
+- `preset` — `"fine" | "medium" | "coarse" | "cinematic"` (default: `"cinematic"`)
+- `frequency` — overrides preset `baseFrequency`
+- `octaves` — overrides preset `numOctaves`
+- `opacity` — overrides preset opacity
+- `blendMode` — CSS `mix-blend-mode` (`"overlay" | "multiply" | "soft-light"` etc, default: `"overlay"`)
+- `animated` — animates grain seed over 8s for a subtle film drift (default: `false`)
+
+**Presets:** `fine (0.85, 4oct, 0.5)`, `medium (0.65, 4oct, 0.65)`, `coarse (0.45, 3oct, 0.75)`, `cinematic (0.72, 4oct, 0.6)`
+
+Used on: all gradient cards in the report (`AISummary`, conversion upsell, AI visibility, recap CTA) and the dashboard hero card.
 
 ---
 
@@ -422,6 +440,138 @@ When a user enters the report, it takes over the full screen. The sidebar and ap
 ### Dashboard vs report — two distinct surfaces
 The dashboard is operational: always-on, functional, answers "how are we doing?" at a glance. The report is editorial: a focused narrative arc, cinematic, one slide at a time. They share schema and components but must feel different. The dashboard can be more utilitarian. The report should feel premium and deliberate.
 
+---
+
+## Report polish — completed 2026-05-19
+
+### Visual fixes
+
+**Number formatting** — `fmtNum` now always writes full Swedish locale numbers (`1 800`, `14 200`) with no k/mn abbreviation. The entire report uses `toLocaleString("sv-SE")`.
+
+**Color logic** — All `TrendPill` calls now use `delta > 0` (strictly positive) to render green. `delta === 0` and `delta === null` both render neutral grey. A negative number can never be green. Fixed across KPI cards, trend slide, channels slide, pages slide.
+
+**Label rename** — `AISummary` default label changed from "AI-sammanfattning" to "Strategisk sammanfattning". The strategic insight slide uses "Det vi ser just nu". No AI terminology visible to end users.
+
+**Channel names** — Cleaned up to plain Swedish for non-technical readers:
+- `"Google (obetalt)"` (was "Google (Obetald söktrafik)")
+- `"Direkttrafik"` — sub-copy now "Besökare som skrev in adressen direkt"
+- `"Okänd trafik"` (was "Ej identifierad trafik" / "Okänd källa")
+
+**All gray body text** — `text-foreground/70`, `/75`, `/80` replaced with full black (`text-foreground`) across the entire report for stronger contrast.
+
+### SlideStrategicInsight redesign
+
+Two-column layout: left side has heading + three signal bullets with green/red dots (Trafiken växer / Engagemanget sjunker / Kontaktsidan tappade synlighet), right side is the expanded gradient card with three focused body paragraphs and a sharp bottom-line callout. This is the product's USP slide — the right card goes deep on business diagnosis, not just restating numbers. Eyebrow removed. Headline line-breaks after "Synligheten ökar" so the em dash opens the second line.
+
+---
+
+## AI insights engine — built and secured 2026-05-19/20
+
+The core architecture for LLM-generated copy. Full spec in [`docs/ai-insights-architecture.md`](./ai-insights-architecture.md).
+
+### Philosophy
+
+Deterministic for numbers and labels. LLM for sentences that should feel like an advisor wrote them. One Claude call per period per user, result cached — report always reads from cache, never triggers generation itself.
+
+### Architecture — three layers
+
+1. **Data** — `ReportData` built server-side from connected GA4/GSC sources. Browser never supplies metrics.
+2. **Insight classifier** — `deriveInsights(data): Insight[]`, pure TypeScript, no LLM, returns facts classified by type and severity.
+3. **LLM generation** — one Claude call, all 6 copy slots in one shot as structured JSON, validated with Zod, cached in Supabase.
+
+### Files
+
+**`src/lib/engine/derive-insights.ts`** — Insight classifier. Pure TypeScript, no LLM. Takes `ReportData`, returns `Insight[]` sorted by severity. Covers 16 insight types: traffic up/down broadly, organic/paid drop, channel concentration, engagement up/down, contact page lost visibility, paid ROAS strong, paid cost up + conversions flat, SEO positions improving/declining, conversions improved/declined, AI visibility untracked, data missing. Each insight carries `type`, `severity` (positive/neutral/warning/critical), `metrics` (real values), and `surface[]` (which UI slots consume it). `hasSufficientData(surface, insights, data)` is the null gate — checked per surface before invoking the LLM.
+
+**`src/lib/engine/slide-headlines.ts`** — Deterministic headline lookup. `deriveSlideHeadline(insights)` picks the headline keyed to the highest-severity insight type. 14 distinct headlines mapped. `SlideHero` now receives `headline` as a prop — no more hardcoded "Din digitala synlighet går åt rätt håll".
+
+**`src/lib/ai-insights/types.ts`** — Shared AI payload contract. Defines `AiInsightsPayloadSchema`, `AiInsightsPayload`, `AI_INSIGHTS_FALLBACK_TEXT`, `AI_INSIGHTS_PROMPT_VERSION`, and `createNullAiInsightsPayload()`. Every slot is nullable. Client code never imports types from a route module.
+
+**`src/lib/ai-insights/cache.ts`** — Shared cache helpers. `hashAiInsightMetrics(data)` includes `AI_INSIGHTS_PROMPT_VERSION` and key input metrics — bumping the version string auto-invalidates all cached rows when the prompt changes. `isFreshAiInsightsCache()` enforces the 24-hour freshness window.
+
+**`src/lib/report-data/server.ts`** — Server-owned report data builder. `buildReportDataForUser({ supabase, userId, dateRange, periodLabel, locale })` reads connected sources, refreshes tokens, fetches GA4/GSC in parallel with prior period, maps and merges into trusted `ReportData`. Used exclusively by `/api/generate-insights`. This is the single source of truth for AI generation — browser can never inject metrics here.
+
+**`src/lib/hooks/useAiInsights.ts`** — Client hook. Fires after real `reportData` is set (not mock fallback), sends only `{ period: { start, end, label } }` to `/api/generate-insights`. Deduplication via `inflightKeyRef` prevents double-firing. Silent fail — UI keeps deterministic copy if the call errors or returns no result.
+
+**`supabase/migrations/20260519000000_ai_report_cache.sql`** — Cache table `ai_report_cache` with RLS. Keyed on `(user_id, period_start, period_end)`. Users can read, insert, and update only their own rows; service role can manage all rows. Indexed on the composite key.
+
+**`supabase/migrations/20260519001000_ai_report_cache_user_writes.sql`** — Policy repair migration for environments where the first cache migration already ran without user write policies.
+
+**`src/app/api/generate-insights/route.ts`** — The generation route. Accepts only `{ period: { start, end, label } }` — no userId, no metrics from the browser. Flow: authenticate server-side from Supabase cookies → `buildReportDataForUser` (server-fetches GA4/GSC) → cache check (returns early if hit + valid hash + <24h old) → `deriveInsights` → `hasSufficientData` per surface → `buildPrompt` with role/data/constraint anatomy per surface → `generateAiInsightsText(prompt)` (provider adapter) → `extractJsonObject` → validate with `AiInsightsPayloadSchema` → `applySufficiencyGate` (server-side backstop enforcing nulls even if model ignores instructions) → cache upsert. Provider errors and malformed model output are **not cached** — the next request retries. Both `openai` and `@anthropic-ai/sdk` installed.
+
+**`src/lib/ai-insights/generate.ts`** — Provider adapter. Single export: `generateAiInsightsText(prompt): Promise<string>`. Dispatches to OpenAI or Anthropic based on `AI_INSIGHTS_PROVIDER` env var. Returns raw text only — parsing and validation stay in the route. Throws typed `AiInsightsProviderError` on misconfiguration (missing key, unknown provider). Dynamic imports so only the active provider's SDK is loaded. Env vars: `AI_INSIGHTS_PROVIDER=openai|anthropic`, `OPENAI_API_KEY`, `OPENAI_MODEL` (default `gpt-4o-mini`), `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` (default `claude-sonnet-4-6`).
+
+### Prompt anatomy
+
+Each surface has three sections in order: **ROLE** (who Claude is and what job it's doing on this surface), **DATA** (only the metrics that surface is responsible for — prevents referencing numbers the user hasn't seen), **CONSTRAINT** (output format and length, hard per surface). One call generates all 6 slots.
+
+| Surface | Role | Type |
+|---|---|---|
+| `dashboard_hero` | Narrator | Educational — what happened this period |
+| `slide_hero` | Summarizer | Pedagogical — for a non-technical SME owner |
+| `slide_insight` | Strategist | Analytical — what this means for the business |
+| `slide_recs` | Advisor | Actionable — what to do and why |
+| `slide_recap` | Editor | Distillation — three things to remember |
+| `next_steps` | Coach | Actionable — why this specific step for this client |
+
+### Null state
+
+If `hasSufficientData` returns false for a surface, that slot is `null` in the payload. Claude is instructed to return `null` for any surface marked `INSUFFICIENT DATA`. `applySufficiencyGate` enforces this server-side regardless of model output. UI fallback for any null slot: **"Inte nog med data för att bedöma din digitala närvaro."**
+
+### Dashboard wiring
+
+`dashboard/page.tsx` fetches `userId` on mount, calls `useAiInsights(reportData, userId, periodStart, periodEnd, periodLabel)`. The hook key is `${periodStart}:${periodEnd}:${metricsHash}` so it re-fires when data changes within the same period. `loading` and `aiInsights` are both passed to components.
+
+- `DashboardHero` — shows skeleton placeholders while loading. Once resolved: `aiInsights.dashboard_hero.headline` + `.sub`, or fallback string if slot is null. No longer accepts or uses `item` prop (removed).
+- `NextStepsCard` — action labels stay deterministic, rationale text shimmers while loading. `aiInsights.next_steps[i].rationale` replaces hardcoded copy when available. Null slot → fallback string.
+
+### Report wiring
+
+`/report` reads `ai_report_cache` after rebuilding `ReportData`. Cache query is scoped to the authenticated user — `getUser()` is called first; if it returns no user, the cache query is skipped entirely (no sentinel `""` query). Validates the cached payload with `AiInsightsPayloadSchema`, checks metric hash and 24-hour freshness, then passes `aiInsights` into:
+- `SlideHero` — `slide_hero`
+- `SlideStrategicInsight` — `slide_insight`
+- `SlideRecommendations` — `slide_recs`
+- `SlideRecap` — `slide_recap`
+
+The report never triggers generation itself. If cache is cold (user opens report before dashboard), all surfaces show deterministic copy — this is intentional. If a cached slot is explicitly `null`, that surface renders the fallback sentence.
+
+### Known limitation — cold report open
+
+If a user navigates directly to `/report` without having opened the dashboard first, the cache will be empty and all AI surfaces show deterministic fallbacks. There is no self-healing trigger in the report. This is a deliberate product decision (dashboard generates, report reads). A future cron pre-warms the cache before users open anything — not yet built.
+
+### Known bugs — do not set `ANTHROPIC_API_KEY` until resolved
+
+~~**1. Classifier: `conversion_rate_improved` / `conversion_rate_declined` use total conversion count, not conversion rate.**~~ ✅ Fixed. Now uses `conv.conversionRate.value` / `.previousValue`. Total conversions count still included in `metrics` for context but does not drive classification.
+
+~~**2. Classifier: SEO positions use percentage delta — wrong metric for rankings.**~~ ✅ Fixed. Now uses absolute delta (`avgPos.value - avgPos.previousValue`). Thresholds: `< -1` position = improving (positive), `> 2` positions lost = declining (warning/critical at `> 5`).
+
+~~**3. Classifier: `traffic_shift_channel` is not a shift — it's a concentration check.**~~ ✅ Fully fixed. Renamed to `traffic_channel_concentrated` across InsightType, derive-insights, slide-headlines, prompt, and docs. Threshold now compares normalized share before rounding. Dominant channel selected explicitly (no longer assumes sorted order).
+
+~~**4. Hook never fired — race between `userId` and `reportData` resolution.**~~ ✅ Fixed. `userId` resolved before `reportData` arrived; effect deps were `[key, userId]` so the effect ran once with `reportData=null`, bailed, then never re-ran. Fixed by adding `hasData` (stable boolean) as a dep — now fires when data arrives regardless of resolution order.
+
+~~**5. `loading` from `useAiInsights` not consumed — no loading indicator.**~~ ✅ Fixed. `loading` now passed to `DashboardHero` (skeleton placeholders) and `NextStepsCard` (shimmer on rationale text).
+
+~~**6. Provider errors and parse failures were cached as null payloads.**~~ ✅ Fixed. Cache write only happens on successful, non-null parse. Provider errors and malformed output return null to the client without poisoning the cache.
+
+~~**7. Dead `item` prop on `DashboardHero`.**~~ ✅ Fixed. Prop removed from type and call site.
+
+### Required env vars
+
+```
+AI_INSIGHTS_PROVIDER=openai   # or 'anthropic'
+OPENAI_API_KEY=               # required if provider is openai
+OPENAI_MODEL=gpt-4o-mini      # optional override
+ANTHROPIC_API_KEY=            # required if provider is anthropic
+ANTHROPIC_MODEL=claude-sonnet-4-6  # optional override
+```
+
+### Open — not yet built / known rough edges
+
+- **AI copy quality not validated** — generated Swedish has not been reviewed against a real client dataset. Prompt tuning and tone review needed before showing to paying clients.
+- **Handcrafted card templates** — each surface should have a design-approved template to constrain the AI output shape. Not yet built.
+- **Cold report** — user opening `/report` before dashboard gets deterministic fallbacks. No self-healing trigger. Future: cron pre-warm or on-demand generate button on the report.
+- **Supabase migrations not applied** — `ai_report_cache` table must exist. Run `npx supabase db push` or apply the two migration files in Supabase Studio.
+
 ### Data hierarchy — three tiers
 Every metric earns its place by answering: does knowing this change what the client does next? If not, it does not belong in the main report.
 
@@ -472,28 +622,38 @@ This prevents building modules that are data-eligible but not decision-useful.
 Never show a metric going down without a corresponding recommendation or action immediately following. The narrative engine should enforce this: a negative delta on a key metric triggers an action item in the recommendations module. The story must close the loop.
 
 ### Next priorities (in order)
-1. ~~**Product intelligence foundation**~~ — ✅ Done. Typed infrastructure for insight contracts, data hierarchy, business criticality, and missing module tracking.
-2. ~~**Fullscreen report mode**~~ — ✅ Done. Report isolated in its own route group, no sidebar chrome, exit button, bottom-center dots, mount transition, dev scenario switcher.
-3. ~~**Adaptive dashboard logic**~~ — ✅ Done. Dashboard registry, eligibility, assembly, and source-driven rendering across all three mock scenarios. Sample data banner restored.
-4. ~~**i18n — Swedish default, English toggle**~~ — ✅ Done. Full translation layer, SV/EN toggle in sidebar.
-5. ~~**Dark mode**~~ — ✅ Done. Light default, dark toggle in sidebar, persists to localStorage.
-6. ~~**Stat contract per data source**~~ — ✅ Done. Full field inventory, mapper tables, query plan, trend logic, and future opportunities documented in `docs/stat-contract.md`.
-7. ~~**GA4 + GSC mapper and API routes**~~ — ✅ Done. Pure mapper functions, typed API routes, parallel fetching. Not yet connected to the UI — 4 steps remain before real data flows.
-8. ~~**Real data end-to-end**~~ — ✅ Done. OAuth scopes, DB schema, connect flow, property picker, dashboard wired to real data. Migration applied.
-9. ~~**Wire `/report` to real data**~~ — ✅ Done. Report page reads connected sources from Supabase, fetches `/api/ga4` + `/api/gsc` in parallel, merges over localized mock fallback via `mergeReportData`, assembles deck from merged data. Dev scenario switcher preserved. `tsc` and `npm run lint` clean.
-10. ~~**`executiveSummary` generation (rule-based bridge)**~~ — ✅ Done. `src/lib/engine/derive-executive-summary.ts` — pure function `deriveExecutiveSummary(data, locale)` builds headline, subheadline, and up to 4 highlight pills from real KPI deltas. Called in both `dashboard/page.tsx` and `report/page.tsx` after merge, only when `executiveSummary` is absent from real data. Replaced by AI wiring later.
-11. ~~**Auth enforcement + token refresh**~~ — ✅ Done. Login page restored with correct OAuth scopes. Proxy guard protects all app routes. Server-side token refresh wired into both API routes — tokens auto-renew silently, no more hourly re-auth.
-12. ~~**Dashboard loading UX + shimmer**~~ — ✅ Done. Purple/blue shimmer sweep (`ShimmerCard`, `ShimmerOverlay` in `src/components/primitives/ShimmerCard.tsx`) replaces all grey skeleton blocks. Shimmer only runs when connected sources exist — mock-only users get instant render. KPI skeleton count derived from actual connected source types (GA4 → 4, GSC → +1, Ads → +1) so placeholder count matches the real dashboard. Counter animation (`AnimatedCounter`) only runs after real data loads. GA4 API parallelized (current + prior period fetched simultaneously) — halved fetch time.
-13. ~~**Dashboard modularized**~~ — ✅ Done. `dashboard/page.tsx` extracted from 1,579 lines to ~200 lines. All components moved to `src/components/dashboard/`: `KpiCard`, `DashboardHero`, `SessionsChart`, `ChannelBreakdown`, `SearchVisibility`, `PaidPerformance`, `NextStepsCard`, `metrics` (shared helpers). TypeScript clean, zero logic changes.
-14. **Open auth — unblock real users** — New users hitting the Google OAuth flow get a "not a developer / app unverified" block because the app is still in testing mode in Google Cloud Console. Fix: either submit the app for Google OAuth verification, or add authorized test users in the Google Cloud Console OAuth consent screen settings. This is blocking any real user from logging in and must be resolved before sharing the product with anyone outside the team.
-15. **Report 2 — sharpen and promote, retire Report 1** — Rapport 2 (the cinematic Clarix-aesthetic shell) is the future. Polish its slides with real data, nail the visual identity, and make it the sole report format. Once Rapport 2 is undeniably better, remove Rapport 1 to reduce surface area and sharpen the product story.
-16. **UX and feel of Clarix — holistic pass** — After auth and report work stabilize, do a full UX pass: transitions, micro-interactions, copy tone, empty states, loading feedback. The product should feel like a premium tool from first login to last slide — every click, every state, every moment of waiting should feel intentional.
-17. **Dashboard — world-class with real data** — The shimmer and loading UX is solid. Next: make the dashboard undeniable. Real data QA pass (every KPI verified against GA4 dashboard), remove any remaining mock contamination, sharpen the narrative copy, elevate visual hierarchy. Every number must earn its space.
-18. **File extraction — large files flagged** — Three files need splitting before they become blockers: `src/app/(app)/integrations/page.tsx` (1,206 lines — same problem dashboard had), `src/lib/google/report-mappers.ts` (722 lines — split into `ga4-mapper.ts` / `gsc-mapper.ts`), `src/app/page.tsx` (653 lines — landing page sections inlined). Do in a dedicated pass.
-19. **Product model — accounts before reports, white-label architecture** — Before deepening the report feature, align on the business model: does a user/agency account own multiple client workspaces, each with their own report? White-label means the report renders with the agency's logo, domain, and accent color — not Clarix branding. Nail the data model (account → workspace → report) before building the UI so no architectural debt accumulates. Open questions: do we prioritize the account model or white-label first? Are these the same feature?
-20. **AI insights — living, dynamic, per-slide and dashboard** — AI is Clarix's USP. The `InsightContract` type and three-field shape (`observation`, `implication`, `recommendedAction`) are already defined in `src/types/insight.ts`. The next step is to wire a Claude model call behind each slide and each dashboard section — not once on page load, but dynamically as data changes. Every slide sends its raw JSON + module type + period context → model returns insight → rendered inline on the slide. Dashboard gets the same treatment. The insight must feel alive: contextual, specific to the numbers, written for a business owner. This is what differentiates Clarix from every other reporting tool.
-21. **Insight contract + AI wiring** — wire a model to fill the three-field `InsightContract` shape per slide using real data as evidence. Each slide sends its raw JSON + module type + period context to the model; model returns `{ observation, implication, recommendedAction }`. The `InsightContract` type and prompt discipline are already defined in `src/types/insight.ts` and the founder notes. `executiveSummary` generation can be folded into this pass.
-22. **PDF export** — each slide as a page, animations stripped, typography and layout fully respected. The most beautiful PDF a client has ever received.
+1. ~~**Product intelligence foundation**~~ — ✅ Done.
+2. ~~**Fullscreen report mode**~~ — ✅ Done.
+3. ~~**Adaptive dashboard logic**~~ — ✅ Done.
+4. ~~**i18n — Swedish default, English toggle**~~ — ✅ Done.
+5. ~~**Dark mode**~~ — ✅ Done.
+6. ~~**Stat contract per data source**~~ — ✅ Done.
+7. ~~**GA4 + GSC mapper and API routes**~~ — ✅ Done.
+8. ~~**Real data end-to-end**~~ — ✅ Done.
+9. ~~**Wire `/report` to real data**~~ — ✅ Done.
+10. ~~**`executiveSummary` generation (rule-based bridge)**~~ — ✅ Done.
+11. ~~**Auth enforcement + token refresh**~~ — ✅ Done.
+12. ~~**Dashboard loading UX + shimmer**~~ — ✅ Done.
+13. ~~**Dashboard modularized**~~ — ✅ Done.
+14. ~~**AI insights engine — classifier, cache, generation route, report + dashboard wiring**~~ — ✅ Done. Full three-layer architecture: server-side `ReportData` builder, pure TypeScript insight classifier, one-shot Claude call for all 6 copy surfaces, Supabase cache with RLS, report reads cache with authenticated user filter (skips query entirely if no user), dashboard triggers generation via `useAiInsights` hook. Auth is server-side — browser sends only the period, server fetches and classifies everything. Null gates enforced in classifier and as server-side backstop in route. All 6 surfaces wired in UI with deterministic fallbacks. `ANTHROPIC_API_KEY` env var required.
+
+**Next — in priority order:**
+
+15. ~~**Fix classifier bugs**~~ — ✅ Done. Conversion rate now uses `conversionRate` not count, SEO positions use absolute delta, channel concentration comment corrected.
+
+16. ~~**Fix `useAiInsights` over-firing**~~ — ✅ Done. `reportData` removed from effect deps.
+
+17. **Wire `loading` from `useAiInsights` to `DashboardHero`** — Pass the `loading` boolean to `DashboardHero` and show a subtle indicator while generation is in flight. A pulsing dot or "Analyserar..." on the hero eyebrow is enough.
+
+18. **Set `ANTHROPIC_API_KEY` and smoke test end-to-end** — Fill the env var in `.env.local`, open the dashboard with real GA4/GSC data connected, confirm the generation route fires, cache writes, and AI copy appears in `DashboardHero`, `NextStepsCard`, and all 4 report slides. Check the null state by testing with only one source connected.
+
+19. **Open auth — unblock real users** — App is still in testing mode in Google Cloud Console. Submit for Google OAuth verification or add authorized test users. Blocking all real users outside the team.
+
+20. **Cron pre-warming** — Users who open `/report` without visiting the dashboard first always see deterministic copy. A daily cron calling `buildReportDataForUser` + generation for all users with connected sources fixes this. `src/lib/report-data/server.ts` makes it straightforward.
+
+21. **PDF export** — Each slide as a page, animations stripped, typography fully respected. The most beautiful PDF a client has ever received.
+
+22. **Product model — accounts, workspaces, white-label** — Nail the data model before building UI.
 
 ---
 

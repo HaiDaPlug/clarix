@@ -4,13 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import { BorderBeam } from "@/components/ui/border-beam";
 
 type InfoTooltipProps =
-  | { text: string; title?: never; body?: never; example?: never; side?: never }
-  | { title: string; body: string; example?: string; text?: never; side?: never };
+  | { text: string; title?: never; body?: never; example?: never; side?: "above" | "below" }
+  | { title: string; body: string; example?: string; text?: never; side?: "above" | "below" };
 
 export function InfoTooltip(props: InfoTooltipProps) {
   const title = props.title ?? null;
   const body = props.body ?? props.text ?? "";
   const example = props.example ?? null;
+  const side = props.side ?? "below";
 
   const [visible, setVisible] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -58,7 +59,8 @@ export function InfoTooltip(props: InfoTooltipProps) {
         <span
           style={{
             position: "absolute",
-            top: "calc(100% + 10px)",
+            top: side === "below" ? "calc(100% + 10px)" : "auto",
+            bottom: side === "above" ? "calc(100% + 10px)" : "auto",
             left: "50%",
             transform: `translateX(-12px) ${visible ? "translateY(0) scale(1)" : "translateY(-5px) scale(0.97)"}`,
             opacity: visible ? 1 : 0,

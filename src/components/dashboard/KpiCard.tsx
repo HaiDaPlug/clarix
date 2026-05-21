@@ -19,15 +19,32 @@ import {
 
 const EASE_OUT = [0.0, 0.0, 0.2, 1] as const;
 const CARD_ENTER = (i: number) => ({ duration: 0.45, ease: EASE_OUT, delay: 0.06 + i * 0.05 });
-const SPARK_BLUE = "oklch(0.55 0.2 250)";
+const SPARK_COLOR = "#FF6B55";
 
 function getSparkData(itemId: DashboardItemId, data: ReportData): { i: number; v: number }[] {
-  const series =
-    itemId === "search-clicks-kpi"
-      ? data.seoOverview?.timeSeries
-      : itemId === "paid-efficiency-kpi"
-        ? data.paidOverview?.timeSeries
-        : data.trafficOverview?.timeSeries;
+  let series: NonNullable<ReportData["trafficOverview"]>["timeSeries"] | undefined;
+  switch (itemId) {
+    case "search-clicks-kpi":
+      series = data.seoOverview?.timeSeries;
+      break;
+    case "paid-efficiency-kpi":
+      series = data.paidOverview?.timeSeries;
+      break;
+    case "conversions-kpi":
+      series = data.conversions?.timeSeries ?? data.trafficOverview?.timeSeries;
+      break;
+    case "engagement-kpi":
+      series = data.trafficOverview?.timeSeries?.map((pt, i) => ({
+        ...pt,
+        value: pt.value > 0 ? 100 - pt.value : pt.value,
+      }));
+      break;
+    case "organic-reach-kpi":
+      series = data.trafficOverview?.timeSeries;
+      break;
+    default:
+      series = data.trafficOverview?.timeSeries;
+  }
   if (!series?.length) return [];
   return series.map((pt, i) => ({ i, v: pt.value }));
 }
@@ -205,7 +222,7 @@ export function KpiCard({
 
       <div className="h-12 w-full overflow-hidden" style={{ marginTop: "auto" }}>
         {!loading && sparkData.length > 1 && (
-          <SparklineReveal accent={SPARK_BLUE} sparkId={sparkId} sparkData={sparkData} delay={0.18 + index * 0.06} />
+          <SparklineReveal accent={SPARK_COLOR} sparkId={sparkId} sparkData={sparkData} delay={0.18 + index * 0.06} />
         )}
       </div>
 

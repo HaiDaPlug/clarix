@@ -13,6 +13,7 @@ import { useDateRange } from "@/lib/google/date-presets";
 import { DateRangePicker } from "@/components/primitives/DateRangePicker";
 import { createClient } from "@/utils/supabase/client";
 import { deriveExecutiveSummary } from "@/lib/engine/derive-executive-summary";
+import { useAiInsights } from "@/lib/hooks/useAiInsights";
 import { useDevScenario } from "@/lib/dev-scenario";
 import { AssembledDashboardItem } from "@/types/dashboard";
 import { ReportData } from "@/types/schema";
@@ -59,11 +60,27 @@ export default function DashboardPage() {
   const [dataError, setDataError] = useState<string | null>(null);
   const [expiredSources, setExpiredSources] = useState<string[]>([]);
   const [noDataForPeriod, setNoDataForPeriod] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  // Fetch user ID once — needed for AI insight cache key
+  useEffect(() => {
+    createClient().auth.getUser().then(({ data }) => {
+      setUserId(data.user?.id ?? null);
+    });
+  }, []);
 
   const active = useMemo(() => SCENARIOS.find((s) => s.id === activeId)!, [activeId]);
   const fallbackData = useMemo(() => localizeMockReportData(active.data, locale), [active.data, locale]);
   const activeData = reportData ?? fallbackData;
   const dashboard = useMemo(() => assembleDashboard(activeData, t), [activeData, t]);
+
+  const { insights: aiInsights, loading: aiInsightsLoading } = useAiInsights(
+    reportData,
+    userId,
+    dateRange.startDate,
+    dateRange.endDate,
+    activeData.meta.period.label,
+  );
 
   const skeletonKpiCount = useMemo(() => {
     if (!isLoadingRealData || connectedSourceTypes.length === 0) return 0;
@@ -278,7 +295,13 @@ export default function DashboardPage() {
           </motion.div>
         )}
 
-        {heroItem && !isLoadingRealData && <DashboardHero item={heroItem} data={activeData} />}
+        {heroItem && !isLoadingRealData && (
+          <DashboardHero
+            data={activeData}
+            aiInsights={aiInsights}
+            loading={aiInsightsLoading}
+          />
+        )}
 
         {isLoadingRealData ? (
           skeletonKpiCount > 0 && (
@@ -316,7 +339,7 @@ export default function DashboardPage() {
             {sectionItems.map((item) => (
               <SectionItem key={item.itemId} item={item} data={activeData} />
             ))}
-            <NextStepsCard data={activeData} />
+            <NextStepsCard data={activeData} aiInsights={aiInsights} loading={aiInsightsLoading} />
           </div>
         ) : null}
 

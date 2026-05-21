@@ -45,6 +45,17 @@ import { useDateRange, DATE_PRESETS, presetToRange, type DatePresetId } from "@/
 import { InfoTooltip } from "@/components/primitives/InfoTooltip";
 import { NoiseTexture } from "@/components/ui/noise-texture";
 import { deriveExecutiveSummary } from "@/lib/engine/derive-executive-summary";
+import { deriveInsights } from "@/lib/engine/derive-insights";
+import { deriveSlideHeadline } from "@/lib/engine/slide-headlines";
+import {
+  AI_INSIGHTS_FALLBACK_TEXT,
+  AiInsightsPayloadSchema,
+  type AiInsightsPayload,
+} from "@/lib/ai-insights/types";
+import {
+  hashAiInsightMetrics,
+  isFreshAiInsightsCache,
+} from "@/lib/ai-insights/cache";
 import type { ReportData } from "@/types/schema";
 
 /* ─── Design tokens ──────────────────────────────────────────────────────── */
@@ -91,12 +102,7 @@ function SlideShimmer() {
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 
-const fmtNum = (n: number) =>
-  n >= 1_000_000
-    ? (n / 1_000_000).toFixed(1).replace(".", ",") + " mn"
-    : n >= 1_000
-      ? (n / 1_000).toFixed(1).replace(".", ",") + " k"
-      : n.toLocaleString("sv-SE");
+const fmtNum = (n: number) => n.toLocaleString("sv-SE");
 
 const sign = (n: number | null): string | null =>
   n === null ? null : n >= 0 ? `+${n}%` : `−${Math.abs(n)}%`;
@@ -151,7 +157,7 @@ function TrendPill({
 
 function Eyebrow({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[13px] font-semibold uppercase tracking-[0.26em] text-foreground/80">
+    <p className="text-[13px] font-semibold uppercase tracking-[0.26em] text-foreground">
       {children}
     </p>
   );
@@ -178,7 +184,7 @@ function SlideHeading({
 
 function AISummary({
   children,
-  label = "AI-sammanfattning",
+  label = "Strategisk sammanfattning",
 }: {
   children: React.ReactNode;
   label?: string;
@@ -188,14 +194,7 @@ function AISummary({
       className="relative overflow-hidden rounded-3xl border border-white/20 p-6 shadow-[0_24px_60px_-26px_rgba(255,107,85,0.45)] sm:p-8"
       style={{ background: "linear-gradient(135deg, #e8336d 0%, #ff6b35 50%, #ffb830 100%)" }}
     >
-      {/* Grain — overlay blend makes it sink into the gradient naturally */}
-      <svg className="pointer-events-none absolute inset-0 z-0 h-full w-full" xmlns="http://www.w3.org/2000/svg" style={{ mixBlendMode: "overlay", opacity: 0.35 }}>
-        <filter id="grain-card">
-          <feTurbulence type="fractalNoise" baseFrequency="0.72" numOctaves="4" stitchTiles="stitch" />
-          <feColorMatrix type="saturate" values="0" />
-        </filter>
-        <rect width="100%" height="100%" filter="url(#grain-card)" />
-      </svg>
+      <NoiseTexture preset="cinematic" blendMode="overlay" />
       <div className="relative z-10">
         <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/70">
           {label}
@@ -302,13 +301,13 @@ function buildSlideData(reportData: ReportData | null): SlideData {
     email: Mail, "Email": Mail, "E-post": Mail,
   };
 
-  const ORGANIC = { name: "Google (Obetald söktrafik)", sub: "Besök från Googles vanliga sökresultat", tip: { title: "Vad är obetald söktrafik?", body: "Personer som hittade er via Googles vanliga sökresultat — utan att ni betalat för klicket.", example: "Ni rankar högt på 'redovisningsbyrå Stockholm' → någon klickar → ett organiskt besök." } };
+  const ORGANIC = { name: "Google (obetalt)", sub: "Besök från Googles vanliga sökresultat", tip: { title: "Vad är obetald söktrafik?", body: "Personer som hittade er via Googles vanliga sökresultat — utan att ni betalat för klicket.", example: "Ni rankar högt på 'redovisningsbyrå Stockholm' → någon klickar → ett organiskt besök." } };
   const PAID    = { name: "Google Ads", sub: "Köpt trafik från Google", tip: { title: "Vad är Google Ads-trafik?", body: "Besökare som kom via en betald annons i Google Sök eller Display-nätverket.", example: "Ni betalar per klick. Stoppar ni budgeten → slutar trafiken direkt." } };
   const SOCIAL  = { name: "Sociala medier", sub: "Besök från inlägg och delningar i sociala medier", tip: { title: "Vad är social trafik?", body: "Besökare som klickat in från sociala plattformar som LinkedIn, Facebook eller Instagram.", example: "Ett LinkedIn-inlägg som delas vidare kan ge en pik av social trafik." } };
-  const DIRECT  = { name: "Direkttrafik", sub: "Besökare som gick direkt till hemsidan", tip: { title: "Vad är direkttrafik?", body: "Besökare som redan känner till er och skrev in adressen direkt, eller kom via ett bokmärke.", example: "Befintliga kunder och varumärkeskännare dyker upp här." } };
+  const DIRECT  = { name: "Direkttrafik", sub: "Besökare som skrev in adressen direkt", tip: { title: "Vad är direkttrafik?", body: "Besökare som redan känner till er och skrev in adressen direkt, eller kom via ett bokmärke.", example: "Befintliga kunder och varumärkeskännare dyker upp här." } };
   const REFERRAL = { name: "Referral", sub: "Länkar från andra sajter", tip: { title: "Vad är referraltrafik?", body: "Besökare som kom via en länk på en annan webbplats — t.ex. en partner, artikel eller katalog.", example: "En omnämning i en branschblogg kan ge hög-kvalitativa referralbesök." } };
   const EMAIL   = { name: "E-post", sub: "Nyhetsbrev & utskick", tip: { title: "Vad är e-posttrafik?", body: "Besökare som klickat via ett nyhetsbrev eller e-postutskick med UTM-spårning.", example: "Skickar ni ett månadsbrev med spårade länkar syns klicken här." } };
-  const UNKNOWN = { name: "Okänd källa", sub: "Trafik som inte kunnat kopplas tydligt till en källa", tip: { title: "Vad är okänd källa?", body: "Trafik där systemet inte kunnat avgöra varifrån besökaren kom — ofta p.g.a. saknade spårparametrar.", example: "Klick från appar, direktmeddelanden eller skyddade webbläsare hamnar ofta här." } };
+  const UNKNOWN = { name: "Okänd trafik", sub: "Trafik som inte kunnat kopplas till en källa", tip: { title: "Vad är okänd trafik?", body: "Trafik där systemet inte kunnat avgöra varifrån besökaren kom — ofta p.g.a. saknade spårparametrar.", example: "Klick från appar, direktmeddelanden eller skyddade webbläsare hamnar ofta här." } };
 
   const channelNames: Record<string, { name: string; sub: string; tip: { title: string; body: string; example?: string } }> = {
     // English GA4 keys
@@ -385,10 +384,20 @@ function buildSlideData(reportData: ReportData | null): SlideData {
 
 /* ─── Slides ─────────────────────────────────────────────────────────────── */
 
-function SlideHero({ d }: { d: SlideData }) {
+
+function SlideHero({
+  d,
+  headline,
+  aiInsights,
+}: {
+  d: SlideData;
+  headline: string;
+  aiInsights: AiInsightsPayload | null;
+}) {
   const hasData = d.trafficDelta !== null;
   const isPos = (d.trafficDelta ?? 0) > 0;
   const isNeg = (d.trafficDelta ?? 0) < 0;
+  const aiHero = aiInsights?.slide_hero;
 
   const pillColor = !hasData
     ? { color: "oklch(0.55 0.01 270)", bg: "oklch(0.94 0.005 270)" }
@@ -401,9 +410,9 @@ function SlideHero({ d }: { d: SlideData }) {
       {/* Top: headline + stat */}
       <div className="text-center space-y-5 mt-16">
         <h1 className="font-display text-[3.1rem] font-bold leading-[1.05] tracking-tight lg:text-[3.8rem] whitespace-nowrap">
-          Din digitala synlighet går åt rätt håll<span style={{ color: "#FF6B55" }}>.</span>
+          {headline}<span style={{ color: "#FF6B55" }}>.</span>
         </h1>
-        <p className="text-[1.6rem] leading-[1.4] text-foreground/70">
+        <p className="text-[1.6rem] leading-[1.4] text-foreground">
           {!hasData ? (
             "Ingen föregående period med data finns att jämföra."
           ) : (
@@ -418,18 +427,51 @@ function SlideHero({ d }: { d: SlideData }) {
         </p>
       </div>
 
+      {/* Middle: sparkline */}
+      {d.timeSeries.length > 1 && (
+        <div className="w-full h-[72px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={d.timeSeries} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="hero-spark" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#FF6B55" stopOpacity={0.18} />
+                  <stop offset="100%" stopColor="#FF6B55" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <Area
+                type="monotone"
+                dataKey="sessions"
+                stroke="#FF6B55"
+                strokeWidth={2}
+                fill="url(#hero-spark)"
+                dot={false}
+                activeDot={false}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
       {/* Bottom: AI summary card */}
       <AISummary>
-        <p>
-          Den här perioden fick din hemsida {pos(fmtNum(d.visits))} besök —
-          cirka {pos(fmtNum(Math.abs(d.visits - d.prevVisits)))} fler än förra
-          månaden.
-        </p>
-        <p>
-          Google var din starkaste trafikkälla och växte mest (
-          {d.trafficDelta != null ? pos(sign(d.trafficDelta)!) : "—"}). Samtidigt tappade kontaktsidan trafik,
-          vilket är viktigt eftersom leads ofta kommer därifrån.
-        </p>
+        {aiHero === null ? (
+          <p>{AI_INSIGHTS_FALLBACK_TEXT}</p>
+        ) : aiHero ? (
+          <p>{aiHero}</p>
+        ) : (
+          <>
+            <p>
+              Den här perioden fick din hemsida {pos(fmtNum(d.visits))} besök —
+              cirka {pos(fmtNum(Math.abs(d.visits - d.prevVisits)))} fler än förra
+              månaden.
+            </p>
+            <p>
+              Google var din starkaste trafikkälla och växte mest (
+              {d.trafficDelta != null ? pos(sign(d.trafficDelta)!) : "—"}). Samtidigt tappade kontaktsidan trafik,
+              vilket är viktigt eftersom leads ofta kommer därifrån.
+            </p>
+          </>
+        )}
       </AISummary>
     </div>
   );
@@ -441,28 +483,28 @@ function SlideKpis({ d }: { d: SlideData }) {
       l: "Besök",
       v: fmtNum(d.visits),
       d: sign(d.trafficDelta),
-      p: (d.trafficDelta ?? 0) >= 0,
+      p: (d.trafficDelta ?? null) !== null && d.trafficDelta! > 0,
       tip: { title: "Vad är ett besök?", body: "Varje gång någon laddar sidan räknas det som ett besök — oavsett om de har varit inne förut.", example: "Samma person som besöker tre gånger = 3 besök." },
     },
     {
       l: "Antal personer",
       v: fmtNum(d.people),
       d: sign(d.peopleDelta),
-      p: (d.peopleDelta ?? 0) >= 0,
+      p: (d.peopleDelta ?? null) !== null && d.peopleDelta! > 0,
       tip: { title: "Vad betyder antal personer?", body: "En person räknas bara en gång, även om den besöker flera gånger.", example: "1 person som går in 3 gånger = 3 besök, men bara 1 person här." },
     },
     {
       l: "Tid på sidan",
       v: "2 min 14 s",
       d: sign(d.timeDelta),
-      p: (d.timeDelta ?? 0) >= 0,
+      p: (d.timeDelta ?? null) !== null && d.timeDelta! > 0,
       tip: { title: "Genomsnittlig besökstid", body: "Hur länge en genomsnittlig besökare stannar. Längre tid betyder att folk hittar det de söker.", example: "2 min 14 s innebär att besökarna läser — inte bara studsar vidare." },
     },
     {
       l: "Leads",
       v: fmtNum(d.leads),
       d: sign(d.leadsDelta),
-      p: (d.leadsDelta ?? 0) >= 0,
+      p: (d.leadsDelta ?? null) !== null && d.leadsDelta! > 0,
       tip: { title: "Vad räknas som ett lead?", body: "Varje registrerad konvertering — t.ex. ifyllt kontaktformulär, telefonklick eller köp.", example: "Kräver att konverteringsspårning är aktiverat i Google Analytics." },
     },
   ];
@@ -509,10 +551,10 @@ function SlideTrend({ d }: { d: SlideData }) {
     <div className="flex flex-col gap-5 h-full">
       {/* Header */}
       <div className="shrink-0">
-        <h1 className="font-display text-[2.6rem] font-bold leading-[1.05] tracking-tight">
+        <h1 className="font-display text-[3.1rem] font-bold leading-[1.05] tracking-tight lg:text-[3.8rem]">
           Så hittar besökarna till er<span style={{ color: "#FF6B55" }}>.</span>
         </h1>
-        <p className="mt-1 text-[21px] text-foreground/80">{d.period}</p>
+        <p className="mt-1 text-[21px] text-foreground">{d.period}</p>
       </div>
 
       {/* Main row: chart left, stats right */}
@@ -522,12 +564,12 @@ function SlideTrend({ d }: { d: SlideData }) {
         <div className="rounded-2xl border border-border/60 bg-background/70 p-5 flex flex-col min-h-0">
           <div className="flex items-center justify-between gap-4 mb-3 shrink-0">
             <div>
-              <p className="text-[18px] font-semibold uppercase tracking-[0.2em] text-foreground/80">Totala besök</p>
+              <p className="text-[18px] font-semibold uppercase tracking-[0.2em] text-foreground">Totala besök</p>
               <p className="font-display text-[3.3rem] font-bold leading-none tracking-tight tabular-nums mt-0.5">
                 {d.visits.toLocaleString("sv-SE")}
               </p>
             </div>
-            <TrendPill delta={sign(d.trafficDelta)} positive={(d.trafficDelta ?? 0) >= 0} size="lg" />
+            <TrendPill delta={sign(d.trafficDelta)} positive={d.trafficDelta !== null && d.trafficDelta > 0} size="lg" />
           </div>
           <div className="flex-1 min-h-0">
             <ResponsiveContainer width="100%" height="100%">
@@ -572,7 +614,7 @@ function SlideTrend({ d }: { d: SlideData }) {
                 {d.topChannels.slice(0, 5).map((ch) => (
                   <div key={ch.name} className="flex-1 min-w-0">
                     <div className="flex items-baseline justify-between gap-1 mb-1.5">
-                      <span className="truncate text-[13px] text-foreground/80">{ch.name}</span>
+                      <span className="truncate text-[13px] text-foreground">{ch.name}</span>
                       <span className="shrink-0 text-[14px] font-bold tabular-nums">{ch.pct}%</span>
                     </div>
                     <div className="h-[4px] rounded-full bg-border/50 overflow-hidden">
@@ -587,13 +629,13 @@ function SlideTrend({ d }: { d: SlideData }) {
 
         {/* Right stats column */}
         <div className="rounded-2xl border border-border/60 bg-background/70 px-5 py-5 flex flex-col min-h-0 overflow-hidden">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-foreground/80 mb-3 shrink-0">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-foreground mb-3 shrink-0">
             Per kanal
           </p>
           <div className="flex flex-col flex-1 min-h-0 divide-y divide-border/50 overflow-hidden">
             {rightStats.map((s) => (
               <div key={s.label} className="flex flex-col justify-center py-2.5">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-foreground/80 mb-1 leading-tight">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-foreground mb-1 leading-tight">
                   {s.label}
                 </p>
                 <div className="flex items-baseline gap-2">
@@ -601,7 +643,7 @@ function SlideTrend({ d }: { d: SlideData }) {
                     {s.value}
                   </p>
                   {s.delta !== undefined && (
-                    <TrendPill delta={sign(s.delta ?? null)} positive={(s.delta ?? 0) >= 0} size="sm" />
+                    <TrendPill delta={sign(s.delta ?? null)} positive={s.delta !== undefined && s.delta !== null && s.delta > 0} size="sm" />
                   )}
                 </div>
               </div>
@@ -643,15 +685,15 @@ function SlideChannels({ d }: { d: SlideData }) {
                     <p className="text-[22px] font-semibold leading-tight">{c.name}</p>
                     {c.tip.title && <InfoTooltip title={c.tip.title} body={c.tip.body} example={c.tip.example} side="above" />}
                   </div>
-                  <p className="truncate text-[20px] text-foreground/80">{c.sub}</p>
+                  <p className="truncate text-[20px] text-foreground">{c.sub}</p>
                 </div>
               </div>
               <div className="mt-4 flex items-end justify-between gap-3">
                 <div>
                   <p className="font-display text-[38px] font-semibold tabular-nums">{c.pct}%</p>
-                  <p className="mt-0.5 text-[20px] tabular-nums text-foreground/80">{fmtNum(c.visits)} besök</p>
+                  <p className="mt-0.5 text-[20px] tabular-nums text-foreground">{fmtNum(c.visits)} besök</p>
                 </div>
-                <TrendPill delta={sign(c.delta)} positive={(c.delta ?? 0) >= 0} size="sm" />
+                <TrendPill delta={sign(c.delta)} positive={c.delta !== null && c.delta > 0} size="sm" />
               </div>
             </div>
           );
@@ -671,13 +713,13 @@ function SlidePages({ d }: { d: SlideData }) {
   return (
     <div className="space-y-7">
       <div>
-        <SlideHeading sub="Sidorna som drar mest besök just nu — och hur de utvecklas.">
-          Dina viktigaste sidor
+        <SlideHeading sub="De mest besökta sidorna under perioden, topp 6 ser du nedan:">
+          Dina mest besökta sidor
         </SlideHeading>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {d.topPages.map((row, i) => {
-          const positive = (row.d ?? 0) >= 0;
+          const positive = row.d !== null && row.d > 0;
           const r = i < 3 ? rankColors[i] : neutral;
           return (
             <div
@@ -704,7 +746,7 @@ function SlidePages({ d }: { d: SlideData }) {
                 <p className="font-display text-[30px] font-semibold tabular-nums">
                   {fmtNum(row.v)}
                 </p>
-                <span className="text-[20px] font-medium text-foreground/80">besök</span>
+                <span className="text-[20px] font-medium text-foreground">besök</span>
                 <InfoTooltip title="Vad räknas som ett sidbesök?" body="Antal gånger den här sidan laddades under perioden." example="En besökare som återkommer tre gånger bidrar med 3 sidbesök." side="above" />
               </div>
             </div>
@@ -715,43 +757,120 @@ function SlidePages({ d }: { d: SlideData }) {
   );
 }
 
-function SlideStrategicInsight({ d }: { d: SlideData }) {
+function SlideStrategicInsight({
+  d,
+  aiInsights,
+}: {
+  d: SlideData;
+  aiInsights: AiInsightsPayload | null;
+}) {
+  const aiInsight = aiInsights?.slide_insight;
+  const signals = [
+    {
+      label: "Trafiken växer",
+      body: "Google driver merparten av ökningen. Det beror på konsekvens — håll publiceringstempot uppe.",
+      positive: true,
+    },
+    {
+      label: "Engagemanget sjunker",
+      body: "Fler hittar sidan, men stannar kortare. Det kan betyda att innehållet inte matchar det besökarna söker.",
+      positive: false,
+    },
+    {
+      label: "Kontaktsidan tappade synlighet",
+      body: "Det är sidan där leads konverterar. En svagare ingång dit påverkar affären direkt.",
+      positive: false,
+    },
+  ];
+
   return (
-    <div className="flex h-full flex-col justify-center gap-6">
-      <div className="space-y-3 text-center">
-        <div className="mx-auto max-w-3xl">
-          <SlideHeading sub="Vad siffrorna betyder för affären — inte bara dashboarden.">
-            Synligheten växer — men värdet fångas inte fullt ut
-          </SlideHeading>
-        </div>
-      </div>
-      <AISummary label="Clarix executive insight">
-        <p>
-          Google är fortsatt din starkaste tillväxtmotor och driver merparten av
-          trafikökningen den här perioden.
-        </p>
-        <p>
-          Samtidigt har engagemanget gått ned, vilket tyder på att besökare hittar
-          dig — men inte stannar lika länge. Kontaktsidan tappade också synlighet,
-          vilket är viktigt eftersom det är där leads ofta konverterar.
-        </p>
-        <div className="flex items-center gap-3 border-t border-[oklch(0.5_0.18_290_/_0.18)] pt-3">
-          <span
-            className="shrink-0 rounded-full px-2.5 py-0.5 text-[0.7rem] font-bold uppercase tracking-widest text-white"
-            style={{ background: ACCENT }}
-          >
-            Bottom line
-          </span>
-          <p className="font-semibold">
-            Synligheten förbättras, men affärsvärdet fångas inte fullt ut ännu.
+    <div className="grid h-full grid-cols-[1fr_1.05fr] gap-6 content-center">
+      {/* Left: heading + signal list */}
+      <div className="flex flex-col justify-center gap-6">
+        <div>
+          <h1 className="font-display text-[2.9rem] font-bold leading-[1.05] tracking-tight lg:text-[3.4rem]">
+            Synligheten ökar.<br />Affärsvärdet fångas inte fullt ut<span style={{ color: "#FF6B55" }}>.</span>
+          </h1>
+          <p className="mt-3 text-[20px] text-foreground leading-relaxed">
+            Vad siffrorna faktiskt betyder för er, bortom dashboarden.
           </p>
         </div>
-      </AISummary>
+        <ul className="space-y-3">
+          {signals.map((s) => (
+            <li
+              key={s.label}
+              className="flex items-start gap-4 rounded-2xl border border-border bg-background/80 px-5 py-4"
+            >
+              <span
+                className="mt-0.5 h-2 w-2 shrink-0 rounded-full"
+                style={{ background: s.positive ? TREND_POS : TREND_NEG, marginTop: 10 }}
+              />
+              <div>
+                <p className="font-semibold text-[19px]">{s.label}</p>
+                <p className="mt-0.5 text-[18px] leading-relaxed text-foreground">{s.body}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Right: expanded summary card */}
+      <div
+        className="relative overflow-hidden rounded-3xl border border-white/20 p-8 shadow-[0_24px_60px_-26px_rgba(255,107,85,0.45)] flex flex-col justify-between"
+        style={{ background: "linear-gradient(135deg, #e8336d 0%, #ff6b35 50%, #ffb830 100%)" }}
+      >
+        <NoiseTexture preset="cinematic" blendMode="overlay" />
+        <div className="relative z-10 flex flex-col h-full gap-5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/70">
+            Det vi ser just nu
+          </p>
+          <div className="flex-1 space-y-4 text-[1.15rem] font-medium leading-[1.65] tracking-[-0.01em] text-white/95">
+            {aiInsight === null ? (
+              <p>{AI_INSIGHTS_FALLBACK_TEXT}</p>
+            ) : aiInsight ? (
+              aiInsight.body.map((paragraph) => <p key={paragraph}>{paragraph}</p>)
+            ) : (
+              <>
+                <p>
+                  Trafiken ökar — men trafik som inte konverterar är bara en kostnad utan
+                  avkastning. Det intressanta den här perioden är gapet som börjar öppna sig
+                  mellan synlighet och affärseffekt.
+                </p>
+                <p>
+                  Sjunkande engagemang i kombination med en svagare kontaktsida är ett klassiskt
+                  mönster: ni når fler, men budskapet eller flödet håller inte besökaren kvar
+                  tillräckligt länge för att ett beslut ska fattas. Det är inte ett trafikproblem —
+                  det är ett konverteringsproblem som döljer sig bakom bra topplinjesiffror.
+                </p>
+                <p>
+                  Nästa steg är inte mer trafik. Det är att förstå varför de som redan hittar er
+                  väljer att lämna.
+                </p>
+              </>
+            )}
+          </div>
+          <div className="flex items-start gap-3 border-t border-white/20 pt-4">
+            <span
+              className="shrink-0 rounded-full px-2.5 py-0.5 text-[0.68rem] font-bold uppercase tracking-widest text-white"
+              style={{ background: ACCENT }}
+            >
+              Bottom line
+            </span>
+            <p className="text-white font-semibold text-[1.05rem] leading-snug">
+              {aiInsight === null
+                ? AI_INSIGHTS_FALLBACK_TEXT
+                : aiInsight?.bottom_line ??
+                  "Synligheten förbättras. Men om engagemanget fortsätter sjunka och kontaktsidan inte återhämtar sig, riskerar ni att trafiktillväxten inte omvandlas till affärer."}
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
-function SlideRecommendations() {
+function SlideRecommendations({ aiInsights }: { aiInsights: AiInsightsPayload | null }) {
+  const aiRecs = aiInsights?.slide_recs;
   const actions = [
     {
       tag: "Skala",
@@ -780,26 +899,29 @@ function SlideRecommendations() {
         </SlideHeading>
       </div>
       <div className="grid gap-4 md:grid-cols-3">
-        {actions.map((a) => {
+        {actions.map((a, index) => {
           const Icon = a.icon;
+          const body = aiRecs === null
+            ? AI_INSIGHTS_FALLBACK_TEXT
+            : aiRecs?.[index]?.body ?? a.b;
           return (
             <div
               key={a.t}
               className="group relative flex flex-col overflow-hidden rounded-3xl border border-border bg-background/95 p-7 shadow-[0_4px_8px_rgba(15,23,42,0.03),0_18px_44px_-22px_rgba(15,23,42,0.18)] transition-all hover:-translate-y-0.5"
             >
               <div className="flex items-center justify-between">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted text-foreground/75">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl text-white" style={{ background: "linear-gradient(135deg, #FF4D9E 0%, #FF6B55 50%, #FFB830 100%)" }}>
                   <Icon className="h-5 w-5" />
                 </div>
-                <span className="rounded-full border border-border bg-background px-3 py-1 text-[10px] font-bold uppercase tracking-[0.22em] text-foreground/80">
+                <span className="rounded-full border border-border bg-background px-3 py-1 text-[10px] font-bold uppercase tracking-[0.22em] text-foreground">
                   {a.tag}
                 </span>
               </div>
               <h3 className="mt-6 font-display text-[22px] font-semibold leading-tight tracking-tight sm:text-[26px]">
                 {a.t}
               </h3>
-              <p className="mt-3 text-[21px] leading-relaxed text-foreground/75">
-                {a.b}
+              <p className="mt-3 text-[21px] leading-relaxed text-foreground">
+                {body}
               </p>
             </div>
           );
@@ -828,7 +950,7 @@ function SlideConversion({ d }: { d: SlideData }) {
               key={m.l}
               className="rounded-3xl border border-border bg-background/85 p-6"
             >
-              <p className="text-sm text-foreground/80">{m.l}</p>
+              <p className="text-sm text-foreground">{m.l}</p>
               <p className="mt-2 font-display text-3xl tracking-tight">{m.v}</p>
               {m.dd && (
                 <p className="mt-1 text-xs font-medium" style={{ color: TREND_POS }}>
@@ -847,7 +969,7 @@ function SlideConversion({ d }: { d: SlideData }) {
         <SlideHeading sub="Just nu mäter vi besök — men inte vad de leder till.">
           Du ser trafiken — men inte affären
         </SlideHeading>
-        <p className="max-w-xl text-base leading-relaxed text-foreground/80 sm:text-lg">
+        <p className="max-w-xl text-base leading-relaxed text-foreground sm:text-lg">
           Konverteringsspårning är inte aktiverat ännu. Med spårning på plats
           kan vi koppla varje besök till leads, samtal och köp — och visa exakt
           vilka kanaler som faktiskt driver affärer.
@@ -860,24 +982,30 @@ function SlideConversion({ d }: { d: SlideData }) {
           Koppla på konverteringsspårning
         </button>
       </div>
-      <AISummary label="Vad du får">
-        <ul className="space-y-3">
-          {[
-            "Antal leads per kanal",
-            "Värde per kanal i kronor",
-            "Vilka sidor som faktiskt genererar affärer",
-            "Bästa kampanj baserat på riktig data",
-          ].map((t) => (
-            <li key={t} className="flex items-start gap-3">
-              <CheckCircle2
-                className="mt-0.5 h-5 w-5 shrink-0"
-                style={{ color: TREND_POS }}
-              />
-              <span className="text-base">{t}</span>
-            </li>
-          ))}
-        </ul>
-      </AISummary>
+      <div
+        className="relative overflow-hidden rounded-3xl border border-white/20 p-8 shadow-[0_24px_60px_-26px_rgba(255,107,85,0.45)] flex flex-col justify-center"
+        style={{ background: "linear-gradient(135deg, #e8336d 0%, #ff6b35 50%, #ffb830 100%)" }}
+      >
+        <NoiseTexture preset="cinematic" blendMode="overlay" />
+        <div className="relative z-10">
+          <p className="text-[13px] font-semibold uppercase tracking-[0.24em] text-white/70 mb-5">
+            Vad du får
+          </p>
+          <ul className="space-y-4">
+            {[
+              "Antal leads per kanal",
+              "Värde per kanal i kronor",
+              "Vilka sidor som faktiskt genererar affärer",
+              "Bästa kampanj baserat på riktig data",
+            ].map((t) => (
+              <li key={t} className="flex items-center gap-3">
+                <CheckCircle2 className="h-6 w-6 shrink-0 text-white" />
+                <span className="text-[22px] font-semibold text-white">{t}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
     </div>
   );
 }
@@ -895,7 +1023,7 @@ function SlideAIVisibility() {
         <SlideHeading sub="ChatGPT, Perplexity och Gemini skickar redan trafik — men syns inte i vanliga rapporter.">
           AI-synligheten är just nu okänd
         </SlideHeading>
-        <ul className="space-y-2.5 text-base text-foreground/80 sm:text-lg">
+        <ul className="space-y-2.5 text-base text-foreground sm:text-lg">
           {[
             "ChatGPT-trafik är inte spårad",
             "Perplexity-hänvisningar mäts inte",
@@ -922,13 +1050,7 @@ function SlideAIVisibility() {
         className="relative overflow-hidden rounded-3xl border border-white/20 p-7 shadow-[0_24px_60px_-26px_rgba(255,107,85,0.45)]"
         style={{ background: "linear-gradient(135deg, #e8336d 0%, #ff6b35 50%, #ffb830 100%)" }}
       >
-        <svg className="pointer-events-none absolute inset-0 z-0 h-full w-full" xmlns="http://www.w3.org/2000/svg" style={{ mixBlendMode: "overlay", opacity: 0.35 }}>
-          <filter id="grain-ai">
-            <feTurbulence type="fractalNoise" baseFrequency="0.72" numOctaves="4" stitchTiles="stitch" />
-            <feColorMatrix type="saturate" values="0" />
-          </filter>
-          <rect width="100%" height="100%" filter="url(#grain-ai)" />
-        </svg>
+        <NoiseTexture preset="cinematic" blendMode="overlay" />
         <div className="relative z-10">
           <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/70">
             Status per AI-källa
@@ -955,7 +1077,37 @@ function SlideAIVisibility() {
   );
 }
 
-function SlideRecap({ d }: { d: SlideData }) {
+function SlideRecap({
+  d,
+  aiInsights,
+}: {
+  d: SlideData;
+  aiInsights: AiInsightsPayload | null;
+}) {
+  const aiRecap = aiInsights?.slide_recap;
+  const bullets = [
+    {
+      t: "Trafiken växer",
+      b: "Google fortsätter driva tillväxten — håll publiceringstempot.",
+      positive: true,
+    },
+    {
+      t: "Engagemanget behöver omsorg",
+      b: "Besökstiden sjunker. Innehåll och layout är värt att se över.",
+      positive: false,
+    },
+    {
+      t: "AI-synligheten är omätt",
+      b: "Aktivera spårning för att inte missa nästa söktrend.",
+      positive: false,
+    },
+  ].map((bullet, index) => ({
+    ...bullet,
+    b: aiRecap === null
+      ? AI_INSIGHTS_FALLBACK_TEXT
+      : aiRecap?.[index]?.body ?? bullet.b,
+  }));
+
   return (
     <div className="grid h-full content-center gap-10 lg:grid-cols-[1.05fr_1fr]">
       <div className="space-y-6">
@@ -963,23 +1115,7 @@ function SlideRecap({ d }: { d: SlideData }) {
           Tre saker att komma ihåg
         </SlideHeading>
         <ul className="space-y-4">
-          {[
-            {
-              t: "Trafiken växer",
-              b: "Google fortsätter driva tillväxten — håll publiceringstempot.",
-              positive: true,
-            },
-            {
-              t: "Engagemanget behöver omsorg",
-              b: "Besökstiden sjunker. Innehåll och layout är värt att se över.",
-              positive: false,
-            },
-            {
-              t: "AI-synligheten är omätt",
-              b: "Aktivera spårning för att inte missa nästa söktrend.",
-              positive: false,
-            },
-          ].map((b) => (
+          {bullets.map((b) => (
             <li
               key={b.t}
               className="flex items-start gap-4 rounded-2xl border border-border bg-background/80 p-4 sm:p-5"
@@ -1001,7 +1137,7 @@ function SlideRecap({ d }: { d: SlideData }) {
               </span>
               <div>
                 <p className="font-semibold">{b.t}</p>
-                <p className="mt-1 text-sm text-foreground/80">{b.b}</p>
+                <p className="mt-1 text-[20px] text-foreground">{b.b}</p>
               </div>
             </li>
           ))}
@@ -1011,22 +1147,16 @@ function SlideRecap({ d }: { d: SlideData }) {
         className="relative overflow-hidden flex flex-col justify-between gap-6 rounded-3xl border border-white/20 p-8 shadow-[0_24px_60px_-26px_rgba(255,107,85,0.45)]"
         style={{ background: "linear-gradient(135deg, #e8336d 0%, #ff6b35 50%, #ffb830 100%)" }}
       >
-        <svg className="pointer-events-none absolute inset-0 z-0 h-full w-full" xmlns="http://www.w3.org/2000/svg" style={{ mixBlendMode: "overlay", opacity: 0.35 }}>
-          <filter id="grain-cta">
-            <feTurbulence type="fractalNoise" baseFrequency="0.72" numOctaves="4" stitchTiles="stitch" />
-            <feColorMatrix type="saturate" values="0" />
-          </filter>
-          <rect width="100%" height="100%" filter="url(#grain-cta)" />
-        </svg>
+        <NoiseTexture preset="cinematic" blendMode="overlay" />
         <div className="relative z-10 flex flex-col justify-between gap-6 flex-1">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/70">
+            <p className="text-[16px] font-semibold uppercase tracking-[0.24em] text-white">
               Vill du ha hjälp att gå från insikt till handling?
             </p>
             <h2 className="mt-4 font-display text-4xl tracking-tight text-white sm:text-5xl">
               Boka en kort genomgång — vi går igenom rapporten tillsammans.
             </h2>
-            <p className="mt-3 text-sm text-white/80">
+            <p className="mt-3 text-[20px] text-white">
               30 minuter. Inga säljpitcher. Bara konkreta nästa steg för din sida.
             </p>
           </div>
@@ -1053,18 +1183,24 @@ function SlideRecap({ d }: { d: SlideData }) {
 
 /* ─── Slide list ─────────────────────────────────────────────────────────── */
 
-function buildSlides(d: SlideData) {
+function buildSlides(
+  d: SlideData,
+  reportData: ReportData | null,
+  aiInsights: AiInsightsPayload | null,
+) {
+  const insights = reportData ? deriveInsights(reportData) : [];
+  const headline = deriveSlideHeadline(insights);
   return [
-    { id: "hero", title: "Sammanfattning", render: () => <SlideHero d={d} /> },
+    { id: "hero", title: "Sammanfattning", render: () => <SlideHero d={d} headline={headline} aiInsights={aiInsights} /> },
     { id: "kpis", title: "Nyckeltal", render: () => <SlideKpis d={d} /> },
     { id: "trend", title: "Trafikutveckling", render: () => <SlideTrend d={d} /> },
     { id: "channels", title: "Trafikkällor", render: () => <SlideChannels d={d} /> },
     { id: "pages", title: "Bästa sidor", render: () => <SlidePages d={d} /> },
-    { id: "insight", title: "Strategisk bedömning", render: () => <SlideStrategicInsight d={d} /> },
-    { id: "recs", title: "Rekommendationer", render: () => <SlideRecommendations /> },
+    { id: "insight", title: "Strategisk bedömning", render: () => <SlideStrategicInsight d={d} aiInsights={aiInsights} /> },
+    { id: "recs", title: "Rekommendationer", render: () => <SlideRecommendations aiInsights={aiInsights} /> },
     { id: "conv", title: "Konvertering", render: () => <SlideConversion d={d} /> },
     { id: "ai", title: "AI-synlighet", render: () => <SlideAIVisibility /> },
-    { id: "recap", title: "Kort summerat", render: () => <SlideRecap d={d} /> },
+    { id: "recap", title: "Kort summerat", render: () => <SlideRecap d={d} aiInsights={aiInsights} /> },
   ];
 }
 
@@ -1147,6 +1283,7 @@ function SlideCard({ slide, scale, innerRef }: {
 
 export default function ReportPage() {
   const [reportData, setReportData] = useState<ReportData | null>(null);
+  const [aiInsights, setAiInsights] = useState<AiInsightsPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [noSources, setNoSources] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -1161,11 +1298,13 @@ export default function ReportPage() {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setNoSources(false);
-    setReportData(null);
 
     async function load() {
+      setLoading(true);
+      setNoSources(false);
+      setReportData(null);
+      setAiInsights(null);
+
       const supabase = createClient();
       const { data, error } = await supabase
         .from("connected_sources")
@@ -1220,6 +1359,29 @@ export default function ReportPage() {
         ? mergeReportData(base, realParts.slice(1), connectedIds)
         : { ...base, meta: { ...base.meta, availableSources: connectedIds } };
       if (!merged.executiveSummary) merged.executiveSummary = deriveExecutiveSummary(merged, "sv");
+
+      const metricsHash = hashAiInsightMetrics(merged);
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      let cached: { insights: unknown; metrics_hash: string; generated_at: string } | null = null;
+
+      if (user) {
+        const { data } = await supabase
+          .from("ai_report_cache")
+          .select("insights, metrics_hash, generated_at")
+          .eq("user_id", user.id)
+          .eq("period_start", dateRange.startDate)
+          .eq("period_end", dateRange.endDate)
+          .maybeSingle();
+        cached = data;
+      }
+
+      if (!cancelled && isFreshAiInsightsCache(cached, metricsHash)) {
+        const parsed = AiInsightsPayloadSchema.safeParse(cached?.insights);
+        setAiInsights(parsed.success ? parsed.data : null);
+      }
+
       setReportData(merged);
       setLoading(false);
     }
@@ -1229,7 +1391,10 @@ export default function ReportPage() {
   }, [dateRange.startDate, dateRange.endDate]);
 
   const slideData = useMemo(() => buildSlideData(reportData), [reportData]);
-  const slides = useMemo(() => buildSlides(slideData), [slideData]);
+  const slides = useMemo(
+    () => buildSlides(slideData, reportData, aiInsights),
+    [slideData, reportData, aiInsights],
+  );
   const total = slides.length;
   const cardH = CANVAS_H * scale;
 
@@ -1311,14 +1476,14 @@ export default function ReportPage() {
   })?.labelSv ?? `${dateRange.startDate} – ${dateRange.endDate}`;
 
   return (
-    <div className="relative flex h-dvh flex-col overflow-hidden bg-[oklch(0.965_0.005_270)] text-foreground print:bg-white">
+    <div className="relative flex h-dvh flex-col overflow-hidden bg-[oklch(0.965_0.005_270)] text-foreground print:bg-white" style={{ overscrollBehavior: "auto" }}>
 
       {/* ── Top bar ───────────────────────────────────────────── */}
       <header className="print:hidden shrink-0 z-20 flex h-12 items-center justify-between px-6">
         <div className="flex items-center gap-3">
           <Link
             href="/dashboard"
-            className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs font-medium text-foreground/80 hover:bg-muted transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
           >
             <ArrowLeft className="h-3 w-3" />
             Avsluta
@@ -1330,7 +1495,7 @@ export default function ReportPage() {
         <div className="relative">
           <button
             onClick={() => setShowDatePicker((v) => !v)}
-            className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-4 py-1.5 text-xs font-semibold text-foreground/80 hover:bg-muted transition-colors"
+            className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-4 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-colors"
           >
             {currentLabel}
             <ArrowRight className="h-3 w-3 rotate-90" />
@@ -1356,7 +1521,7 @@ export default function ReportPage() {
 
         <button
           onClick={togglePresent}
-          className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs font-medium text-foreground/80 hover:bg-muted transition-colors"
+          className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
         >
           {isFs ? <Minimize2 className="h-3 w-3" /> : <Maximize2 className="h-3 w-3" />}
           {isFs ? "Avsluta" : "Present"}
@@ -1367,7 +1532,7 @@ export default function ReportPage() {
       <div
         ref={scrollRef}
         className="relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden"
-        style={{ scrollbarWidth: "none" }}
+        style={{ scrollbarWidth: "none", overscrollBehaviorY: "auto" }}
       >
         <div ref={containerRef} className="mx-auto w-full max-w-[1400px] px-8">
 
@@ -1384,7 +1549,7 @@ export default function ReportPage() {
 
           <div
             className="flex flex-col items-center"
-            style={{ gap: SLIDE_GAP, paddingTop: SLIDE_GAP, paddingBottom: SLIDE_GAP * 4 }}
+            style={{ gap: SLIDE_GAP, paddingTop: SLIDE_GAP, paddingBottom: SLIDE_GAP }}
           >
             {loading
               ? Array.from({ length: 4 }).map((_, i) => (
