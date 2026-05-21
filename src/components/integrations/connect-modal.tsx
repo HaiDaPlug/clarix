@@ -4,7 +4,6 @@ import React from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Check, Loader2, Lock, ShieldCheck, X } from "lucide-react";
 import type {
-  ConnectableSource,
   ConnectedSource,
 } from "@/lib/google/connected-sources";
 

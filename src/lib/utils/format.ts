@@ -1,11 +1,7 @@
 export function formatNumber(value: number, unit?: string): string {
   if (unit === "percent") return `${value.toFixed(1)}%`;
   if (unit === "currency") return formatCurrency(value);
-  if (unit === "seconds") {
-    const m = Math.floor(value / 60);
-    const s = Math.round(value % 60);
-    return `${m}:${s.toString().padStart(2, "0")}`;
-  }
+  if (unit === "seconds") return `${Math.round(value)}s`;
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
   if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
   return value.toLocaleString("sv-SE");

@@ -19,7 +19,7 @@ const SLIDE_CHANNEL_COLORS: Record<string, string> = {
 };
 
 function inferChannelKey(unit: string | undefined, label: string): string | null {
-  if (unit === "percent" || unit === "seconds") return null;
+  if (unit === "percent") return null;
   const l = label.toLowerCase();
   if (l.includes("organic") || l.includes("organisk")) return "organic";
   if (l.includes("paid") || l.includes("betald") || l.includes("ads")) return "paid";
@@ -76,19 +76,25 @@ function MiniMetric({ metric, delay = 0 }: { metric: Metric; delay?: number }) {
   );
 }
 
+function formatDuration(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = Math.round(seconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
 export default function TrafficOverviewSlide({ data, variant }: ModuleProps) {
   const { t } = useLocale();
   const traffic = data.trafficOverview;
   if (!traffic) return null;
 
-  const secondaryMetrics = [
+  const channelMetrics = [
     traffic.organicSessions,
     traffic.directSessions,
     traffic.paidSessions,
     traffic.referralSessions,
-    traffic.bounceRate,
-    traffic.avgSessionDuration,
   ].filter(Boolean) as Metric[];
+
+  const duration = traffic.avgSessionDuration ?? null;
 
   return (
     <div className="slide bg-[var(--bone)]">
@@ -140,12 +146,36 @@ export default function TrafficOverviewSlide({ data, variant }: ModuleProps) {
             transition={{ duration: 0.55, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
           >
             <p className="eyebrow mb-0">{t.trafficOverview.byChannel}</p>
-            {secondaryMetrics.slice(0, 4).map((m, i) => (
+            {channelMetrics.map((m, i) => (
               <div key={i}>
                 <MiniMetric metric={m} delay={0.15 + i * 0.06} />
-                {i < Math.min(secondaryMetrics.length - 1, 3) && <Rule light />}
+                {(i < channelMetrics.length - 1 || duration) && <Rule light />}
               </div>
             ))}
+            {duration && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.45, delay: 0.15 + channelMetrics.length * 0.06, ease: [0.16, 1, 0.3, 1] }}
+                className="py-4 flex items-start gap-3"
+              >
+                <div className="pl-[20px]">
+                  <p className="eyebrow mb-2">{duration.label}</p>
+                  <p className="font-display text-2xl leading-none text-[var(--charcoal)]">
+                    {formatDuration(duration.value)}
+                  </p>
+                  {duration.previousValue !== undefined && (() => {
+                    const change = formatChange(duration.value, duration.previousValue!);
+                    const isGood = change.direction === "up" && duration.trendGood !== false;
+                    return change.direction !== "flat" ? (
+                      <p className={cn("text-[11px] font-medium mt-1", isGood ? "text-[var(--signal-up)]" : "text-[var(--signal-down)]")}>
+                        {change.sign}{change.value}
+                      </p>
+                    ) : null;
+                  })()}
+                </div>
+              </motion.div>
+            )}
           </motion.div>
         </div>
 
