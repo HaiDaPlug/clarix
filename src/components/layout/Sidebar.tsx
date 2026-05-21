@@ -20,6 +20,7 @@ export function Sidebar() {
   const { t, locale, setLocale } = useLocale();
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
+  const [propertyName, setPropertyName] = useState<string | null>(null);
   const { activeId, setActiveId } = useDevScenario();
 
   useEffect(() => {
@@ -35,6 +36,16 @@ export function Sidebar() {
         null
       );
     });
+    supabase
+      .from("connected_sources")
+      .select("display_name")
+      .eq("source", "ga4")
+      .neq("property_id", "_pending")
+      .limit(1)
+      .single()
+      .then(({ data }) => {
+        setPropertyName(data?.display_name ?? null);
+      });
   }, []);
 
   const NAV = [
@@ -76,6 +87,42 @@ export function Sidebar() {
         >
           {t.nav.tagline}
         </p>
+        {propertyName && (
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 5,
+              marginTop: 7,
+              padding: "2px 8px 2px 6px",
+              borderRadius: 6,
+              backgroundColor: "var(--parchment)",
+              border: "1px solid var(--rule)",
+              alignSelf: "flex-start",
+            }}
+          >
+            <span
+              style={{
+                width: 6, height: 6, borderRadius: "50%", flexShrink: 0,
+                backgroundColor: "#E8826A",
+              }}
+            />
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 600,
+                letterSpacing: "0.04em",
+                color: "var(--slate)",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                maxWidth: 148,
+              }}
+            >
+              {propertyName}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Nav */}

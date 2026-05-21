@@ -69,12 +69,24 @@ function DashboardPageInner() {
   const [expiredSources, setExpiredSources] = useState<string[]>([]);
   const [noDataForPeriod, setNoDataForPeriod] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [propertyName, setPropertyName] = useState<string | null>(null);
 
-  // Fetch user ID once — needed for AI insight cache key
+  // Fetch user ID + active GA4 property name once
   useEffect(() => {
-    createClient().auth.getUser().then(({ data }) => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
       setUserId(data.user?.id ?? null);
     });
+    supabase
+      .from("connected_sources")
+      .select("display_name")
+      .eq("source", "ga4")
+      .neq("property_id", "_pending")
+      .limit(1)
+      .single()
+      .then(({ data }) => {
+        setPropertyName(data?.display_name ?? null);
+      });
   }, []);
 
   const active = useMemo(() => SCENARIOS.find((s) => s.id === activeId)!, [activeId]);
@@ -308,6 +320,7 @@ function DashboardPageInner() {
             data={activeData}
             aiInsights={aiInsights}
             loading={aiInsightsLoading}
+            propertyName={propertyName}
           />
         )}
 

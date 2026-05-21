@@ -16,10 +16,12 @@ export function DashboardHero({
   data,
   aiInsights,
   loading,
+  propertyName,
 }: {
   data: ReportData;
   aiInsights: AiInsightsPayload | null;
   loading: boolean;
+  propertyName?: string | null;
 }) {
   const { t } = useLocale();
   const params = useSearchParams();
@@ -42,6 +44,22 @@ export function DashboardHero({
       <NoiseTexture preset="cinematic" blendMode="overlay" />
       {loading && <ShimmerOverlay />}
       <div className="relative z-10 flex flex-col">
+        {propertyName && (
+          <p
+            style={{
+              fontSize: "12px",
+              fontWeight: 500,
+              color: "rgba(255,255,255,0.6)",
+              marginBottom: "10px",
+              letterSpacing: "0.01em",
+            }}
+          >
+            Välkommen,{" "}
+            <span style={{ fontWeight: 700, color: "rgba(255,255,255,0.85)" }}>
+              {propertyName}
+            </span>
+          </p>
+        )}
         <div className="flex items-center gap-2">
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em]" style={{ color: "rgba(255,255,255,0.7)" }}>
             {loading ? "Analyserar data" : "Insikter från proffset"}
