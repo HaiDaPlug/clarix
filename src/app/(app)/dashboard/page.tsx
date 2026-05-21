@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, Suspense } from "react";
 import { motion } from "motion/react";
 import Link from "next/link";
 import { Download } from "lucide-react";
@@ -50,6 +50,14 @@ function SectionItem({ item, data }: { item: AssembledDashboardItem; data: Repor
 }
 
 export default function DashboardPage() {
+  return (
+    <Suspense>
+      <DashboardPageInner />
+    </Suspense>
+  );
+}
+
+function DashboardPageInner() {
   const { locale, t } = useLocale();
   const { activeId } = useDevScenario();
   const dateRange = useDateRange();
