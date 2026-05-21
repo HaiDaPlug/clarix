@@ -316,12 +316,19 @@ function DashboardPageInner() {
         )}
 
         {heroItem && !isLoadingRealData && (
-          <DashboardHero
-            data={activeData}
-            aiInsights={aiInsights}
-            loading={aiInsightsLoading}
-            propertyName={propertyName}
-          />
+          <div className="flex flex-col gap-3">
+            {propertyName && (
+              <p style={{ fontSize: "13px", color: "var(--slate)" }}>
+                Välkommen,{" "}
+                <span style={{ fontWeight: 700, color: "var(--charcoal)" }}>{propertyName}</span>
+              </p>
+            )}
+            <DashboardHero
+              data={activeData}
+              aiInsights={aiInsights}
+              loading={aiInsightsLoading}
+            />
+          </div>
         )}
 
         {isLoadingRealData ? (
