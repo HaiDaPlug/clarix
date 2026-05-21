@@ -1,5 +1,29 @@
 # Digital Rapport — Current State
 
+---
+
+## NOW — Open priorities (2026-05-21)
+
+### Done this session
+
+- **Slide 3 duration** — `avgSessionDuration` is now rendered as a guaranteed last item in the right column, always visible regardless of how many channel rows precede it. Uses a scoped `formatDuration()` (`m:ss`) — the global `formatNumber` for `seconds` was intentionally left as `"Ns"` to avoid wrong abstraction.
+- **Slide 3 channel dots** — each channel row (organic, paid, direct, referral) gets a soft colored dot on the left keyed to the channel type. Non-channel metrics have no dot.
+- **Dashboard channel breakdown** — soft coral/warm palette: coral → amber-coral → blush → terracotta → sand → sage. Replaces the vivid primary colors.
+- **KPI card source badges** — each dashboard KPI card shows a small logo chip (GA4 / GSC / Ads) top-right, so the data source is immediately clear.
+- **Property indicator** — sidebar shows a coral-dot chip with the connected GA4 `display_name` below the brand name. Dashboard shows "Välkommen, **[property]**" as a standalone line above the hero card.
+- **Connect modal UX** — property list has fixed `max-h-56` with scroll. Per-row pending state: only the clicked row turns dark + shows a spinner. All others dim. "Ansluter" label appears inline under that row only.
+- **InfoTooltip** — BorderBeam animation removed, scale transform removed from trigger icon, example box background darkened (`oklch 0.90`).
+- **Build fixes** — all three pages using `useSearchParams` (`/dashboard`, `/data`, `/report`) wrapped in `<Suspense>` shells to fix Vercel static prerender failures.
+
+### Still open / to bounce
+
+- **Slide 3 — core idea ownership.** The duration and colors are fixed, but the original complaint ("nothing demands attention") is not fully resolved. The layout has a large sessions number + chart on the left and a list on the right — this may need a stronger visual hierarchy decision, not just cosmetic polish. To be bounced.
+- **Slide 4 (KPI Snapshot) — competing attention.** Complaint is too much vying for attention. Decision: badges stay (red/green) but something else is causing the crowding. To be bounced — need to look at it together.
+- **Custom GA4 channel groups not appearing.** The mapper uses `sessionDefaultChannelGroup` (Google's hardcoded grouping). Custom channel groups are a separate GA4 dimension. Needs investigation before implementation.
+- **KPI quiz / onboarding** — deferred. Design the quiz flow first. No code until then.
+
+---
+
 ## What it is and why
 
 Digital Rapport is a premium reporting SaaS for SME business owners who want clarity on their digital performance — not another BI dashboard. The core idea: connect your Google data sources, get a calm, narrative-driven report that tells you what happened, why it matters, and what to do next.
@@ -117,12 +141,13 @@ Source-driven — renders real GA4/GSC data when connected, falls back to mock o
    - *No data for period* — shown when GA4 is connected but has no data for the selected date range (e.g. connected after last month). Black text, Clarix-styled. No mock data ever shown when a source is connected.
    - *Sample data* — shown only when zero sources connected, with "Anslut källor" CTA
    - *GSC nudge* — when GA4 is connected but GSC is not
-3. **AI Summary hero** — pink→coral→amber gradient card (`linear-gradient(135deg, #e8336d88, #ff6b3588, #ffb83088)` over `#fff5f3` base), `NoiseTexture` grain overlay, "Insikter från proffset" eyebrow, wavy SVG underline on headline, white text, "Läs hela rapporten" CTA
-4. **Narrative KPI cards** (3-column grid) — large number + inline delta arrow, educational headline + insight line, flush sparkline strip at bottom using `#FF6B55` matching the report sparkline color. Each KPI routes to its own time series (sessions, organic, SEO clicks, bounce inverted, conversions, paid)
-5. **Traffic chart** — dual area series (Besök + Besökare), dark tooltip, legend
-6. **Channel breakdown** — SVG donut diagram with interactive arc segments; legend rows show channel name, bold session count, delta arrow, percentage pill. Hover cross-highlights arc + row.
-7. **Search visibility** — 2×2 grid of GSC metrics with deltas
-8. **Nästa steg card** — derived from real data (ROAS, SEO position, bounce rate, missing paid), max 3 steps with Effort/Vinst badges
+3. **Property greeting** — "Välkommen, **[GA4 display_name]**" shown above the hero card when a property is connected. Hidden in mock/sample mode.
+4. **AI Summary hero** — full pink→coral→amber gradient card (`linear-gradient(135deg, #e8336d, #ff6b35, #ffb830)`), `NoiseTexture` grain overlay, "Insikter från proffset" eyebrow, wavy SVG underline on headline, white text, "Läs hela rapporten" CTA. AI copy generated server-side and cached in Supabase.
+5. **Narrative KPI cards** (3-column grid) — large number + inline delta arrow, educational headline + insight line, flush sparkline strip at bottom using `#FF6B55`. Each card has a source logo badge (GA4 / GSC / Ads) top-right. Each KPI routes to its own time series.
+6. **Traffic chart** — dual area series (Besök + Besökare), dark tooltip, legend
+7. **Channel breakdown** — SVG donut diagram with interactive arc segments; soft coral/warm palette (coral → amber-coral → blush → terracotta → sand → sage). Legend rows show channel name, bold session count, delta arrow, percentage pill. Hover cross-highlights arc + row.
+8. **Search visibility** — 2×2 grid of GSC metrics with deltas
+9. **Nästa steg card** — derived from real data (ROAS, SEO position, bounce rate, missing paid), max 3 steps with Effort/Vinst badges
 
 **Data loading behavior:**
 - When sources are connected, an empty base (no mock numbers) is used as the merge base — real zeros show instead of fake data
@@ -212,7 +237,9 @@ V2 visual shell fully wired to real auth logic.
 
 **Integration cards** — GA4, GSC, Google Ads with real logo SVGs, category eyebrow, purpose description, "unlocks" chips. Google Ads marked coming soon.
 
-**Connect flow** — inline property picker expands below each card with `AnimatePresence` height animation. Loads available GA4 properties and GSC sites from `/api/google/properties`. Disconnect removes the row. `needs_refresh` surfaces a re-auth prompt. All loading/error states handled.
+**Connect flow** — modal opens on "Anslut". Property list has fixed `max-h-56` with scroll — never unbounded stacking. Per-row pending state: only the clicked property row turns dark with a spinner; all others dim. "Ansluter…" appears inline under that row. Loads available GA4 properties and GSC sites from `/api/google/properties`. Disconnect removes the row. `needs_refresh` surfaces a re-auth prompt. All loading/error states handled.
+
+**Sidebar property indicator** — the sidebar logo section shows a small coral-dot chip with the connected GA4 `display_name` below the brand name. Queries `connected_sources` on mount. Hidden when no property is connected.
 
 ## Report
 
@@ -260,7 +287,7 @@ The cinematic scroll-surface report viewer — previously "Rapport 2", now the s
 - If no sources connected or API returns empty → "Ingen data för den här perioden" state with link to Integrations
 - Real data only: fetches from `/api/ga4` and `/api/gsc`, merges via `mergeReportData`
 
-**InfoTooltip** — unified API: accepts either `text="..."` (plain, used by dashboard) or `title` + `body` + `example` (rich, used by report). Previously dashboard callers passed `text` but component only accepted `title`+`body` — those were silently empty. Now both work. Tooltip opens downward-right, has a single BorderBeam cycling `#FF4D9E → #FFB830` around the card border. `src/components/ui/border-beam.tsx` added as a new primitive.
+**InfoTooltip** — unified API: accepts either `text="..."` (plain) or `title` + `body` + `example` (rich). Tooltip opens downward-right. No animation on the trigger icon (scale removed). Example box uses `oklch(0.90 0.008 270)` background for clear contrast. BorderBeam animation removed — card has a plain `1px solid rgba(0,0,0,0.05)` border.
 
 ---
 
