@@ -2,9 +2,23 @@
 
 ---
 
-## NOW — Open priorities (2026-05-21)
+## NOW — Open priorities (2026-05-22)
 
 ### Done this session
+
+**Report page modularization — `report/page.tsx` 1553 → 347 lines**
+- `src/components/report/tokens.ts` — design tokens (`TREND_POS/NEG/BG`, `ACCENT`) + canvas constants (`CANVAS_W/H`, `SLIDE_GAP`)
+- `src/components/report/slide-data.tsx` — `SlideData` type + `buildSlideData()` (kept under `components/` not `lib/` because it references Lucide icon components)
+- `src/components/report/primitives/` — `Shimmer`, `TrendPill` (+ `fmtNum`/`sign`/`formatDuration`), `SlideHeading` (+ `Eyebrow`), `AISummary` (+ `pos`/`neg`/`trendSpan`)
+- `src/components/report/slides/` — 10 individual slide files (`SlideHero` through `SlideRecap`)
+- `src/components/report/layout/useCardScale.ts` — ResizeObserver hook; `containerW` removed (was tracked but never consumed)
+- `src/components/report/layout/SlideCard.tsx` — motion wrapper + canvas scaling shell
+- `src/components/report/slide-list.tsx` — `buildSlides()` array builder
+- `page.tsx` now contains only: data loading effect, `ReportPageInner` state/hooks, and chrome UI (top bar, dot nav, bottom controls)
+- Unused props removed: `d` from `SlideStrategicInsight` and `SlideRecap`, `containerW` from `SlideCard`, `neg` from `SlideHero`, `cardH` from page
+- Build passes. Zero behavior or visual changes.
+
+### Done this session (prior)
 
 **Trust + calm report polish pass**
 - **Date ranges end on yesterday** — `lastCompletedDay()` helper added to `connected-sources.ts`. All presets (`this-month`, `all-time`) and `rangeFromSearchParams` clamp `endDate` to yesterday. Partial-day data no longer creates FOMO dips at the end of charts. `labelFromSearchParams` uses the clamped range so the label always matches the data fetched.

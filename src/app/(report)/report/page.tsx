@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
-import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -18,120 +17,14 @@ import {
 } from "@/lib/google/connected-sources";
 import { useDateRange, DATE_PRESETS, presetToRange, type DatePresetId } from "@/lib/google/date-presets";
 import { deriveExecutiveSummary } from "@/lib/engine/derive-executive-summary";
-import { deriveInsights } from "@/lib/engine/derive-insights";
-import { deriveSlideHeadline } from "@/lib/engine/slide-headlines";
-import { type AiInsightsPayload } from "@/lib/ai-insights/types";
 import { useAiInsights } from "@/lib/hooks/useAiInsights";
 import type { ReportData } from "@/types/schema";
 import { CANVAS_W, CANVAS_H, SLIDE_GAP } from "@/components/report/tokens";
 import { SlideShimmer } from "@/components/report/primitives/Shimmer";
-import { type SlideData, buildSlideData } from "@/components/report/slide-data";
-import { SlideHero } from "@/components/report/slides/SlideHero";
-import { SlideKpis } from "@/components/report/slides/SlideKpis";
-import { SlideTrend } from "@/components/report/slides/SlideTrend";
-import { SlideChannels } from "@/components/report/slides/SlideChannels";
-import { SlidePages } from "@/components/report/slides/SlidePages";
-import { SlideStrategicInsight } from "@/components/report/slides/SlideStrategicInsight";
-import { SlideRecommendations } from "@/components/report/slides/SlideRecommendations";
-import { SlideConversion } from "@/components/report/slides/SlideConversion";
-import { SlideAIVisibility } from "@/components/report/slides/SlideAIVisibility";
-import { SlideRecap } from "@/components/report/slides/SlideRecap";
-
-/* ─── Slide list ─────────────────────────────────────────────────────────── */
-
-function buildSlides(
-  d: SlideData,
-  reportData: ReportData | null,
-  aiInsights: AiInsightsPayload | null,
-) {
-  const insights = reportData ? deriveInsights(reportData) : [];
-  const headline = deriveSlideHeadline(insights);
-  return [
-    { id: "hero", title: "Sammanfattning", render: () => <SlideHero d={d} headline={headline} aiInsights={aiInsights} /> },
-    { id: "kpis", title: "Nyckeltal", render: () => <SlideKpis d={d} /> },
-    { id: "trend", title: "Trafikutveckling", render: () => <SlideTrend d={d} /> },
-    { id: "channels", title: "Trafikkällor", render: () => <SlideChannels d={d} /> },
-    { id: "pages", title: "Bästa sidor", render: () => <SlidePages d={d} /> },
-    { id: "insight", title: "Strategisk bedömning", render: () => <SlideStrategicInsight d={d} aiInsights={aiInsights} /> },
-    { id: "recs", title: "Rekommendationer", render: () => <SlideRecommendations aiInsights={aiInsights} /> },
-    { id: "conv", title: "Konvertering", render: () => <SlideConversion d={d} /> },
-    { id: "ai", title: "AI-synlighet", render: () => <SlideAIVisibility /> },
-    { id: "recap", title: "Kort summerat", render: () => <SlideRecap d={d} aiInsights={aiInsights} /> },
-  ];
-}
-
-/* ─── Layout ─────────────────────────────────────────────────────────────── */
-
-function useCardScale(containerRef: React.RefObject<HTMLDivElement | null>) {
-  const [scale, setScale] = useState(1);
-  const [containerW, setContainerW] = useState(CANVAS_W);
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const compute = (w: number) => {
-      const s = Math.min(w / CANVAS_W, 1.2) * 0.90;
-      setScale(s);
-      setContainerW(w);
-    };
-    const ro = new ResizeObserver(([entry]) => compute(entry.contentRect.width));
-    ro.observe(el);
-    compute(el.clientWidth);
-    return () => ro.disconnect();
-  }, [containerRef]);
-
-  return { scale, containerW };
-}
-
-function SlideCard({ slide, scale, innerRef }: {
-  slide: { id: string; render: () => React.ReactNode };
-  scale: number;
-  containerW: number;
-  innerRef?: React.RefCallback<HTMLDivElement>;
-}) {
-  const prefersReduced = useReducedMotion();
-  const cardH = CANVAS_H * scale;
-  const cardW = CANVAS_W * scale;
-
-  return (
-    <motion.div
-      ref={innerRef}
-      initial={prefersReduced ? false : { opacity: 0, y: 32 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-10%" }}
-      transition={{ duration: 0.55, ease: [0, 0, 0.2, 1] }}
-      style={{ height: cardH, width: cardW, flexShrink: 0 }}
-      className="relative mx-auto print:shadow-none print:rounded-none"
-    >
-      {/* Clipping shell — sized to scaled dimensions */}
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          borderRadius: 6,
-          overflow: "hidden",
-          background: "#ffffff",
-          boxShadow: "0 2px 4px rgba(20,18,16,0.04), 0 12px 40px rgba(20,18,16,0.08)",
-          border: "1px solid rgba(20,18,16,0.05)",
-        }}
-      >
-        {/* Canvas — full 1280×720, scaled down to fit */}
-        <div
-          style={{
-            width: CANVAS_W,
-            height: CANVAS_H,
-            transform: `scale(${scale})`,
-            transformOrigin: "top left",
-            fontSize: 20,
-          }}
-          className="flex h-full flex-col justify-center px-16 py-12"
-        >
-          {slide.render()}
-        </div>
-      </div>
-    </motion.div>
-  );
-}
+import { buildSlideData } from "@/components/report/slide-data";
+import { buildSlides } from "@/components/report/slide-list";
+import { useCardScale } from "@/components/report/layout/useCardScale";
+import { SlideCard } from "@/components/report/layout/SlideCard";
 
 /* ─── Page ───────────────────────────────────────────────────────────────── */
 
@@ -154,7 +47,7 @@ function ReportPageInner() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const { scale, containerW } = useCardScale(containerRef);
+  const { scale } = useCardScale(containerRef);
   const dateRange = useDateRange();
   const router = useRouter();
 
@@ -249,7 +142,6 @@ function ReportPageInner() {
     [slideData, reportData, aiInsights],
   );
   const total = slides.length;
-  const cardH = CANVAS_H * scale;
 
   // Track which slide is in view via IntersectionObserver
   useEffect(() => {
@@ -437,7 +329,6 @@ function ReportPageInner() {
                     key={slide.id}
                     slide={slide}
                     scale={scale}
-                    containerW={containerW}
                     innerRef={(el) => { cardRefs.current[i] = el; }}
                   />
                 ))

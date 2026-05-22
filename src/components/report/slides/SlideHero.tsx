@@ -4,7 +4,7 @@ import { Area, AreaChart, ResponsiveContainer } from "recharts";
 import { type AiInsightsPayload, AI_INSIGHTS_FALLBACK_TEXT } from "@/lib/ai-insights/types";
 import { type SlideData } from "../slide-data";
 import { TREND_POS, TREND_NEG } from "../tokens";
-import { AISummary, pos, neg, trendSpan } from "../primitives/AISummary";
+import { AISummary, pos, trendSpan } from "../primitives/AISummary";
 import { fmtNum, sign } from "../primitives/TrendPill";
 
 export function SlideHero({

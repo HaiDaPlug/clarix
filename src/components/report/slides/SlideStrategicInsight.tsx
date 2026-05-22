@@ -2,14 +2,11 @@
 
 import { NoiseTexture } from "@/components/ui/noise-texture";
 import { type AiInsightsPayload, AI_INSIGHTS_FALLBACK_TEXT } from "@/lib/ai-insights/types";
-import { type SlideData } from "../slide-data";
 import { TREND_POS, TREND_NEG, ACCENT } from "../tokens";
 
 export function SlideStrategicInsight({
-  d,
   aiInsights,
 }: {
-  d: SlideData;
   aiInsights: AiInsightsPayload | null;
 }) {
   const aiInsight = aiInsights?.slide_insight;

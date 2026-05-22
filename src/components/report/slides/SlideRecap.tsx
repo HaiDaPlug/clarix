@@ -4,15 +4,12 @@ import { Compass, Lightbulb, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { NoiseTexture } from "@/components/ui/noise-texture";
 import { type AiInsightsPayload, AI_INSIGHTS_FALLBACK_TEXT } from "@/lib/ai-insights/types";
-import { type SlideData } from "../slide-data";
 import { TREND_POS, TREND_POS_BG, ACCENT } from "../tokens";
 import { SlideHeading } from "../primitives/SlideHeading";
 
 export function SlideRecap({
-  d,
   aiInsights,
 }: {
-  d: SlideData;
   aiInsights: AiInsightsPayload | null;
 }) {
   const aiRecap = aiInsights?.slide_recap;
