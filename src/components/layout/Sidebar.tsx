@@ -1,7 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useLocale, Locale } from "@/lib/i18n";
@@ -15,7 +17,19 @@ const DEV_SCENARIOS = [
   { id: "scenario-3" as const, label: "Partial" },
 ];
 
-export function Sidebar() {
+type SidebarProps = {
+  collapsed: boolean;
+  mobileOpen: boolean;
+  onCollapseToggle: () => void;
+  onMobileClose: () => void;
+};
+
+export function Sidebar({
+  collapsed,
+  mobileOpen,
+  onCollapseToggle,
+  onMobileClose,
+}: SidebarProps) {
   const pathname = usePathname();
   const { t, locale, setLocale } = useLocale();
   const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -48,7 +62,7 @@ export function Sidebar() {
       });
   }, []);
 
-  const NAV = [
+  const nav = [
     {
       section: t.nav.sections.overview,
       items: [
@@ -69,31 +83,63 @@ export function Sidebar() {
 
   return (
     <aside
-      className="w-64 shrink-0 flex flex-col border-r fixed top-0 left-0 h-dvh z-40"
+      className={cn(
+        "fixed inset-y-0 left-0 z-50 flex w-[min(20rem,calc(100vw-2rem))] shrink-0 flex-col border-r shadow-[18px_0_60px_-36px_rgba(20,18,16,0.45)] transition-all duration-300 ease-out lg:shadow-none",
+        collapsed ? "lg:w-20" : "lg:w-64",
+        mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+      )}
       style={{ borderColor: "var(--rule)", backgroundColor: "var(--bone)" }}
     >
-      {/* Logo */}
-      <div className="px-6 border-b flex flex-col justify-center" style={{ borderColor: "var(--rule)", height: "88px" }}>
-        <p className="eyebrow" style={{ color: "var(--slate)" }}>{t.nav.brand}</p>
-        <p
-          style={{
-            fontFamily: "var(--font-display)",
-            fontSize: "1.15rem",
-            fontWeight: 600,
-            letterSpacing: "-0.02em",
-            color: "var(--charcoal)",
-            marginTop: "3px",
-          }}
-        >
-          {t.nav.tagline}
-        </p>
+      <div
+        className={cn("border-b px-4 transition-all lg:px-5", collapsed ? "lg:px-3" : "lg:px-6")}
+        style={{ borderColor: "var(--rule)", minHeight: "88px" }}
+      >
+        <div className="flex min-h-[88px] items-center gap-3">
+          <Link
+            href="/dashboard"
+            onClick={onMobileClose}
+            className={cn("flex min-w-0 flex-1 items-center gap-3", collapsed && "lg:justify-center")}
+            aria-label="Clarix dashboard"
+          >
+            <Image
+              src="/clarix-logga-transparent.png"
+              alt="Clarix"
+              width={160}
+              height={52}
+              className={cn("h-10 w-auto dark:invert", collapsed ? "lg:h-8" : "lg:h-11")}
+              priority
+            />
+          </Link>
+
+          <button
+            type="button"
+            aria-label="Close navigation"
+            onClick={onMobileClose}
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bone-dark)] lg:hidden"
+            style={{ color: "var(--slate)" }}
+          >
+            <X className="h-4 w-4" />
+          </button>
+
+          <button
+            type="button"
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            onClick={onCollapseToggle}
+            className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bone-dark)] lg:inline-flex"
+            style={{ color: "var(--slate)" }}
+          >
+            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          </button>
+        </div>
+
         {propertyName && (
           <div
+            className={cn("mb-4", collapsed && "lg:hidden")}
             style={{
               display: "inline-flex",
               alignItems: "center",
               gap: 5,
-              marginTop: 7,
               padding: "2px 8px 2px 6px",
               borderRadius: 6,
               backgroundColor: "var(--parchment)",
@@ -103,7 +149,10 @@ export function Sidebar() {
           >
             <span
               style={{
-                width: 6, height: 6, borderRadius: "50%", flexShrink: 0,
+                width: 6,
+                height: 6,
+                borderRadius: "50%",
+                flexShrink: 0,
                 backgroundColor: "#E8826A",
               }}
             />
@@ -116,7 +165,7 @@ export function Sidebar() {
                 whiteSpace: "nowrap",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
-                maxWidth: 148,
+                maxWidth: 180,
               }}
             >
               {propertyName}
@@ -125,80 +174,102 @@ export function Sidebar() {
         )}
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 px-3 py-5 flex flex-col gap-6 overflow-y-auto">
-        {NAV.map((group) => (
-          <div key={group.section}>
-            <p
-              className="px-3 mb-1.5"
-              style={{ fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--slate-light)" }}
-            >
-              {group.section}
-            </p>
-            <ul className="flex flex-col gap-0.5">
-              {group.items.map(({ label, href, icon: Icon }) => {
-                const active = pathname === href;
-                return (
-                  <li key={href}>
-                    <Link
-                      href={href}
-                      className={cn(
-                        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors",
-                        active
-                          ? "font-medium"
-                          : "hover:bg-[var(--bone-dark)]"
-                      )}
-                      style={{
-                        backgroundColor: active ? "var(--charcoal)" : undefined,
-                        color: active ? "var(--parchment)" : "var(--charcoal)",
-                      }}
-                    >
-                      <Icon size={15} active={active} />
-                      {label}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
+      <nav className="flex-1 overflow-y-auto px-3 py-5">
+        <div className="flex flex-col gap-6">
+          {nav.map((group) => (
+            <div key={group.section}>
+              <p
+                className={cn("mb-1.5 px-3", collapsed && "lg:sr-only")}
+                style={{
+                  fontSize: "10px",
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  color: "var(--slate-light)",
+                }}
+              >
+                {group.section}
+              </p>
+              <ul className="flex flex-col gap-0.5">
+                {group.items.map(({ label, href, icon: Icon }) => {
+                  const active = pathname === href;
+                  return (
+                    <li key={href}>
+                      <Link
+                        href={href}
+                        onClick={onMobileClose}
+                        title={collapsed ? label : undefined}
+                        aria-label={label}
+                        className={cn(
+                          "flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
+                          collapsed && "lg:justify-center lg:px-0",
+                          active ? "font-medium" : "hover:bg-[var(--bone-dark)]"
+                        )}
+                        style={{
+                          backgroundColor: active ? "var(--charcoal)" : undefined,
+                          color: active ? "var(--parchment)" : "var(--charcoal)",
+                        }}
+                      >
+                        <Icon size={15} active={active} />
+                        <span className={cn("min-w-0 truncate", collapsed && "lg:hidden")}>{label}</span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </div>
       </nav>
 
-      {/* Dev scenario switcher */}
       {process.env.NODE_ENV === "development" && (
-        <div className="px-4 py-3 border-t" style={{ borderColor: "var(--rule)" }}>
-          <p className="mb-2" style={{ fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--slate-light)" }}>
+        <div className={cn("border-t px-4 py-3", collapsed && "lg:hidden")} style={{ borderColor: "var(--rule)" }}>
+          <p
+            className="mb-2"
+            style={{
+              fontSize: "9px",
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: "var(--slate-light)",
+            }}
+          >
             Dev · Scenario
           </p>
           <div className="flex items-center gap-1">
-            {DEV_SCENARIOS.map((s) => (
+            {DEV_SCENARIOS.map((scenario) => (
               <button
-                key={s.id}
-                onClick={() => setActiveId(s.id)}
-                className="flex-1 py-1 rounded-md transition-colors"
+                key={scenario.id}
+                type="button"
+                onClick={() => setActiveId(scenario.id)}
+                className="flex-1 rounded-md py-1 transition-colors"
                 style={{
                   fontSize: "10px",
                   fontWeight: 500,
                   letterSpacing: "0.03em",
-                  backgroundColor: activeId === s.id ? "var(--charcoal)" : "var(--bone-dark)",
-                  color: activeId === s.id ? "var(--parchment)" : "var(--slate)",
+                  backgroundColor: activeId === scenario.id ? "var(--charcoal)" : "var(--bone-dark)",
+                  color: activeId === scenario.id ? "var(--parchment)" : "var(--slate)",
                 }}
               >
-                {s.label}
+                {scenario.label}
               </button>
             ))}
           </div>
         </div>
       )}
 
-      {/* Display controls — language + theme */}
-      <div className="px-5 py-3 border-t flex items-center justify-between" style={{ borderColor: "var(--rule)" }}>
-        <div className="flex items-center gap-1">
+      <div
+        className={cn(
+          "flex items-center justify-between border-t px-5 py-3",
+          collapsed && "lg:flex-col lg:gap-3 lg:px-3"
+        )}
+        style={{ borderColor: "var(--rule)" }}
+      >
+        <div className={cn("flex items-center gap-1", collapsed && "lg:hidden")}>
           {(["sv", "en"] as Locale[]).map((loc) => (
             <button
               key={loc}
+              type="button"
               onClick={() => setLocale(loc)}
-              className="px-2.5 py-1 rounded-md text-[11px] font-medium uppercase tracking-wider transition-colors"
+              className="rounded-md px-2.5 py-1 text-[11px] font-medium uppercase tracking-wider transition-colors"
               style={{
                 backgroundColor: locale === loc ? "var(--charcoal)" : "transparent",
                 color: locale === loc ? "var(--parchment)" : "var(--slate-light)",
@@ -210,25 +281,24 @@ export function Sidebar() {
         </div>
         <AnimatedThemeToggler
           variant="circle"
-          className="w-7 h-7 rounded-md flex items-center justify-center transition-colors hover:bg-[var(--bone-dark)] [&>svg]:w-[14px] [&>svg]:h-[14px]"
+          className="flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-[var(--bone-dark)] [&>svg]:h-[14px] [&>svg]:w-[14px]"
           style={{ color: "var(--slate-light)" }}
         />
       </div>
 
-      {/* User */}
-      <div className="px-4 py-5 border-t" style={{ borderColor: "var(--rule)" }}>
-        <div className="flex items-center gap-3">
+      <div className={cn("border-t px-4 py-5", collapsed && "lg:px-3")} style={{ borderColor: "var(--rule)" }}>
+        <div className={cn("flex items-center gap-3", collapsed && "lg:justify-center")}>
           <div
-            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium shrink-0 uppercase"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-medium uppercase"
             style={{ backgroundColor: "var(--charcoal)", color: "var(--parchment)" }}
           >
             {(userName ?? userEmail ?? "U").charAt(0)}
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate" style={{ color: "var(--charcoal)" }}>
+          <div className={cn("min-w-0 flex-1", collapsed && "lg:hidden")}>
+            <p className="truncate text-sm font-medium" style={{ color: "var(--charcoal)" }}>
               {userName ?? t.nav.user.account}
             </p>
-            <p className="text-[11px] truncate" style={{ color: "var(--slate-light)" }}>
+            <p className="truncate text-[11px]" style={{ color: "var(--slate-light)" }}>
               {userEmail ?? t.nav.user.plan}
             </p>
           </div>
@@ -238,10 +308,9 @@ export function Sidebar() {
   );
 }
 
-
 function IconDashboard({ size = 16, active }: { size?: number; active?: boolean }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" className="shrink-0">
       <rect x="1" y="1" width="6" height="6" rx="1.5" stroke={active ? "var(--parchment)" : "var(--charcoal)"} strokeWidth="1.2" />
       <rect x="9" y="1" width="6" height="6" rx="1.5" stroke={active ? "var(--parchment)" : "var(--charcoal)"} strokeWidth="1.2" />
       <rect x="1" y="9" width="6" height="6" rx="1.5" stroke={active ? "var(--parchment)" : "var(--charcoal)"} strokeWidth="1.2" />
@@ -252,7 +321,7 @@ function IconDashboard({ size = 16, active }: { size?: number; active?: boolean 
 
 function IconReport({ size = 16, active }: { size?: number; active?: boolean }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" className="shrink-0">
       <rect x="2" y="1" width="12" height="14" rx="1.5" stroke={active ? "var(--parchment)" : "var(--charcoal)"} strokeWidth="1.2" />
       <line x1="5" y1="5" x2="11" y2="5" stroke={active ? "var(--parchment)" : "var(--charcoal)"} strokeWidth="1.2" strokeLinecap="round" />
       <line x1="5" y1="8" x2="11" y2="8" stroke={active ? "var(--parchment)" : "var(--charcoal)"} strokeWidth="1.2" strokeLinecap="round" />
@@ -263,7 +332,7 @@ function IconReport({ size = 16, active }: { size?: number; active?: boolean }) 
 
 function IconIntegrations({ size = 16, active }: { size?: number; active?: boolean }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" className="shrink-0">
       <circle cx="3.5" cy="8" r="2" stroke={active ? "var(--parchment)" : "var(--charcoal)"} strokeWidth="1.2" />
       <circle cx="12.5" cy="3.5" r="2" stroke={active ? "var(--parchment)" : "var(--charcoal)"} strokeWidth="1.2" />
       <circle cx="12.5" cy="12.5" r="2" stroke={active ? "var(--parchment)" : "var(--charcoal)"} strokeWidth="1.2" />
@@ -276,7 +345,7 @@ function IconIntegrations({ size = 16, active }: { size?: number; active?: boole
 function IconClients({ size = 16, active }: { size?: number; active?: boolean }) {
   const c = active ? "var(--parchment)" : "var(--charcoal)";
   return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" className="shrink-0">
       <circle cx="6" cy="5" r="2.5" stroke={c} strokeWidth="1.2" />
       <path d="M1.5 13.5c0-2.485 2.015-4.5 4.5-4.5s4.5 2.015 4.5 4.5" stroke={c} strokeWidth="1.2" strokeLinecap="round" />
       <path d="M11 7.5a2 2 0 1 0 0-4" stroke={c} strokeWidth="1.2" strokeLinecap="round" />
@@ -288,7 +357,7 @@ function IconClients({ size = 16, active }: { size?: number; active?: boolean })
 function IconData({ size = 16, active }: { size?: number; active?: boolean }) {
   const c = active ? "var(--parchment)" : "var(--charcoal)";
   return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" className="shrink-0">
       <ellipse cx="8" cy="4" rx="5.5" ry="2" stroke={c} strokeWidth="1.2" />
       <path d="M2.5 4v4c0 1.1 2.46 2 5.5 2s5.5-.9 5.5-2V4" stroke={c} strokeWidth="1.2" />
       <path d="M2.5 8v4c0 1.1 2.46 2 5.5 2s5.5-.9 5.5-2V8" stroke={c} strokeWidth="1.2" />
@@ -299,7 +368,7 @@ function IconData({ size = 16, active }: { size?: number; active?: boolean }) {
 function IconSettings({ size = 16, active }: { size?: number; active?: boolean }) {
   const c = active ? "var(--parchment)" : "var(--charcoal)";
   return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" className="shrink-0">
       <circle cx="8" cy="8" r="2" stroke={c} strokeWidth="1.2" />
       <path d="M8 1.5v1.8M8 12.7v1.8M1.5 8h1.8M12.7 8h1.8M3.4 3.4l1.27 1.27M11.33 11.33l1.27 1.27M12.6 3.4l-1.27 1.27M4.67 11.33l-1.27 1.27" stroke={c} strokeWidth="1.2" strokeLinecap="round" />
     </svg>

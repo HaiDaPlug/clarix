@@ -14,7 +14,6 @@ import {
   ShieldCheck,
   Palette,
 } from "lucide-react";
-import { useEffect, useState } from "react";
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
 import {
   Showcase,
@@ -40,24 +39,24 @@ export function ThemeToggle() {
 export function LandingHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-border/40 bg-background/60 backdrop-blur-xl">
-      <div className="mx-auto flex h-24 max-w-7xl items-center justify-between px-8">
-        <Link href="/" className="shrink-0">
+      <div className="mx-auto grid h-16 max-w-7xl grid-cols-[auto_1fr] items-center gap-3 px-4 sm:h-20 sm:px-6 md:grid-cols-[1fr_auto_1fr] lg:h-24 lg:px-8">
+        <Link href="/" className="shrink-0 justify-self-start">
           <Image
             src="/clarix-logga-transparent.png"
             alt="Clarix"
             width={200}
             height={64}
-            className="h-16 w-auto dark:invert"
+            className="h-12 w-auto dark:invert sm:h-14 lg:h-20"
             priority
           />
         </Link>
-        <nav className="hidden items-center gap-10 text-base text-muted-foreground md:flex">
+        <nav className="hidden items-center justify-center gap-10 text-base text-muted-foreground md:flex">
           <a href="#features" className="transition-colors hover:text-foreground">Funktioner</a>
           <a href="#channels" className="transition-colors hover:text-foreground">Kanaler</a>
           <a href="#agencies" className="transition-colors hover:text-foreground">För byråer</a>
           <a href="#pricing" className="transition-colors hover:text-foreground">Priser</a>
         </nav>
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center justify-self-end gap-2 sm:gap-3">
           <ThemeToggle />
           <Link
             href="/login"
@@ -67,10 +66,10 @@ export function LandingHeader() {
           </Link>
           <Link
             href="/dashboard"
-            className="inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-base font-medium text-background transition-all hover:opacity-90"
+            className="inline-flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-full bg-foreground px-4 py-2.5 text-sm font-medium text-background transition-all hover:opacity-90 sm:gap-2 sm:px-5 sm:text-base"
           >
             Kom igång
-            <ArrowRight className="h-4 w-4" />
+            <ArrowRight className="h-4 w-4 shrink-0" />
           </Link>
         </div>
       </div>
@@ -80,13 +79,13 @@ export function LandingHeader() {
 
 export function HeroSection() {
   return (
-    <section className="relative mx-auto max-w-7xl px-6 pb-32 pt-10 text-center sm:pt-16">
+    <section className="relative mx-auto max-w-7xl px-4 pb-20 pt-8 text-center sm:px-6 sm:pb-28 sm:pt-16 lg:pb-32">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
       >
-        <h1 className="font-display2 mx-auto mt-10 max-w-5xl text-6xl leading-[1.04] tracking-[-0.04em] text-foreground sm:text-7xl md:text-[6rem]">
+        <h1 className="font-display2 mx-auto mt-8 max-w-5xl text-[2.55rem] leading-[1.05] tracking-normal text-foreground min-[380px]:text-[3.25rem] sm:mt-10 sm:text-7xl md:text-[6rem]">
           Förstå din marknadsföring
           <span
             className="mt-3 block bg-clip-text font-accent italic text-transparent"
@@ -99,23 +98,23 @@ export function HeroSection() {
           </span>
         </h1>
 
-        <p className="mx-auto mt-10 max-w-2xl text-lg font-medium leading-[1.5] text-foreground/75 sm:text-xl">
+        <p className="mx-auto mt-7 max-w-2xl text-base font-medium leading-[1.55] text-foreground/75 sm:mt-10 sm:text-xl">
           Anslut dina kanaler. Få tydliga rapporter och smarta AI-insikter
           <br className="hidden sm:block" />{" "}
           på enkel svenska som alla förstår.
         </p>
 
-        <div className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-5">
+        <div className="mt-9 flex flex-col items-stretch justify-center gap-3 sm:mt-12 sm:flex-row sm:items-center sm:gap-5">
           <Link
             href="/dashboard"
-            className="group inline-flex items-center gap-2 rounded-full bg-foreground px-7 py-3.5 text-[0.95rem] font-semibold text-background shadow-elevated2 transition-all hover:-translate-y-0.5 hover:shadow-glow2"
+            className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-foreground px-7 py-3.5 text-[0.95rem] font-semibold text-background shadow-elevated2 transition-all hover:-translate-y-0.5 hover:shadow-glow2"
           >
             Öppna dashboarden
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
           </Link>
           <Link
             href="/report"
-            className="inline-flex items-center gap-2 rounded-full px-6 py-3.5 text-[0.95rem] font-medium text-foreground/80 transition-colors hover:text-foreground"
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-border/50 bg-background/50 px-6 py-3.5 text-[0.95rem] font-medium text-foreground/80 transition-colors hover:text-foreground sm:border-transparent sm:bg-transparent"
           >
             Se en exempelrapport
             <ArrowRight className="h-4 w-4 opacity-60" />
@@ -127,12 +126,12 @@ export function HeroSection() {
         initial={{ opacity: 0, y: 60 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 1, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
-        className="relative mx-auto mt-24 max-w-6xl"
+        className="relative mx-auto mt-14 max-w-6xl sm:mt-24"
       >
-        <div className="pointer-events-none absolute -inset-12 -z-10">
-          <div className="absolute inset-0 rounded-[3rem] bg-gradient-brand opacity-25 blur-3xl" />
+        <div className="pointer-events-none absolute -inset-4 -z-10 sm:-inset-12">
+          <div className="absolute inset-0 rounded-[2rem] bg-gradient-brand opacity-20 blur-2xl sm:rounded-[3rem] sm:opacity-25 sm:blur-3xl" />
           <div
-            className="absolute -bottom-16 left-1/4 h-48 w-1/2 rounded-full blur-3xl"
+            className="absolute -bottom-10 left-1/4 h-32 w-1/2 rounded-full blur-2xl sm:-bottom-16 sm:h-48 sm:blur-3xl"
             style={{ background: "oklch(0.65 0.19 265 / 0.3)" }}
           />
         </div>
@@ -144,13 +143,13 @@ export function HeroSection() {
 
 export function QuoteBridge() {
   return (
-    <section className="mx-auto max-w-6xl px-6 pt-12 pb-2 sm:pt-16">
+    <section className="mx-auto max-w-6xl px-4 pt-8 pb-1 sm:px-6 sm:pt-16 sm:pb-2">
       <motion.figure
         initial={{ opacity: 0, y: 24 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: "-80px" }}
         transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        className="relative overflow-hidden rounded-[24px] px-6 py-10 text-center shadow-[0_24px_60px_-28px_rgba(244,114,82,0.35)] sm:px-12 sm:py-12"
+        className="relative overflow-hidden rounded-[20px] px-5 py-8 text-center shadow-[0_24px_60px_-28px_rgba(244,114,82,0.35)] sm:rounded-[24px] sm:px-12 sm:py-12"
         style={{
           background:
             "linear-gradient(135deg, #FFF4EE 0%, #FFEDE3 55%, #FDE7DA 100%)",
@@ -169,10 +168,10 @@ export function QuoteBridge() {
           className="pointer-events-none absolute -top-20 left-1/2 h-56 w-56 -translate-x-1/2 rounded-full opacity-50 blur-3xl"
           style={{ background: "radial-gradient(circle, rgba(253,164,132,0.55), transparent 70%)" }}
         />
-        <blockquote className="relative font-display text-[1.75rem] font-semibold leading-[1.15] tracking-[-0.02em] text-[#2A1810] sm:whitespace-nowrap sm:text-[2.5rem] md:text-[3rem]">
-          <span aria-hidden className="mr-1 text-[#E8744A]">"</span>
+        <blockquote className="relative font-display text-[1.55rem] font-semibold leading-[1.15] tracking-normal text-[#2A1810] min-[380px]:text-[1.75rem] sm:whitespace-nowrap sm:text-[2.5rem] md:text-[3rem]">
+          <span aria-hidden className="mr-1 text-[#E8744A]">&quot;</span>
           Data är värdelös om du inte förstår den.
-          <span aria-hidden className="ml-1 text-[#E8744A]">"</span>
+          <span aria-hidden className="ml-1 text-[#E8744A]">&quot;</span>
         </blockquote>
         <figcaption className="relative mt-5 text-base font-medium text-[#1A0F0A] sm:mt-6 sm:text-xl">
           Därför byggde vi{" "}
@@ -188,7 +187,7 @@ export function QuoteBridge() {
 
 export function ShowcaseSection() {
   return (
-    <section className="relative mx-auto max-w-7xl space-y-40 px-6 py-32 sm:space-y-48 sm:py-40">
+    <section className="relative mx-auto max-w-7xl space-y-24 px-4 py-20 sm:space-y-40 sm:px-6 sm:py-32 lg:space-y-48 lg:py-40">
       <Showcase
         eyebrow="AI-insikter"
         title="Få veckans viktigaste händelser förklarade."
@@ -207,13 +206,13 @@ export function ShowcaseSection() {
 
 export function AiInsightPanel() {
   return (
-    <section className="mx-auto max-w-7xl px-6 pb-32">
+    <section className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 sm:pb-32">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: "-80px" }}
         transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        className="relative overflow-hidden rounded-[2rem] border border-white/40 p-10 shadow-[0_30px_80px_-30px_rgba(139,92,246,0.4)] sm:p-16 dark:border-white/10"
+        className="relative overflow-hidden rounded-[1.4rem] border border-white/40 p-5 shadow-[0_30px_80px_-30px_rgba(139,92,246,0.4)] sm:rounded-[2rem] sm:p-10 lg:p-16 dark:border-white/10"
         style={{
           background:
             "linear-gradient(135deg, oklch(0.97 0.04 300) 0%, oklch(0.96 0.05 260) 50%, oklch(0.97 0.04 350) 100%)",
@@ -227,13 +226,13 @@ export function AiInsightPanel() {
           className="pointer-events-none absolute -bottom-32 -right-10 h-96 w-96 rounded-full opacity-60 blur-3xl"
           style={{ background: "radial-gradient(circle, oklch(0.86 0.14 220 / 0.5), transparent 70%)" }}
         />
-        <div className="relative grid grid-cols-1 items-center gap-10 lg:grid-cols-12">
+        <div className="relative grid grid-cols-1 items-center gap-8 sm:gap-10 lg:grid-cols-12">
           <div className="lg:col-span-5">
             <div
-              className="inline-flex h-14 w-14 items-center justify-center rounded-2xl text-white shadow-[0_10px_30px_-8px_rgba(139,92,246,0.7)]"
+              className="inline-flex h-12 w-12 items-center justify-center rounded-2xl text-white shadow-[0_10px_30px_-8px_rgba(139,92,246,0.7)] sm:h-14 sm:w-14"
               style={{ background: "linear-gradient(135deg, oklch(0.62 0.22 295), oklch(0.65 0.2 255))" }}
             >
-              <Sparkles className="h-7 w-7" />
+              <Sparkles className="h-6 w-6 sm:h-7 sm:w-7" />
             </div>
             <p
               className="mt-6 text-[11px] font-semibold uppercase tracking-[0.22em]"
@@ -242,18 +241,18 @@ export function AiInsightPanel() {
               AI-sammanfattning
             </p>
             <h2
-              className="font-display2 mt-4 text-4xl tracking-[-0.035em] sm:text-5xl md:text-[3.25rem] md:leading-[1.05]"
+              className="font-display2 mt-4 text-[2.15rem] leading-[1.08] tracking-normal sm:text-5xl md:text-[3.25rem] md:leading-[1.05]"
               style={{ color: "oklch(0.18 0.02 280)" }}
             >
               Som att ha en analytiker i fickan.
             </h2>
-            <p className="mt-5 max-w-md text-lg leading-[1.6]" style={{ color: "oklch(0.3 0.03 280)" }}>
+            <p className="mt-5 max-w-md text-base leading-[1.6] sm:text-lg" style={{ color: "oklch(0.3 0.03 280)" }}>
               Få veckans eller månadens viktigaste siffror förklarade så du kan ta action och datadrivna beslut.
             </p>
           </div>
 
           <div className="lg:col-span-7">
-            <div className="rounded-2xl border border-white/60 bg-white/70 p-7 shadow-[0_20px_50px_-20px_rgba(15,23,42,0.25)] backdrop-blur-xl sm:p-9 dark:bg-background/40">
+            <div className="rounded-2xl border border-white/60 bg-white/70 p-5 shadow-[0_20px_50px_-20px_rgba(15,23,42,0.25)] backdrop-blur-xl sm:p-7 lg:p-9 dark:bg-background/40">
               <div className="flex items-center gap-2">
                 <span
                   className="inline-flex h-1.5 w-1.5 animate-pulse rounded-full"
@@ -267,7 +266,7 @@ export function AiInsightPanel() {
                 </p>
               </div>
               <p
-                className="mt-5 text-2xl font-medium leading-[1.4] tracking-[-0.01em] sm:text-[1.7rem]"
+                className="mt-5 text-[1.25rem] font-medium leading-[1.45] tracking-normal sm:text-[1.7rem]"
                 style={{ color: "oklch(0.18 0.02 280)" }}
               >
                 Intäkterna växte{" "}
@@ -297,20 +296,20 @@ export function AiInsightPanel() {
 
 export function FeaturesSection() {
   return (
-    <section id="features" className="mx-auto max-w-7xl px-6 py-24">
+    <section id="features" className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-24">
       <div className="mx-auto max-w-2xl text-center">
         <p className="text-xs font-semibold uppercase tracking-[0.22em]" style={{ color: "var(--c2-accent)" }}>
           Byggt för klarhet
         </p>
-        <h2 className="font-display2 mt-4 text-5xl tracking-[-0.035em] sm:text-[3.5rem]">
+        <h2 className="font-display2 mt-4 text-[2.35rem] leading-[1.08] tracking-normal sm:text-[3.5rem]">
           Marknadsdata som vem som helst kan läsa.
         </h2>
-        <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-foreground/70">
+        <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-foreground/70 sm:text-lg">
           Oavsett om du är VD, CFO, kommunikatör eller ägare — få svaren utan att tolka grafer.
         </p>
       </div>
 
-      <div className="mt-16 grid grid-cols-1 gap-5 md:grid-cols-3">
+      <div className="mt-10 grid grid-cols-1 gap-4 sm:mt-16 md:grid-cols-3 md:gap-5">
         {[
           { icon: Zap, title: "Snabb onboarding", body: "Anslut en kanal med två klick. Vi bygger hela dashboarden åt dig." },
           { icon: Sparkles, title: "AI-sammanfattningar", body: "Varje slide kommer med insikter på enkel svenska. Sluta skriva samma kommentar två gånger." },
@@ -325,12 +324,12 @@ export function FeaturesSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: i * 0.05 }}
-            className="rounded-2xl border border-border/60 bg-gradient-card2 p-7 transition-all hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-elevated2"
+            className="rounded-2xl border border-border/60 bg-gradient-card2 p-5 transition-all hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-elevated2 sm:p-7"
           >
             <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-brand text-white shadow-glow2">
               <f.icon className="h-5 w-5" />
             </div>
-            <h3 className="mt-6 text-xl font-bold tracking-tight">{f.title}</h3>
+            <h3 className="mt-6 text-xl font-bold tracking-normal">{f.title}</h3>
             <p className="mt-2.5 text-[0.975rem] leading-relaxed text-foreground/70">{f.body}</p>
           </motion.div>
         ))}
@@ -341,9 +340,9 @@ export function FeaturesSection() {
 
 export function ChannelsSection() {
   return (
-    <section id="channels" className="relative py-24 sm:py-28">
-      <div className="mx-auto w-[92%] max-w-7xl sm:w-[88%] lg:w-[85%]">
-        <div className="relative isolate overflow-hidden rounded-[28px] px-6 py-20 text-white shadow-[0_30px_80px_-30px_rgba(15,17,21,0.45),0_10px_30px_-12px_rgba(15,17,21,0.35)] sm:px-12 sm:py-24 lg:px-16">
+    <section id="channels" className="relative py-20 sm:py-28">
+      <div className="mx-auto w-full max-w-7xl px-4 sm:w-[88%] sm:px-0 lg:w-[85%]">
+        <div className="relative isolate overflow-hidden rounded-[22px] px-5 py-14 text-white shadow-[0_30px_80px_-30px_rgba(15,17,21,0.45),0_10px_30px_-12px_rgba(15,17,21,0.35)] sm:rounded-[28px] sm:px-12 sm:py-24 lg:px-16">
           <div aria-hidden className="pointer-events-none absolute inset-0 -z-10" style={{ background: "radial-gradient(ellipse 90% 70% at 50% 0%, #22252A 0%, #1C1E22 50%, #17181B 100%)" }} />
           <div aria-hidden className="pointer-events-none absolute inset-0 -z-10" style={{ background: "radial-gradient(ellipse 60% 40% at 50% 8%, rgba(255,240,220,0.06) 0%, transparent 70%)" }} />
           <div aria-hidden className="pointer-events-none absolute inset-0 -z-10" style={{ background: "radial-gradient(ellipse 50% 45% at 15% 25%, rgba(255,245,230,0.045) 0%, transparent 72%)" }} />
@@ -356,15 +355,15 @@ export function ChannelsSection() {
               <p className="text-xs font-semibold uppercase tracking-[0.24em]" style={{ color: "oklch(0.78 0.13 240)" }}>
                 Rekommenderade integrationer
               </p>
-              <h2 className="font-display2 mt-4 text-[3.3rem] font-bold leading-[1.05] tracking-[-0.035em] text-white sm:text-[3.85rem]">
+              <h2 className="font-display2 mt-4 text-[2.45rem] font-bold leading-[1.05] tracking-normal text-white sm:text-[3.85rem]">
                 Koppla allt<br />du redan använder
               </h2>
-              <p className="mx-auto mt-6 max-w-xl text-[1.2rem] leading-relaxed text-white/90 sm:text-[1.4rem]">
+              <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-white/90 sm:mt-6 sm:text-[1.4rem]">
                 Börja med de viktigaste. Lägg till resten när du vill.
               </p>
             </div>
 
-            <div className="mx-auto mt-14 grid max-w-4xl grid-cols-1 gap-5 sm:grid-cols-3">
+            <div className="mx-auto mt-10 grid max-w-4xl grid-cols-1 gap-4 sm:mt-14 sm:grid-cols-3 sm:gap-5">
               {([
                 { name: "Google Analytics 4", label: "WEBBTRAFIK", Logo: GoogleAnalyticsLogo, badge: "Mest vald" as string | undefined, primary: true },
                 { name: "Google Ads", label: "BETALD TILLVÄXT", Logo: GoogleAdsLogo, badge: undefined as string | undefined, primary: false },
@@ -376,7 +375,7 @@ export function ChannelsSection() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: "-60px" }}
                   transition={{ duration: 0.4, delay: i * 0.04, ease: [0.22, 1, 0.36, 1] }}
-                  className="group relative flex min-h-[290px] flex-col rounded-[18px] border border-white/10 bg-white p-7 ring-1 ring-black/[0.03] transition-all duration-[240ms] ease-out hover:-translate-y-1.5"
+                  className="group relative flex min-h-[230px] flex-col rounded-[18px] border border-white/10 bg-white p-5 ring-1 ring-black/[0.03] transition-all duration-[240ms] ease-out hover:-translate-y-1.5 sm:min-h-[290px] sm:p-7"
                   style={{
                     boxShadow: "0 2px 4px rgba(0,0,0,0.18), 0 18px 40px -12px rgba(0,0,0,0.45), 0 40px 80px -30px rgba(0,0,0,0.55)",
                   }}
@@ -393,7 +392,7 @@ export function ChannelsSection() {
                     <c.Logo className="h-6 w-6" />
                   </div>
                   <div className="mt-7">
-                    <h3 className="text-[1.15rem] font-bold tracking-tight text-foreground">{c.name}</h3>
+                    <h3 className="text-[1.15rem] font-bold tracking-normal text-foreground">{c.name}</h3>
                     <p className="mt-2 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-foreground/45">{c.label}</p>
                   </div>
                   <a
@@ -410,23 +409,23 @@ export function ChannelsSection() {
               ))}
             </div>
 
-            <div className="mx-auto mt-16 max-w-3xl text-center">
-              <p className="text-[1.15rem] leading-relaxed text-white/85 sm:text-[1.2rem]">
+            <div className="mx-auto mt-10 max-w-3xl text-center sm:mt-16">
+              <p className="text-base leading-relaxed text-white/85 sm:text-[1.2rem]">
                 + Meta • Shopify • Search Console • Matomo • YouTube • Excel / CSV
               </p>
               <a
                 href="#pricing"
-                className="mt-5 inline-flex items-center gap-2 text-[1.075rem] font-semibold text-white transition-colors hover:text-white/90 sm:text-[1.15rem]"
+                className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 text-base font-semibold text-white transition-colors hover:text-white/90 sm:text-[1.15rem]"
               >
                 Visa alla integrationer <ArrowRight className="h-[18px] w-[18px]" />
               </a>
             </div>
 
-            <div className="mx-auto mt-10 flex flex-wrap items-center justify-center gap-x-7 gap-y-3 text-[1.025rem] text-white/85">
+            <div className="mx-auto mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-3 text-sm text-white/85 sm:mt-10 sm:gap-x-7 sm:text-[1.025rem]">
               {["Säker OAuth", "Ingen kod", "Klar på 2 minuter"].map((t) => (
                 <span key={t} className="inline-flex items-center gap-2">
                   <Check className="h-[18px] w-[18px] text-emerald-400/90" />
-                  <span className="font-medium tracking-tight">{t}</span>
+                  <span className="font-medium tracking-normal">{t}</span>
                 </span>
               ))}
             </div>
@@ -439,13 +438,13 @@ export function ChannelsSection() {
 
 export function AgenciesSection() {
   return (
-    <section id="agencies" className="border-y border-border/40 bg-muted/20 py-24">
-      <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-12 px-6 lg:grid-cols-2">
+    <section id="agencies" className="border-y border-border/40 bg-muted/20 py-20 sm:py-24">
+      <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-10 px-4 sm:px-6 lg:grid-cols-2 lg:gap-12">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.22em]" style={{ color: "var(--c2-accent)" }}>
             För byråer
           </p>
-          <h2 className="font-display2 mt-4 text-5xl leading-[1.02] tracking-[-0.035em] sm:text-[3.5rem]">
+          <h2 className="font-display2 mt-4 text-[2.4rem] leading-[1.06] tracking-normal sm:text-[3.5rem]">
             Driver du en byrå?
             <span
               className="block bg-clip-text text-transparent"
@@ -454,10 +453,10 @@ export function AgenciesSection() {
               White-labla om du vill
             </span>
           </h2>
-          <p className="mt-7 max-w-xl text-lg leading-relaxed text-foreground/70">
+          <p className="mt-6 max-w-xl text-base leading-relaxed text-foreground/70 sm:mt-7 sm:text-lg">
             Vår filosofi: kunder ska inte behöva en byrå för att förstå sin marknadsföring. Men om du driver en — gör vi dig till hjälten i rummet. Egen logotyp, färger, domän och kundinloggningar.
           </p>
-          <ul className="mt-9 space-y-3.5 text-[0.975rem]">
+          <ul className="mt-7 space-y-3.5 text-[0.975rem] sm:mt-9">
             {[
               "Eget varumärke på dashboards och rapporter",
               "Eget domännamn (rapport.dinbyra.se)",
@@ -473,7 +472,7 @@ export function AgenciesSection() {
               </li>
             ))}
           </ul>
-          <div className="relative mt-11 inline-block">
+          <div className="relative mt-9 inline-block sm:mt-11">
             <span
               aria-hidden
               className="pointer-events-none absolute -inset-3 -z-10 rounded-full opacity-60 blur-2xl"
@@ -481,7 +480,7 @@ export function AgenciesSection() {
             />
             <a
               href="#pricing"
-              className="inline-flex items-center gap-2 rounded-full bg-foreground px-6 py-3 text-[0.95rem] font-semibold text-background shadow-elevated2 transition-all hover:-translate-y-0.5 hover:shadow-glow2"
+              className="inline-flex min-h-12 items-center gap-2 rounded-full bg-foreground px-6 py-3 text-[0.95rem] font-semibold text-background shadow-elevated2 transition-all hover:-translate-y-0.5 hover:shadow-glow2"
             >
               Se byråpriser <ArrowRight className="h-4 w-4" />
             </a>
@@ -490,7 +489,7 @@ export function AgenciesSection() {
 
         <div className="relative">
           <div className="absolute -inset-6 -z-10 rounded-[2rem] bg-gradient-brand opacity-15 blur-3xl" />
-          <div className="rounded-2xl border border-border/60 bg-background/80 p-6 shadow-elevated2 backdrop-blur">
+          <div className="rounded-2xl border border-border/60 bg-background/80 p-4 shadow-elevated2 backdrop-blur sm:p-6">
             <div className="flex items-center gap-3 border-b border-border/60 pb-4">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-brand text-white">
                 <Palette className="h-5 w-5" />
@@ -500,7 +499,7 @@ export function AgenciesSection() {
                 <p className="text-xs text-muted-foreground">Eget varumärke aktiverat</p>
               </div>
             </div>
-            <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="mt-4 grid grid-cols-1 gap-3 min-[380px]:grid-cols-2">
               {[
                 { l: "Klientkonton", v: "24" },
                 { l: "Aktiva rapporter", v: "112" },
@@ -522,20 +521,20 @@ export function AgenciesSection() {
 
 export function PricingSection() {
   return (
-    <section id="pricing" className="mx-auto max-w-7xl px-6 py-24">
+    <section id="pricing" className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-24">
       <div className="mx-auto max-w-2xl text-center">
         <p className="text-xs font-semibold uppercase tracking-[0.22em]" style={{ color: "var(--c2-accent)" }}>
           Priser
         </p>
-        <h2 className="font-display2 mt-4 text-5xl tracking-[-0.035em] sm:text-[3.5rem]">
+        <h2 className="font-display2 mt-4 text-[2.35rem] leading-[1.08] tracking-normal sm:text-[3.5rem]">
           Tre paket. <span className="text-foreground/55">Noll förvirring.</span>
         </h2>
-        <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-foreground/70">
+        <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-foreground/70 sm:text-lg">
           Välj nivån som matchar din ambition. Uppgradera när du växer.
         </p>
       </div>
 
-      <div className="mt-16 grid grid-cols-1 gap-6 md:grid-cols-3 md:items-stretch">
+      <div className="mt-10 grid grid-cols-1 gap-5 sm:mt-16 md:grid-cols-3 md:items-stretch md:gap-6">
         {([
           {
             name: "Bas", price: 499,
@@ -567,7 +566,7 @@ export function PricingSection() {
           return (
             <div
               key={p.name}
-              className={`relative flex flex-col rounded-3xl border p-8 transition-all ${cardClasses} ${isPro ? "sm:p-10" : ""}`}
+              className={`relative flex flex-col rounded-3xl border p-6 transition-all sm:p-8 ${cardClasses} ${isPro ? "sm:p-10" : ""}`}
             >
               {isPro && (
                 <>
@@ -582,12 +581,12 @@ export function PricingSection() {
               )}
 
               <div className="relative">
-                <h3 className="font-display2 text-2xl font-bold tracking-tight">{p.name}</h3>
+                <h3 className="font-display2 text-2xl font-bold tracking-normal">{p.name}</h3>
                 <p className="mt-3 text-[0.975rem] leading-relaxed text-foreground/70">{p.tagline}</p>
               </div>
 
               <div className="relative mt-8 flex items-baseline gap-1.5">
-                <span className="font-numeric text-6xl">{p.price}</span>
+                <span className="font-numeric text-5xl sm:text-6xl">{p.price}</span>
                 <span className="text-base text-foreground/60">kr / mån</span>
               </div>
 
@@ -607,7 +606,7 @@ export function PricingSection() {
 
               <Link
                 href="/dashboard"
-                className={`relative mt-10 inline-flex w-full items-center justify-center rounded-full px-5 py-3.5 text-[0.95rem] font-semibold transition-all ${
+                className={`relative mt-10 inline-flex min-h-12 w-full items-center justify-center rounded-full px-5 py-3.5 text-center text-[0.95rem] font-semibold transition-all ${
                   isPro
                     ? "bg-foreground text-background shadow-[0_14px_30px_-10px_rgba(15,23,42,0.45)] hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-10px_rgba(15,23,42,0.55)]"
                     : isMax
@@ -631,11 +630,11 @@ export function PricingSection() {
 
 export function FinalCtaSection() {
   return (
-    <section className="mx-auto max-w-7xl px-6 pb-24">
-      <div className="relative overflow-hidden rounded-3xl border border-border/60 bg-gradient-card2 p-12 text-center shadow-elevated2">
+    <section className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 sm:pb-24">
+      <div className="relative overflow-hidden rounded-[1.4rem] border border-border/60 bg-gradient-card2 p-6 text-center shadow-elevated2 sm:rounded-3xl sm:p-12">
         <div className="pointer-events-none absolute inset-0 bg-gradient-aurora opacity-60" />
         <div className="relative">
-          <h2 className="font-display2 mx-auto max-w-3xl text-5xl tracking-[-0.035em] sm:text-[3.5rem]">
+          <h2 className="font-display2 mx-auto max-w-3xl text-[2.25rem] leading-[1.08] tracking-normal sm:text-[3.5rem]">
             Äntligen rapporter som är både{" "}
             <span
               className="font-accent bg-clip-text text-transparent"
@@ -649,7 +648,7 @@ export function FinalCtaSection() {
           </h2>
           <Link
             href="/dashboard"
-            className="mt-10 inline-flex items-center gap-2 rounded-full bg-foreground px-7 py-3.5 text-[0.95rem] font-semibold text-background shadow-elevated2 transition-all hover:-translate-y-0.5 hover:shadow-glow2"
+            className="mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-foreground px-7 py-3.5 text-[0.95rem] font-semibold text-background shadow-elevated2 transition-all hover:-translate-y-0.5 hover:shadow-glow2 sm:mt-10"
           >
             Prova Clarix gratis
             <ArrowRight className="h-4 w-4" />
@@ -663,7 +662,7 @@ export function FinalCtaSection() {
 export function LandingFooter() {
   return (
     <footer className="border-t border-border/40 py-8">
-      <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-6 text-sm text-muted-foreground sm:flex-row">
+      <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 text-sm text-muted-foreground sm:flex-row sm:px-6">
         <div className="flex items-center gap-2">
           <Image
             src="/clarix-logga-transparent.png"
@@ -674,7 +673,7 @@ export function LandingFooter() {
           />
           <span>© 2025</span>
         </div>
-        <div className="flex gap-6">
+        <div className="flex flex-wrap justify-center gap-x-6 gap-y-2">
           <a href="/privacy-policy" className="transition-colors hover:text-foreground">Integritet</a>
           <a href="#" className="transition-colors hover:text-foreground">Villkor</a>
           <a href="#" className="transition-colors hover:text-foreground">Kontakt</a>

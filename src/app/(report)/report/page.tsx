@@ -224,11 +224,11 @@ function ReportPageInner() {
     <div className="relative flex h-dvh flex-col overflow-hidden bg-[oklch(0.965_0.005_270)] text-foreground print:bg-white" style={{ overscrollBehavior: "auto" }}>
 
       {/* ── Top bar ───────────────────────────────────────────── */}
-      <header className="print:hidden shrink-0 z-20 flex h-12 items-center justify-between px-6">
-        <div className="flex items-center gap-3">
+      <header className="z-20 flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-2 px-4 py-2 print:hidden sm:px-6 lg:h-12 lg:min-h-12 lg:flex-nowrap">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           <Link
             href="/dashboard"
-            className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
           >
             <ArrowLeft className="h-3 w-3" />
             Avsluta
@@ -237,17 +237,17 @@ function ReportPageInner() {
         </div>
 
         {/* Date picker */}
-        <div className="relative">
+        <div className="relative order-3 w-full sm:order-none sm:w-auto">
           <button
             onClick={() => setShowDatePicker((v) => !v)}
-            className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-4 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-colors"
+            className="inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-full border border-border/60 bg-background/70 px-4 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted sm:w-auto"
           >
             {currentLabel}
             <ArrowRight className="h-3 w-3 rotate-90" />
           </button>
           {showDatePicker && (
             <div
-              className="absolute top-full right-0 mt-2 w-48 rounded-2xl border border-border/60 bg-background shadow-xl overflow-hidden z-50"
+              className="absolute right-0 top-full z-50 mt-2 w-full overflow-hidden rounded-2xl border border-border/60 bg-background shadow-xl sm:w-48"
               onMouseLeave={() => setShowDatePicker(false)}
             >
               {DATE_PRESETS.map((p) => (
@@ -266,7 +266,7 @@ function ReportPageInner() {
 
         <button
           onClick={togglePresent}
-          className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+          className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
         >
           {isFs ? <Minimize2 className="h-3 w-3" /> : <Maximize2 className="h-3 w-3" />}
           {isFs ? "Avsluta" : "Present"}
@@ -279,7 +279,7 @@ function ReportPageInner() {
         className="relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden"
         style={{ scrollbarWidth: "none", overscrollBehaviorY: "auto" }}
       >
-        <div ref={containerRef} className="mx-auto w-full max-w-[1400px] px-8">
+        <div ref={containerRef} className="mx-auto w-full max-w-[1400px] px-2 sm:px-5 lg:px-8">
 
           {/* No sources state */}
           {!loading && noSources && (
@@ -337,7 +337,7 @@ function ReportPageInner() {
         </div>
 
         {/* Dot nav — fixed right edge */}
-        <div className="print:hidden fixed right-4 top-1/2 -translate-y-1/2 flex flex-col items-center gap-[7px] z-20">
+        <div className="fixed right-3 top-1/2 z-20 hidden -translate-y-1/2 flex-col items-center gap-[7px] print:hidden sm:flex lg:right-4">
           {slides.map((s, i) => (
             <button
               key={s.id}
@@ -357,7 +357,7 @@ function ReportPageInner() {
       </div>
 
       {/* ── Bottom controls ──────────────────────────────────── */}
-      <div className="print:hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3 rounded-full px-4 py-2.5 backdrop-blur-md" style={{ background: "rgba(255,255,255,0.55)", border: "1px solid rgba(255,255,255,0.7)", boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
+      <div className="fixed bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full px-3 py-2 backdrop-blur-md print:hidden sm:bottom-5 sm:gap-3 sm:px-4 sm:py-2.5" style={{ background: "rgba(255,255,255,0.55)", border: "1px solid rgba(255,255,255,0.7)", boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
         <button
           onClick={() => scrollToIndex(activeIndex - 1)}
           disabled={activeIndex === 0}

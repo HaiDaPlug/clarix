@@ -6,6 +6,15 @@
 
 ### Done this session
 
+**Responsive shell + dashboard/report mobile pass (2026-05-24)**
+- Landing page mobile optimization completed across header, hero, quote, showcase, AI panel, features, channels, agency, pricing, CTA, and footer. Desktop nav is centered and the Clarix logo is larger on desktop and mobile.
+- Shared app shell added via `src/components/layout/AppShell.tsx`; dashboard now uses a responsive sidebar that collapses on desktop and opens as a drawer on mobile.
+- Dashboard page tuned for small screens: sticky header wraps cleanly, date/export controls fit, banners stack, KPI/section grids collapse, and spacing is reduced for handheld viewports.
+- Date range picker now switches to a mobile-friendly sheet-style popover while preserving the compact desktop popover.
+- Report page mobile pass completed for the standalone report route: top controls wrap safely, the date picker fits full width on phones, slide padding tightens, dot navigation hides on small screens, and bottom controls shrink.
+- Report route intentionally does not use the shared sidebar yet, per follow-up direction.
+- Verification: targeted ESLint passed with existing warnings only; production build passes.
+
 **Report page modularization — `report/page.tsx` 1553 → 347 lines**
 - `src/components/report/tokens.ts` — design tokens (`TREND_POS/NEG/BG`, `ACCENT`) + canvas constants (`CANVAS_W/H`, `SLIDE_GAP`)
 - `src/components/report/slide-data.tsx` — `SlideData` type + `buildSlideData()` (kept under `components/` not `lib/` because it references Lucide icon components)

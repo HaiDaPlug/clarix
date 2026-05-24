@@ -256,22 +256,15 @@ export function DateRangePicker({ locale = "sv" }: DateRangePickerProps) {
 
       {open && (
         <div
+          className="fixed inset-x-4 top-24 z-50 flex max-h-[calc(100dvh-7rem)] flex-col gap-0 overflow-auto rounded-2xl p-3 sm:absolute sm:inset-x-auto sm:right-0 sm:top-[calc(100%+6px)] sm:max-h-none sm:flex-row sm:overflow-visible"
           style={{
-            position: "absolute",
-            top: "calc(100% + 6px)",
-            right: 0,
             background: "#fff",
             border: "1px solid var(--rule)",
-            borderRadius: 16,
             boxShadow: "0 4px 6px rgba(0,0,0,0.04), 0 12px 32px rgba(0,0,0,0.12)",
-            padding: "12px",
-            zIndex: 50,
-            display: "flex",
-            gap: 0,
           }}
         >
           {/* Preset list */}
-          <div style={{ paddingRight: 12, borderRight: "1px solid var(--rule)", display: "flex", flexDirection: "column", gap: 2, justifyContent: "center" }}>
+          <div className="flex flex-col gap-0.5 border-b pb-3 sm:border-b-0 sm:border-r sm:pb-0 sm:pr-3" style={{ borderColor: "var(--rule)", justifyContent: "center" }}>
             {DATE_PRESETS.map((preset) => {
               const isActive = activePresetId === preset.id;
               const label = locale === "sv" ? preset.labelSv : preset.labelEn;
@@ -302,7 +295,7 @@ export function DateRangePicker({ locale = "sv" }: DateRangePickerProps) {
           </div>
 
           {/* Calendar panel */}
-          <div style={{ paddingLeft: 12 }}>
+          <div className="pt-3 sm:pl-3 sm:pt-0">
             {/* Header */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
               <button
@@ -340,7 +333,7 @@ export function DateRangePicker({ locale = "sv" }: DateRangePickerProps) {
             </div>
 
             {/* Two-month grid */}
-            <div style={{ display: "flex", gap: 24 }}>
+            <div className="flex flex-col gap-5 sm:flex-row sm:gap-6">
               <CalendarGrid
                 year={calYear}
                 month={calMonth}

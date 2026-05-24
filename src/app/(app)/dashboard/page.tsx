@@ -224,21 +224,21 @@ function DashboardPageInner() {
   const sectionItems = dashboard.items.filter((item) => item.definition.type === "section");
 
   return (
-    <div className="flex-1 flex flex-col min-h-dvh">
+    <div className="flex min-h-dvh flex-1 flex-col">
       <header
-        className="flex items-center justify-between px-8 border-b shrink-0 sticky top-0 z-30"
-        style={{ borderColor: "var(--rule)", backgroundColor: "var(--parchment)", height: "88px" }}
+        className="sticky top-0 z-30 flex shrink-0 flex-col items-start justify-center gap-3 border-b py-4 pl-16 pr-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8 lg:pl-8"
+        style={{ borderColor: "var(--rule)", backgroundColor: "var(--parchment)", minHeight: "88px" }}
       >
-        <div>
+        <div className="min-w-0">
           <p className="eyebrow" style={{ color: "var(--slate)" }}>{activeData.meta.period.label}</p>
           <h1 style={{ fontFamily: "var(--font-display)", fontSize: "1.5rem", fontWeight: 600, color: "var(--charcoal)", letterSpacing: "-0.02em", marginTop: "2px" }}>
             {t.dashboard.heading}
           </h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
           <DateRangePicker locale={locale} />
           <button
-            className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-80"
+            className="inline-flex min-h-10 items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-80"
             style={{ backgroundColor: "var(--charcoal)", color: "var(--parchment)" }}
           >
             <Download className="h-4 w-4" />
@@ -247,14 +247,14 @@ function DashboardPageInner() {
         </div>
       </header>
 
-      <main className="flex-1 px-8 py-8 flex flex-col gap-7">
+      <main className="flex flex-1 flex-col gap-5 px-4 py-5 sm:gap-7 sm:px-6 sm:py-8 lg:px-8">
 
         {expiredSources.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: EASING }}
-            className="flex items-center justify-between px-5 py-3.5 rounded-2xl"
+            className="flex flex-col gap-3 rounded-2xl px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between"
             style={{ backgroundColor: "var(--bone)", border: "1px solid var(--signal-down-bg)" }}
           >
             <div className="flex items-center gap-3">
@@ -264,7 +264,7 @@ function DashboardPageInner() {
                 Reconnect to see your latest data.
               </p>
             </div>
-            <Link href="/integrations" className="shrink-0 ml-6" style={{ fontSize: "12px", fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--charcoal)", textDecoration: "none" }}>
+            <Link href="/integrations" className="shrink-0 sm:ml-6" style={{ fontSize: "12px", fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--charcoal)", textDecoration: "none" }}>
               Reconnect
             </Link>
           </motion.div>
@@ -275,12 +275,12 @@ function DashboardPageInner() {
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: EASING }}
-            className="flex items-center px-6 py-5 rounded-2xl"
+            className="flex items-center rounded-2xl px-5 py-4 sm:px-6 sm:py-5"
             style={{ backgroundColor: "var(--bone)", border: "1px solid var(--rule)" }}
           >
             <div className="flex items-center gap-3">
               <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: "var(--charcoal)" }} />
-              <p style={{ fontSize: "15px", color: "var(--charcoal)" }}>
+              <p style={{ fontSize: "15px", color: "var(--charcoal)", lineHeight: 1.45 }}>
                 {locale === "sv"
                   ? "Ingen data hittades för den valda perioden. GA4 var troligtvis inte anslutet då."
                   : "No data found for the selected period. GA4 was likely not connected at that time."}
@@ -294,12 +294,12 @@ function DashboardPageInner() {
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: EASING }}
-            className="flex items-center justify-between px-6 py-5 rounded-2xl"
+            className="flex flex-col gap-3 rounded-2xl px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-5"
             style={{ backgroundColor: "var(--bone)", border: "1px solid var(--rule)" }}
           >
             <div className="flex items-center gap-3">
               <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: "#C97B2A" }} />
-              <p style={{ fontSize: "15px", color: "var(--charcoal)" }}>
+              <p style={{ fontSize: "15px", color: "var(--charcoal)", lineHeight: 1.45 }}>
                 {dataError ?? t.dashboard.sampleBanner.text}{" "}
                 {!hasConnectedSources && !dataError && (
                   <>
@@ -309,7 +309,7 @@ function DashboardPageInner() {
                 )}
               </p>
             </div>
-            <Link href="/integrations" className="shrink-0 ml-6" style={{ fontSize: "12px", fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--charcoal)", textDecoration: "none" }}>
+            <Link href="/integrations" className="shrink-0 sm:ml-6" style={{ fontSize: "12px", fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--charcoal)", textDecoration: "none" }}>
               {t.dashboard.sampleBanner.link}
             </Link>
           </motion.div>
@@ -333,7 +333,7 @@ function DashboardPageInner() {
 
         {isLoadingRealData ? (
           skeletonKpiCount > 0 && (
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {Array.from({ length: skeletonKpiCount }).map((_, i) => (
                 <ShimmerCard key={i} loading height={160} />
               ))}
@@ -341,7 +341,7 @@ function DashboardPageInner() {
           )
         ) : (
           kpiItems.length > 0 && (
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {kpiItems.map((item, index) => (
                 <KpiCard key={item.itemId} item={item} data={activeData} index={index} loading={false} animateNumbers={hasConnectedSources} />
               ))}
@@ -358,12 +358,12 @@ function DashboardPageInner() {
         )}
 
         {isLoadingRealData ? (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <ShimmerCard loading height={280} />
             <ShimmerCard loading height={280} />
           </div>
         ) : sectionItems.length > 0 ? (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {sectionItems.map((item) => (
               <SectionItem key={item.itemId} item={item} data={activeData} />
             ))}
@@ -376,11 +376,11 @@ function DashboardPageInner() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.25, ease: EASING }}
-            className="flex items-center justify-between px-6 py-5 rounded-2xl"
+            className="flex flex-col gap-3 rounded-2xl px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-5"
             style={{ backgroundColor: "var(--bone)", border: "1px solid var(--rule)" }}
           >
-            <p style={{ fontSize: "15px", color: "var(--charcoal)" }}>{dashboard.nudge.message}</p>
-            <Link href="/integrations" className="shrink-0 ml-6" style={{ fontSize: "12px", fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--charcoal)", textDecoration: "none" }}>
+            <p style={{ fontSize: "15px", color: "var(--charcoal)", lineHeight: 1.45 }}>{dashboard.nudge.message}</p>
+            <Link href="/integrations" className="shrink-0 sm:ml-6" style={{ fontSize: "12px", fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--charcoal)", textDecoration: "none" }}>
               {t.dashboard.nudge.link}
             </Link>
           </motion.div>

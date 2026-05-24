@@ -26,10 +26,10 @@ export function Showcase({
         <p className="text-xs font-semibold uppercase tracking-[0.22em]" style={{ color: "var(--c2-accent)" }}>
           {eyebrow}
         </p>
-        <h2 className="font-display2 mx-auto mt-5 max-w-3xl text-4xl tracking-[-0.035em] sm:text-5xl md:text-[3.5rem] md:leading-[1.05]">
+        <h2 className="font-display2 mx-auto mt-5 max-w-3xl text-[2.25rem] leading-[1.08] tracking-normal sm:text-5xl md:text-[3.5rem] md:leading-[1.05]">
           {title}
         </h2>
-        <p className="mx-auto mt-6 max-w-xl text-lg leading-[1.6] text-foreground/70">{body}</p>
+        <p className="mx-auto mt-5 max-w-xl text-base leading-[1.6] text-foreground/70 sm:mt-6 sm:text-lg">{body}</p>
       </motion.div>
 
       <motion.div
@@ -37,11 +37,11 @@ export function Showcase({
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: "-80px" }}
         transition={{ duration: 0.8, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
-        className="relative mx-auto mt-16 max-w-5xl"
+        className="relative mx-auto mt-10 max-w-5xl sm:mt-16"
       >
-        <div className="pointer-events-none absolute -inset-12 -z-10">
-          <div className="absolute inset-0 rounded-[3rem] bg-gradient-brand opacity-15 blur-3xl" />
-          <div className="absolute -bottom-10 left-1/4 h-40 w-1/2 rounded-full blur-3xl" style={{ background: `oklch(0.65 0.19 265 / 0.25)` }} />
+        <div className="pointer-events-none absolute -inset-4 -z-10 sm:-inset-12">
+          <div className="absolute inset-0 rounded-[2rem] bg-gradient-brand opacity-12 blur-2xl sm:rounded-[3rem] sm:opacity-15 sm:blur-3xl" />
+          <div className="absolute -bottom-8 left-1/4 h-28 w-1/2 rounded-full blur-2xl sm:-bottom-10 sm:h-40 sm:blur-3xl" style={{ background: `oklch(0.65 0.19 265 / 0.25)` }} />
         </div>
         {visual}
       </motion.div>
@@ -51,12 +51,12 @@ export function Showcase({
 
 function VisualFrame({ children, label }: { children: React.ReactNode; label: string }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-border/40 bg-gradient-card2 shadow-[0_50px_120px_-30px_rgba(15,23,42,0.5),0_20px_40px_-20px_rgba(15,23,42,0.3)] ring-1 ring-white/5">
-      <div className="flex items-center gap-1.5 border-b border-border/40 bg-gradient-to-b from-muted/40 to-muted/20 px-4 py-3 backdrop-blur">
+    <div className="overflow-hidden rounded-xl border border-border/40 bg-gradient-card2 shadow-[0_34px_80px_-34px_rgba(15,23,42,0.45),0_16px_34px_-22px_rgba(15,23,42,0.3)] ring-1 ring-white/5 sm:rounded-2xl sm:shadow-[0_50px_120px_-30px_rgba(15,23,42,0.5),0_20px_40px_-20px_rgba(15,23,42,0.3)]">
+      <div className="flex items-center gap-1.5 border-b border-border/40 bg-gradient-to-b from-muted/40 to-muted/20 px-3 py-2.5 backdrop-blur sm:px-4 sm:py-3">
         <span className="h-2.5 w-2.5 rounded-full bg-destructive/70" />
         <span className="h-2.5 w-2.5 rounded-full" style={{ background: "var(--c2-warning)" }} />
         <span className="h-2.5 w-2.5 rounded-full" style={{ background: "var(--c2-success)" }} />
-        <span className="ml-3 text-xs font-medium tracking-tight text-muted-foreground">{label}</span>
+        <span className="ml-2 min-w-0 truncate text-[11px] font-medium tracking-normal text-muted-foreground sm:ml-3 sm:text-xs">{label}</span>
       </div>
       {children}
     </div>
@@ -72,26 +72,26 @@ export function DashboardKpiVisual() {
   ];
   return (
     <VisualFrame label="clarix.se/oversikt">
-      <div className="space-y-5 p-7">
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="space-y-4 p-3 sm:space-y-5 sm:p-7">
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-4">
           {kpis.map((k) => (
-            <div key={k.l} className="rounded-xl border border-border/60 bg-background/60 p-5 text-left">
+            <div key={k.l} className="rounded-lg border border-border/60 bg-background/60 p-3 text-left sm:rounded-xl sm:p-5">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-medium text-muted-foreground">{k.l}</p>
-                <k.icon className="h-3.5 w-3.5 text-muted-foreground" />
+                <p className="text-[11px] font-medium text-muted-foreground sm:text-xs">{k.l}</p>
+                <k.icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
               </div>
-              <p className="font-numeric mt-3 text-3xl text-foreground">{k.v}</p>
+              <p className="font-numeric mt-2 text-2xl text-foreground sm:mt-3 sm:text-3xl">{k.v}</p>
               <p className="mt-1 text-xs font-semibold" style={{ color: "var(--c2-success)" }}>{k.d}</p>
             </div>
           ))}
         </div>
-        <div className="relative rounded-xl border border-border/60 bg-background/60 p-5">
+        <div className="relative rounded-lg border border-border/60 bg-background/60 p-3 sm:rounded-xl sm:p-5">
           <div className="pointer-events-none absolute inset-x-6 bottom-2 h-12 rounded-full blur-2xl" style={{ background: `oklch(0.65 0.19 265 / 0.3)` }} />
-          <div className="relative flex h-44 items-end gap-1.5">
+          <div className="relative flex h-32 items-end gap-1 sm:h-44 sm:gap-1.5">
             {[35, 48, 42, 55, 60, 52, 68, 72, 70, 80, 86, 95, 90, 102, 115, 108, 122].map((h, i) => (
               <div
                 key={i}
-                className="flex-1 rounded-t-md"
+                className="flex-1 rounded-t-sm sm:rounded-t-md"
                 style={{ height: `${h}%`, background: `linear-gradient(to top, oklch(0.65 0.19 265 / 0.3), oklch(0.65 0.19 265))`, boxShadow: "0 0 20px -2px oklch(0.65 0.19 265 / 0.4)" }}
               />
             ))}
@@ -115,14 +115,14 @@ export function AiInsightsVisual() {
   };
   return (
     <VisualFrame label="clarix.se/ai-insikter">
-      <div className="space-y-3 p-7">
-        <div className="flex items-center gap-2 rounded-lg px-4 py-3" style={{ background: `oklch(0.65 0.19 265 / 0.15)` }}>
-          <Sparkles className="h-4 w-4" style={{ color: "oklch(0.65 0.19 265)" }} />
+      <div className="space-y-3 p-3 sm:p-7">
+        <div className="flex items-center gap-2 rounded-lg px-3 py-3 sm:px-4" style={{ background: `oklch(0.65 0.19 265 / 0.15)` }}>
+          <Sparkles className="h-4 w-4 shrink-0" style={{ color: "oklch(0.65 0.19 265)" }} />
           <p className="text-sm font-semibold">Veckans 3 viktigaste insikter</p>
         </div>
         {insights.map((it) => (
-          <div key={it.title} className="rounded-xl border border-border/60 bg-background/60 p-5">
-            <div className="flex items-start gap-3.5">
+          <div key={it.title} className="rounded-xl border border-border/60 bg-background/60 p-4 sm:p-5">
+            <div className="flex items-start gap-3 sm:gap-3.5">
               <span
                 className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
                 style={{ cssText: toneStyles[it.tone] } as React.CSSProperties}
@@ -130,7 +130,7 @@ export function AiInsightsVisual() {
                 <Sparkles className="h-4 w-4" />
               </span>
               <div>
-                <p className="text-base font-semibold text-foreground">{it.title}</p>
+                <p className="text-[0.95rem] font-semibold leading-snug text-foreground sm:text-base">{it.title}</p>
                 <p className="mt-1.5 text-sm leading-relaxed text-foreground/70">{it.body}</p>
               </div>
             </div>
@@ -150,25 +150,25 @@ export function SeoChannelsVisual() {
   ];
   return (
     <VisualFrame label="clarix.se/kanaler">
-      <div className="space-y-5 p-7">
-        <div className="flex items-center justify-between">
-          <p className="text-base font-semibold">Trafik & konvertering per kanal</p>
-          <span className="rounded-full border border-border/60 bg-background/60 px-2.5 py-0.5 text-xs text-muted-foreground">Senaste 30 dagar</span>
+      <div className="space-y-4 p-3 sm:space-y-5 sm:p-7">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-[0.95rem] font-semibold leading-snug sm:text-base">Trafik & konvertering per kanal</p>
+          <span className="w-fit rounded-full border border-border/60 bg-background/60 px-2.5 py-0.5 text-xs text-muted-foreground">Senaste 30 dagar</span>
         </div>
         <div className="space-y-3">
           {rows.map((c) => (
-            <div key={c.name} className="rounded-xl border border-border/60 bg-background/60 p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border/60 bg-background">
+            <div key={c.name} className="rounded-xl border border-border/60 bg-background/60 p-3.5 sm:p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-background">
                     {c.Logo ? <c.Logo className="h-5 w-5" /> : <Compass className="h-[18px] w-[18px] text-foreground/80" strokeWidth={1.75} />}
                   </span>
-                  <div className="flex flex-col">
+                  <div className="flex min-w-0 flex-col">
                     <span className="text-sm font-semibold leading-tight">{c.name}</span>
                     <span className="text-[11px] leading-tight text-muted-foreground">{c.sub}</span>
                   </div>
                 </div>
-                <div className="flex items-baseline gap-2">
+                <div className="flex items-baseline gap-2 self-end sm:self-auto">
                   <span className="font-numeric text-lg text-foreground">{c.value}</span>
                   <span className="text-xs font-semibold" style={{ color: "var(--c2-success)" }}>{c.delta}</span>
                 </div>
