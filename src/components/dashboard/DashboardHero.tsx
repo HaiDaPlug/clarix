@@ -10,6 +10,7 @@ import type { AiInsightsPayload } from "@/lib/hooks/useAiInsights";
 import { FALLBACK_TEXT } from "@/lib/hooks/useAiInsights";
 import { ShimmerOverlay } from "@/components/primitives/ShimmerCard";
 import { withPeriod } from "@/lib/utils/text";
+import { AI_GRADIENT } from "@/components/report/tokens";
 
 // Splits a string on numeric tokens (e.g. "1 234", "87%", "3,5x") and wraps
 // each number in a bright green span so visit counts pop on the gradient card.
@@ -64,7 +65,7 @@ export function DashboardHero({
       animate={{ opacity: 1, y: 0 }}
       transition={HERO_ENTER}
       className="relative overflow-hidden rounded-3xl border border-white/15 p-8 shadow-[0_24px_60px_-26px_rgba(180,40,60,0.5)] sm:p-10"
-      style={{ background: "linear-gradient(135deg, #c4245a 0%, #d94f2a 55%, #bf4020 100%)" }}
+      style={{ background: AI_GRADIENT }}
     >
       <NoiseTexture preset="cinematic" blendMode="overlay" />
       {loading && <ShimmerOverlay />}

@@ -1,5 +1,5 @@
 import { NoiseTexture } from "@/components/ui/noise-texture";
-import { TREND_POS, TREND_NEG } from "../tokens";
+import { TREND_POS, TREND_NEG, AI_GRADIENT, AI_SHADOW } from "../tokens";
 
 export const pos = (s: string) => (
   <span className="font-semibold" style={{ color: TREND_POS }}>
@@ -29,8 +29,11 @@ export function AISummary({
 }) {
   return (
     <div
-      className="relative overflow-hidden rounded-3xl border border-white/20 p-6 shadow-[0_24px_60px_-26px_rgba(255,107,85,0.45)] sm:p-8"
-      style={{ background: "linear-gradient(135deg, #e8336d 0%, #ff6b35 50%, #ffb830 100%)" }}
+      className="relative overflow-hidden rounded-3xl border border-white/15 p-6 sm:p-8"
+      style={{
+        background: AI_GRADIENT,
+        boxShadow: AI_SHADOW.replace(/_/g, " "),
+      }}
     >
       <NoiseTexture preset="cinematic" blendMode="overlay" />
       <div className="relative z-10">
