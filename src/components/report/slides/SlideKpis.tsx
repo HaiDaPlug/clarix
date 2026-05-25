@@ -5,6 +5,14 @@ import { type SlideData } from "../slide-data";
 import { TrendPill, fmtNum, sign } from "../primitives/TrendPill";
 import { SlideHeading } from "../primitives/SlideHeading";
 
+function fmtDuration(seconds: number | null): string {
+  if (seconds == null || seconds <= 0) return "–";
+  const m = Math.floor(seconds / 60);
+  const s = Math.round(seconds % 60);
+  if (m === 0) return `${s} s`;
+  return `${m} min ${s} s`;
+}
+
 export function SlideKpis({ d }: { d: SlideData }) {
   const kpis = [
     {
@@ -23,7 +31,7 @@ export function SlideKpis({ d }: { d: SlideData }) {
     },
     {
       l: "Tid på sidan",
-      v: "2 min 14 s",
+      v: fmtDuration(d.avgDuration),
       d: sign(d.timeDelta),
       p: (d.timeDelta ?? null) !== null && d.timeDelta! > 0,
       tip: { title: "Genomsnittlig besökstid", body: "Hur länge en genomsnittlig besökare stannar. Längre tid betyder att folk hittar det de söker.", example: "2 min 14 s innebär att besökarna läser — inte bara studsar vidare." },

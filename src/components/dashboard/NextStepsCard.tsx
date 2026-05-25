@@ -2,20 +2,10 @@
 
 import { motion } from "motion/react";
 import { ReportData } from "@/types/schema";
-import { formatNumber } from "@/lib/utils/format";
+import { withPeriod } from "@/lib/utils/text";
+import { deriveNextSteps, type Effort, type Reward } from "@/lib/dashboard/next-steps";
 import type { AiInsightsPayload } from "@/lib/hooks/useAiInsights";
-import { FALLBACK_TEXT } from "@/lib/hooks/useAiInsights";
 import { ShimmerCard } from "@/components/primitives/ShimmerCard";
-
-type Effort = "låg" | "medel" | "hög";
-type Reward = "låg" | "medel" | "hög";
-
-interface NextStep {
-  action: string;
-  rationale: string;
-  effort: Effort;
-  reward: Reward;
-}
 
 const EFFORT_COLOR: Record<Effort, string> = {
   låg:   "oklch(0.62 0.22 155)",
@@ -28,56 +18,6 @@ const REWARD_COLOR: Record<Reward, string> = {
   medel: "oklch(0.62 0.22 155)",
   hög:   "oklch(0.52 0.22 295)",
 };
-
-function deriveNextSteps(data: ReportData): NextStep[] {
-  const steps: NextStep[] = [];
-  const traffic = data.trafficOverview;
-  const seo = data.seoOverview;
-  const paid = data.paidOverview;
-
-  if (paid?.totalSpend && paid.roas) {
-    steps.push({
-      action: "Skala upp de bäst presterande annonserna",
-      rationale: `ROAS är ${formatNumber(paid.roas.value, "number")}× — kampanjerna är lönsamma och har utrymme att växa.`,
-      effort: "låg",
-      reward: "hög",
-    });
-  }
-
-  if (seo && seo.avgPosition.value > 8) {
-    steps.push({
-      action: "Optimera de sidor som rankar på position 8–15",
-      rationale: "Sidorna syns men klickas sällan. Bättre titlar och meta-texter kan ge snabb CTR-ökning.",
-      effort: "medel",
-      reward: "hög",
-    });
-  } else if (traffic?.organicSessions && traffic.organicSessions.trend === "down") {
-    steps.push({
-      action: "Granska innehållet på de tio viktigaste organiska sidorna",
-      rationale: "Organisk trafik tappade. Uppdaterat innehåll brukar återhämta positioner inom 4–6 veckor.",
-      effort: "medel",
-      reward: "medel",
-    });
-  }
-
-  if (traffic?.bounceRate && traffic.bounceRate.value > 50) {
-    steps.push({
-      action: "Förbättra landningssidans relevans och laddningstid",
-      rationale: `Avvisningsfrekvensen är ${formatNumber(traffic.bounceRate.value, "percent")} — besökarna lämnar utan att agera.`,
-      effort: "medel",
-      reward: "hög",
-    });
-  } else if (!paid) {
-    steps.push({
-      action: "Testa Google Ads med en liten budget",
-      rationale: "Ni har stark organik men saknar betald trafik. Även 3 000 kr/mån ger värdefull data.",
-      effort: "låg",
-      reward: "medel",
-    });
-  }
-
-  return steps.slice(0, 3);
-}
 
 export function NextStepsCard({
   data,
@@ -141,7 +81,7 @@ export function NextStepsCard({
                 />
               ) : (
                 <p style={{ fontSize: "12.5px", color: "var(--slate)", lineHeight: 1.5 }}>
-                  {aiInsights?.next_steps?.[i]?.rationale ?? FALLBACK_TEXT}
+                  {withPeriod(aiInsights?.next_steps?.[i]?.rationale ?? step.rationale)}
                 </p>
               )}
             </div>

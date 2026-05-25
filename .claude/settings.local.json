@@ -37,7 +37,9 @@
       "Skill(frontend-design:*)",
       "Skill(framer-motion)",
       "Skill(framer-motion:*)",
-      "PowerShell(git push origin main)"
+      "PowerShell(git push origin main)",
+      "PowerShell(git push)",
+      "PowerShell(git add docs/current_state.md docs/ai-insights-architecture.md package-lock.json package.json \"src/app/\\(app\\)/dashboard/page.tsx\" \"src/app/\\(report\\)/report/page.tsx\" src/components/dashboard/DashboardHero.tsx src/components/dashboard/KpiCard.tsx src/components/dashboard/NextStepsCard.tsx src/components/primitives/InfoTooltip.tsx src/components/ui/noise-texture.tsx src/app/api/generate-insights/ src/lib/ai-insights/ src/lib/engine/derive-insights.test.ts src/lib/engine/derive-insights.ts src/lib/engine/slide-headlines.ts src/lib/hooks/ src/lib/report-data/ supabase/migrations/20260519000000_ai_report_cache.sql supabase/migrations/20260519001000_ai_report_cache_user_writes.sql vitest.config.ts)"
     ]
   }
 }

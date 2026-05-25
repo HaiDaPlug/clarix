@@ -89,12 +89,12 @@ export function buildSlideData(reportData: ReportData | null): SlideData {
       : null;
 
   const bounceNow = traffic?.bounceRate?.value ?? null;
-  const bouncePrev = traffic?.bounceRate?.previousValue ?? null;
-  const timeDelta =
-    bounceNow != null && bouncePrev != null && bouncePrev > 0
-      ? Math.round(((bounceNow - bouncePrev) / bouncePrev) * 100)
-      : null;
   const avgDuration = traffic?.avgSessionDuration?.value ?? null;
+  const prevDuration = traffic?.avgSessionDuration?.previousValue ?? null;
+  const timeDelta =
+    avgDuration != null && prevDuration != null && prevDuration > 0
+      ? Math.round(((avgDuration - prevDuration) / prevDuration) * 100)
+      : null;
 
   const conv = reportData?.conversions;
   const leads = conv?.totalConversions?.value ?? 0;

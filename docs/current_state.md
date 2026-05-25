@@ -2,18 +2,87 @@
 
 ---
 
-## NOW — Open priorities (2026-05-22)
+## NOW — Open priorities (2026-05-24)
 
 ### Done this session
 
 **Responsive shell + dashboard/report mobile pass (2026-05-24)**
-- Landing page mobile optimization completed across header, hero, quote, showcase, AI panel, features, channels, agency, pricing, CTA, and footer. Desktop nav is centered and the Clarix logo is larger on desktop and mobile.
-- Shared app shell added via `src/components/layout/AppShell.tsx`; dashboard now uses a responsive sidebar that collapses on desktop and opens as a drawer on mobile.
-- Dashboard page tuned for small screens: sticky header wraps cleanly, date/export controls fit, banners stack, KPI/section grids collapse, and spacing is reduced for handheld viewports.
-- Date range picker now switches to a mobile-friendly sheet-style popover while preserving the compact desktop popover.
-- Report page mobile pass completed for the standalone report route: top controls wrap safely, the date picker fits full width on phones, slide padding tightens, dot navigation hides on small screens, and bottom controls shrink.
-- Report route intentionally does not use the shared sidebar yet, per follow-up direction.
-- Verification: targeted ESLint passed with existing warnings only; production build passes.
+- Landing page mobile optimization completed: header, hero sizing, CTA stacking, showcase visuals, cards, pricing, final CTA, and footer now use tighter mobile spacing and safer text/container sizing.
+- Landing desktop header adjusted: navbar uses a centered desktop column and the Clarix logo is larger across mobile/tablet/desktop breakpoints.
+- Shared `AppShell` added for authenticated app pages. It owns mobile drawer state and desktop sidebar collapsed state.
+- `Sidebar` rebuilt as a proper responsive navigation feature: mobile drawer with backdrop/close behavior, desktop collapse/expand rail, icon-only collapsed mode, larger brand treatment, active states, language/theme controls, user block, and dev scenario controls.
+- Dashboard route now uses the shared shell and has mobile-safe header/actions, responsive KPI grids, responsive section grids, and better banner wrapping.
+- Dashboard date picker popover now behaves like a viewport-aware mobile sheet on small screens while keeping desktop popover behavior.
+- Report page mobile polish completed for its own isolated canvas: top controls wrap on small screens, date preset control becomes full-width on mobile, slide surface padding is tighter, dot nav hides on phones, and bottom controls shrink.
+- Report route intentionally does not use the shared sidebar yet. `(report)/layout.tsx` is back to an isolated no-sidebar layout, per current product direction.
+- Verification: targeted ESLint passed for touched dashboard/report/sidebar files with only existing warnings, and `npm.cmd run build` passed successfully after the responsive shell work.
+
+**AI insights — living advisor pass (v7–v11)**
+
+*P0 — Cache bug fixed*
+- Root cause: a stale all-null payload in `ai_report_cache` (written before the API key was live) was being served forever. `isFreshAiInsightsCache` returned `true`, `AiInsightsPayloadSchema.safeParse` succeeded on all-null, and the route short-circuited without ever calling OpenAI.
+- Fix: cache reads now only short-circuit if at least one slot has real content (`Object.values(result.data).some(v => v !== null)`). An all-null cached row is treated as a miss and forces a fresh LLM call.
+- Removed two debug `console.log` lines from `generate-insights/route.ts`.
+
+*P1 — Prompt architecture overhauled*
+- `generate.ts` system prompt replaced from 1 throwaway line to the full Clarix advisor persona: prioritization order (intäkter → kostnad → konvertering → kanaler), language rules ("besökare" not "sessions", never guarantee, distinguish traffic from business value), "siffror är inte målet, beslut är målet", Swedish-only output.
+- `buildReasoningRules()` added to `route.ts`: maps each `InsightType` to advisor reasoning logic, injected only when that pattern is present in this client's classified insights. 14 rules covering all insight types. Model now receives not just "what happened" but "how an advisor should think about this pattern."
+- Data block in `buildPrompt()` expanded: SEO clicks, avg position, conversion rate, paid spend/ROAS all included when present.
+- Surface constraints tightened with EXEMPEL blocks (FEL/RÄTT pairs) for `dashboard_hero`, `slide_hero`, `slide_recs`, `slide_recap`. Each example is drawn from real bad output observed in the product.
+- `slide_hero` expanded from 1 sentence to 2–4 sentence flowing paragraph: what happened, why it might be so, what to watch next. Prompt role reframed as "rådgivare i fickan."
+- `AI_INSIGHTS_PROMPT_VERSION` bumped through v7→v11 as each prompt change was made.
+
+*Direct traffic attribution fix*
+- `buildPrompt()` now detects when the dominant channel is Direct/Direkt/Unassigned/Ej tilldelad/unknown and keeps the channel label separate from attribution guidance.
+- Prompt data now sends `topChannel`, `attributionUnclear`, and `attributionNote` separately instead of stuffing instructions into the channel name.
+- `traffic_channel_concentrated` reasoning rule updated to branch: Direct/unknown → attribution problem framing; real channel → vulnerability/diversification framing.
+- Goal: prevent the "114 besök, alla från direkttrafik" pattern where Direct is presented as a confirmed marketing source.
+
+*NextStepsCard rationale fixed*
+- Was falling back to `FALLBACK_TEXT` ("Inte nog med data…") when AI rationale was absent.
+- Now falls back to the deterministic `step.rationale` from `deriveNextSteps()` — always shows real data-driven copy even without AI. `FALLBACK_TEXT` import removed from `NextStepsCard.tsx`.
+- `deriveNextSteps()` moved into shared `src/lib/dashboard/next-steps.ts`; both the dashboard card and AI prompt now use the same deterministic action list. AI `next_steps` rationales are requested in that exact action order, reducing the risk of mismatched rationale/action copy.
+
+*Period punctuation*
+- `withPeriod(text)` helper added to `src/lib/utils/text.ts`: ensures AI-generated sentences end with `.` — leaves strings already ending in `.`, `!`, `?` untouched.
+- Applied to: `DashboardHero` headline + sub, `NextStepsCard` rationale, `SlideHero` gradient card AI line, `SlideStrategicInsight`, `SlideRecommendations`, and `SlideRecap`.
+
+*SlideHero layout*
+- Subtext under headline restored: deterministic, period-aware — "Jämfört med föregående period" when comparison exists, "Ingen föregående period att jämföra med" when not.
+- Gradient card line 1: visit count always rendered; delta percentage shown only when a prior period exists (no more "circa 114 fler än förra månaden" hallucination from `visits - 0`).
+- AI `slide_hero` text is line 2 of the gradient card — not duplicated as subtext above the sparkline.
+
+*Numbers highlighted green in DashboardHero*
+- `highlightNumbers()` utility added: splits AI text on numeric tokens (Swedish thousand-spaced numbers, percentages, decimals, multipliers) and wraps them in `#6EF5A8` at `font-weight: 700`. Applied to both headline and sub line.
+
+### Done this session (prior)
+
+**Dashboard welcome header**
+- "Välkommen, {name}" replaced with a world-class greeting: large display heading with "Välkommen" as a muted prefix inline, client name bold, period + "Din digitala rapport är redo." as a subtitle line beneath.
+- KPI card source icons (GA/GSC/Ads) enlarged to `h-7 w-7`, border/background container removed — icons render bare.
+- KPI card layout fixed: label + number grouped tightly in a `flex-col gap-1`, icon floated top-right with `items-start justify-between`. Eliminated the excess gap between label and number.
+
+**Report — Tid på sidan is now real data**
+- `SlideKpis` was hardcoded to `"2 min 14 s"`. Now reads `d.avgDuration` (seconds from GA4) formatted as `X min Y s`.
+- `timeDelta` in `buildSlideData` was incorrectly computed from bounce rate. Fixed to compare `avgSessionDuration` current vs previous period.
+
+**AI insights rendering — fallback text eliminated**
+- Removed `"Inte nog med data för att bedöma din digitala närvaro."` from all slide rendering paths (`SlideHero`, `SlideStrategicInsight`, `SlideRecommendations`, `SlideRecap`).
+- New unified pattern across all AI slots: `aiInsights === null` (loading) → shimmer skeleton; slot has data → AI text; slot is null after resolve → hardcoded copy (never the fallback string).
+- `AI_INSIGHTS_FALLBACK_TEXT` import removed from all slide files.
+
+**SlideHero — line 1 deterministic, line 2 AI**
+- Line 1 always renders immediately: visit count colored by direction.
+- Line 2: shimmer while loading, AI `slide_hero` string when resolved, nothing if null.
+- `slide_hero` prompt rewritten: role is now "kontextlinje" — 1 sentence about strongest channel and a signal (what grew, what dropped, what to watch). Max 25 words, never starts with "Besöken"/"Trafiken".
+- `slide_hero` sufficiency gate set to `true` always — was previously being blocked even with real data.
+- `AI_INSIGHTS_PROMPT_VERSION` bumped to `v6` to bust cache after prompt changes.
+
+**AI insights debugging**
+- Confirmed root cause of null returns: `OPENAI_API_KEY` was empty in `.env.local`. Provider was set to OpenAI but key missing.
+- Added temporary logging (`console.log` of raw model output + parse result) to `generate-insights/route.ts` for diagnosis.
+
+### Done this session (prior)
 
 **Report page modularization — `report/page.tsx` 1553 → 347 lines**
 - `src/components/report/tokens.ts` — design tokens (`TREND_POS/NEG/BG`, `ACCENT`) + canvas constants (`CANVAS_W/H`, `SLIDE_GAP`)
@@ -51,13 +120,30 @@
 
 ### Next priorities
 
-1. **AI insights quality** — generated copy needs to actually say something. Prompt tuning: more specific, more Swedish, more advisor-voice. Add real client dataset test. Review each surface's output against the "so what?" bar.
-2. **LLM copy into more surfaces** — currently only hero, insight, recs, recap. Boring cards (KPI snapshot, pages) could have a one-line AI commentary. Define which cards benefit and wire them up.
-3. **AI insights card colors** — the gradient cards that hold AI copy (hero, strategic insight, recommendations) are all the same Clarix gradient. Needs visual differentiation or a calmer treatment for the "thinking" surfaces vs the "summary" surfaces.
-4. **Dashboard text fine-tuning** — hero copy, KPI labels, and period labels need a Swedish copy pass. Some labels are technical (e.g. "Avvisningsfrekvens" may need a softer framing for SME owners).
-5. **Property picker on dashboard** — currently the property name shows as a static label. Should be interactive: click to switch between connected GA4 properties without going to Integrations.
-6. **UI / visual bugs** — slide-by-slide review needed. Known: slide 3 right column can overflow if many channels + bounce + duration; slide 4 "featured" border treatment needs re-evaluation now that icon chips are softer.
-7. **Date range debugging** — the "yesterday" clamp is in place but needs end-to-end verification with real data across timezones. Edge: user in UTC+2 at midnight will compute a different "yesterday" than the GA4 API (which uses property timezone). Needs a dedicated investigation pass.
+**P1 — Deepen the classifier (`deriveInsights`)**
+The advisor quality is capped by what the classifier detects. Current insight types cover the basics but miss important patterns:
+- `direct_traffic_dominates` — should be its own type (not just `traffic_channel_concentrated`) so the reasoning rule is always injected when Direct is dominant, not only when one channel >60%
+- `traffic_up_but_conversions_flat` — trafik ökar men inga fler förfrågningar/köp, the most important tension to surface
+- `source_attribution_unclear` — when >50% of sessions are Direct/Unassigned, flag it explicitly as a tracking concern
+- `small_change_watch_only` — when deltas are <5% in either direction, model should calibrate language to "bevakas" not "åtgärdas"
+These feed directly into `buildReasoningRules()` — more insight types = more targeted advisor copy.
+
+**P2 — Deterministic fallbacks that reflect reality**
+When AI is unavailable (no key, quota, cold start), every slot should fall back to a sentence built from real data — not hardcoded copy that may be factually wrong. Each fallback reads from `SlideData`/`ReportData` directly. `slide_recs` and `slide_recap` still show hardcoded placeholder copy when AI is null.
+
+**P3 — Visual polish pass**
+- Slide-by-slide review. Known issues: slide 3 right column overflow, slide 4 featured card border.
+- Dashboard KPI card height consistency now that icon size changed.
+- Property picker: make the "Välkommen, {name}" name clickable to switch GA4 property.
+
+**P4 — LLM copy into more surfaces**
+Currently only hero, insight, recs, recap have AI slots. Boring cards (KPI snapshot, pages) could have a one-line AI commentary. Define which cards benefit and wire them up.
+
+**P5 — Dashboard copy pass**
+Hero copy, KPI labels, and period labels need a Swedish copy pass. Some labels are technical (e.g. "Avvisningsfrekvens" may need a softer framing for SME owners).
+
+**P6 — Date range debugging**
+The "yesterday" clamp is in place but needs end-to-end verification with real data across timezones. Edge: user in UTC+2 at midnight will compute a different "yesterday" than the GA4 API (which uses property timezone).
 
 ### Still open / deferred
 

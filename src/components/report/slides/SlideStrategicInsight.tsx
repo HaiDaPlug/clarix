@@ -1,7 +1,8 @@
 "use client";
 
 import { NoiseTexture } from "@/components/ui/noise-texture";
-import { type AiInsightsPayload, AI_INSIGHTS_FALLBACK_TEXT } from "@/lib/ai-insights/types";
+import { type AiInsightsPayload } from "@/lib/ai-insights/types";
+import { withPeriod } from "@/lib/utils/text";
 import { TREND_POS, TREND_NEG, ACCENT } from "../tokens";
 
 export function SlideStrategicInsight({
@@ -70,27 +71,17 @@ export function SlideStrategicInsight({
             Det vi ser just nu
           </p>
           <div className="flex-1 space-y-4 text-[1.15rem] font-medium leading-[1.65] tracking-[-0.01em] text-white/95">
-            {aiInsight === null ? (
-              <p>{AI_INSIGHTS_FALLBACK_TEXT}</p>
+            {aiInsights === null ? (
+              <div className="flex flex-col gap-3">
+                {[90, 80, 65].map((w, i) => <div key={i} className="h-4 rounded-full animate-pulse bg-white/25" style={{ width: `${w}%` }} />)}
+              </div>
             ) : aiInsight ? (
-              aiInsight.body.map((paragraph) => <p key={paragraph}>{paragraph}</p>)
+              aiInsight.body.map((paragraph) => <p key={paragraph}>{withPeriod(paragraph)}</p>)
             ) : (
               <>
-                <p>
-                  Trafiken ökar — men trafik som inte konverterar är bara en kostnad utan
-                  avkastning. Det intressanta den här perioden är gapet som börjar öppna sig
-                  mellan synlighet och affärseffekt.
-                </p>
-                <p>
-                  Sjunkande engagemang i kombination med en svagare kontaktsida är ett klassiskt
-                  mönster: ni når fler, men budskapet eller flödet håller inte besökaren kvar
-                  tillräckligt länge för att ett beslut ska fattas. Det är inte ett trafikproblem —
-                  det är ett konverteringsproblem som döljer sig bakom bra topplinjesiffror.
-                </p>
-                <p>
-                  Nästa steg är inte mer trafik. Det är att förstå varför de som redan hittar er
-                  väljer att lämna.
-                </p>
+                <p>Trafiken ökar — men trafik som inte konverterar är bara en kostnad utan avkastning. Det intressanta den här perioden är gapet som börjar öppna sig mellan synlighet och affärseffekt.</p>
+                <p>Sjunkande engagemang i kombination med en svagare kontaktsida är ett klassiskt mönster: ni når fler, men budskapet eller flödet håller inte besökaren kvar tillräckligt länge för att ett beslut ska fattas.</p>
+                <p>Nästa steg är inte mer trafik. Det är att förstå varför de som redan hittar er väljer att lämna.</p>
               </>
             )}
           </div>
@@ -102,10 +93,10 @@ export function SlideStrategicInsight({
               Bottom line
             </span>
             <p className="text-white font-semibold text-[1.05rem] leading-snug">
-              {aiInsight === null
-                ? AI_INSIGHTS_FALLBACK_TEXT
-                : aiInsight?.bottom_line ??
-                  "Synligheten förbättras. Men om engagemanget fortsätter sjunka och kontaktsidan inte återhämtar sig, riskerar ni att trafiktillväxten inte omvandlas till affärer."}
+              {aiInsights === null
+                ? <span className="block h-4 w-[75%] rounded-full animate-pulse bg-white/25" />
+                : withPeriod(aiInsight?.bottom_line ?? "Synligheten förbättras. Men om engagemanget fortsätter sjunka och kontaktsidan inte återhämtar sig, riskerar ni att trafiktillväxten inte omvandlas till affärer.")
+              }
             </p>
           </div>
         </div>

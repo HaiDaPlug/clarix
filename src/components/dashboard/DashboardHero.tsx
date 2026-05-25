@@ -9,6 +9,29 @@ import { NoiseTexture } from "@/components/ui/noise-texture";
 import type { AiInsightsPayload } from "@/lib/hooks/useAiInsights";
 import { FALLBACK_TEXT } from "@/lib/hooks/useAiInsights";
 import { ShimmerOverlay } from "@/components/primitives/ShimmerCard";
+import { withPeriod } from "@/lib/utils/text";
+
+// Splits a string on numeric tokens (e.g. "1 234", "87%", "3,5x") and wraps
+// each number in a bright green span so visit counts pop on the gradient card.
+// Matches: optional leading sign, digits with Swedish thousand-space separators,
+// optional decimal comma/period, optional trailing % or x.
+// Split pattern — capturing group means the matched tokens are kept in the array.
+const NUM_SPLIT = /([+-]?\d[\d\s]*(?:[,.]\d+)?(?:\s*[%x])?)/g;
+// Test pattern — separate instance to avoid stateful lastIndex issues.
+const NUM_TEST = /^[+-]?\d[\d\s]*(?:[,.]\d+)?(?:\s*[%x])?$/;
+
+function highlightNumbers(text: string) {
+  const parts = text.split(NUM_SPLIT);
+  return parts.map((part, i) =>
+    NUM_TEST.test(part) ? (
+      <span key={i} style={{ color: "#6EF5A8", fontWeight: 700 }}>
+        {part}
+      </span>
+    ) : (
+      part
+    ),
+  );
+}
 
 const HERO_ENTER = { duration: 0.5, ease: [0.0, 0.0, 0.2, 1] as const, delay: 0 };
 
@@ -27,8 +50,12 @@ export function DashboardHero({
   if (!summary) return null;
 
   const reportHref = `/report${params.toString() ? `?${params.toString()}` : ""}`;
-  const headline = aiInsights?.dashboard_hero?.headline ?? FALLBACK_TEXT;
-  const sub = aiInsights?.dashboard_hero?.sub ?? null;
+  const headline = aiInsights?.dashboard_hero?.headline
+    ? withPeriod(aiInsights.dashboard_hero.headline)
+    : FALLBACK_TEXT;
+  const sub = aiInsights?.dashboard_hero?.sub
+    ? withPeriod(aiInsights.dashboard_hero.sub)
+    : null;
   const noData = aiInsights?.dashboard_hero === null;
 
   return (
@@ -62,7 +89,7 @@ export function DashboardHero({
           <>
             <p className="mt-5 text-[2rem] font-semibold leading-[1.25] tracking-[-0.02em] sm:text-[2.4rem]" style={{ color: "rgba(255,255,255,0.95)" }}>
               <span className="relative inline">
-                {headline}
+                {highlightNumbers(headline)}
                 {!noData && (
                   <svg
                     viewBox="0 0 300 10"
@@ -85,7 +112,7 @@ export function DashboardHero({
 
             {!noData && sub && (
               <p className="mt-6 text-lg font-normal leading-relaxed" style={{ color: "rgba(255,255,255,0.85)" }}>
-                {sub}
+                {highlightNumbers(sub)}
               </p>
             )}
           </>

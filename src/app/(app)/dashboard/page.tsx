@@ -259,7 +259,7 @@ function DashboardPageInner() {
           >
             <div className="flex items-center gap-3">
               <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: "var(--signal-down)" }} />
-              <p style={{ fontSize: "13px", color: "var(--slate)" }}>
+              <p style={{ fontSize: "13px", color: "var(--slate)", lineHeight: 1.45 }}>
                 <span style={{ color: "var(--charcoal)", fontWeight: 500 }}>{expiredSources.join(" and ")} connection expired.</span>{" "}
                 Reconnect to see your latest data.
               </p>
@@ -316,13 +316,22 @@ function DashboardPageInner() {
         )}
 
         {heroItem && !isLoadingRealData && (
-          <div className="flex flex-col gap-3">
-            {propertyName && (
-              <p style={{ fontSize: "13px", color: "var(--slate)" }}>
-                Välkommen,{" "}
-                <span style={{ fontWeight: 700, color: "var(--charcoal)" }}>{propertyName}</span>
+          <div className="flex flex-col gap-6">
+            <div>
+              <p style={{ fontFamily: "var(--font-display)", fontSize: "clamp(1.75rem, 3vw, 2.75rem)", fontWeight: 700, color: "var(--charcoal)", letterSpacing: "-0.03em", lineHeight: 1.1 }}>
+                {propertyName ? (
+                  <>
+                    <span style={{ color: "var(--slate)", fontWeight: 400 }}>Välkommen, </span>
+                    {propertyName}
+                  </>
+                ) : (
+                  "Välkommen"
+                )}
               </p>
-            )}
+              <p style={{ marginTop: "6px", fontSize: "15px", color: "var(--slate)", lineHeight: 1.5 }}>
+                {activeData.meta.period.label} · Din digitala rapport är redo.
+              </p>
+            </div>
             <DashboardHero
               data={activeData}
               aiInsights={aiInsights}

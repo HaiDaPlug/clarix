@@ -173,49 +173,39 @@ export function KpiCard({
       }}
     >
       <div className="px-5 pt-5 pb-4 flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <p className="eyebrow" style={{ color: "var(--slate)", letterSpacing: "0.1em" }}>
-            {getKpiLabel(item.itemId, metric, t)}
-          </p>
-          {SourceLogo && (
-            <span
-              style={{
-                display: "inline-flex", alignItems: "center", justifyContent: "center",
-                width: 22, height: 22, borderRadius: 6,
-                background: "var(--parchment)",
-                border: "1px solid var(--rule)",
-                flexShrink: 0,
-              }}
-            >
-              <SourceLogo className="h-3.5 w-3.5" />
-            </span>
-          )}
-        </div>
-
-        <div className="flex items-baseline gap-3">
-          <NumberFlash delay={0.1 + index * 0.05}>
-            <span style={{ fontFamily: "var(--font-display)", fontSize: "2.4rem", fontWeight: 700, lineHeight: 1, letterSpacing: "-0.04em", color: "var(--charcoal)" }}>
-              {loading ? (
-                <motion.span
-                  animate={{ opacity: [0.3, 0.7, 0.3] }}
-                  transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
-                  style={{ color: "var(--rule)", letterSpacing: "-0.02em" }}
-                >
-                  ···
-                </motion.span>
-              ) : (
-                <AnimatedCounter value={metric.value} format={(n) => formatNumber(n, metric.unit)} animate={animateNumbers} />
+        {/* Label + number grouped, icon floated top-right */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex flex-col gap-1 min-w-0">
+            <p className="eyebrow" style={{ color: "var(--slate)", letterSpacing: "0.1em" }}>
+              {getKpiLabel(item.itemId, metric, t)}
+            </p>
+            <div className="flex items-baseline gap-3">
+              <NumberFlash delay={0.1 + index * 0.05}>
+                <span style={{ fontFamily: "var(--font-display)", fontSize: "2.4rem", fontWeight: 700, lineHeight: 1, letterSpacing: "-0.04em", color: "var(--charcoal)" }}>
+                  {loading ? (
+                    <motion.span
+                      animate={{ opacity: [0.3, 0.7, 0.3] }}
+                      transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+                      style={{ color: "var(--rule)", letterSpacing: "-0.02em" }}
+                    >
+                      ···
+                    </motion.span>
+                  ) : (
+                    <AnimatedCounter value={metric.value} format={(n) => formatNumber(n, metric.unit)} animate={animateNumbers} />
+                  )}
+                </span>
+              </NumberFlash>
+              {isFull && secondaryMetric && !loading && (
+                <span style={{ fontSize: "12px", color: "var(--slate)" }}>
+                  {secondaryMetric.label}:{" "}
+                  <span style={{ color: "var(--charcoal)", fontWeight: 600 }}>
+                    {formatNumber(secondaryMetric.value, secondaryMetric.unit)}
+                  </span>
+                </span>
               )}
-            </span>
-          </NumberFlash>
-          {isFull && secondaryMetric && !loading && (
-            <span style={{ fontSize: "12px", color: "var(--slate)" }}>
-              {secondaryMetric.label}:{" "}
-              <span style={{ color: "var(--charcoal)", fontWeight: 600 }}>
-                {formatNumber(secondaryMetric.value, secondaryMetric.unit)}
-              </span>
-            </span>
-          )}
+            </div>
+          </div>
+          {SourceLogo && <SourceLogo className="h-7 w-7 shrink-0 mt-0.5" />}
         </div>
 
         {!loading && state && state.change.direction !== "flat" && (

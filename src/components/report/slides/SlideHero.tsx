@@ -1,11 +1,26 @@
 "use client";
 
 import { Area, AreaChart, ResponsiveContainer } from "recharts";
-import { type AiInsightsPayload, AI_INSIGHTS_FALLBACK_TEXT } from "@/lib/ai-insights/types";
+import { type AiInsightsPayload } from "@/lib/ai-insights/types";
+
+function Shimmer({ lines = 2 }: { lines?: number }) {
+  return (
+    <div className="flex flex-col gap-2 pt-0.5">
+      {Array.from({ length: lines }).map((_, i) => (
+        <div
+          key={i}
+          className="h-[1.15em] rounded-full animate-pulse bg-white/25"
+          style={{ width: i === lines - 1 ? "65%" : "90%" }}
+        />
+      ))}
+    </div>
+  );
+}
 import { type SlideData } from "../slide-data";
 import { TREND_POS, TREND_NEG } from "../tokens";
-import { AISummary, pos, trendSpan } from "../primitives/AISummary";
-import { fmtNum, sign } from "../primitives/TrendPill";
+import { withPeriod } from "@/lib/utils/text";
+import { AISummary, pos } from "../primitives/AISummary";
+import { fmtNum } from "../primitives/TrendPill";
 
 export function SlideHero({
   d,
@@ -22,23 +37,13 @@ export function SlideHero({
 
   return (
     <div className="flex h-full flex-col justify-between py-12">
-      {/* Top: headline + stat */}
-      <div className="text-center space-y-5 mt-16">
+      {/* Top: headline + period context */}
+      <div className="text-center space-y-3 mt-16">
         <h1 className="font-display text-[3.1rem] font-bold leading-[1.05] tracking-tight lg:text-[3.8rem] whitespace-nowrap">
           {headline}<span style={{ color: "#FF6B55" }}>.</span>
         </h1>
-        <p className="text-[1.6rem] leading-[1.4] text-foreground">
-          {!hasData ? (
-            "Ingen föregående period med data finns att jämföra."
-          ) : (
-            <>
-              Trafiken under perioden har {isPos ? "gått upp" : "gått ner"}{" "}
-              <span className="font-bold tabular-nums" style={{ color: isPos ? TREND_POS : TREND_NEG }}>
-                {sign(d.trafficDelta)!}
-              </span>{" "}
-              under perioden.
-            </>
-          )}
+        <p className="text-[1.2rem] text-foreground/50 font-medium tracking-tight">
+          {hasData ? "Jämfört med föregående period" : "Ingen föregående period att jämföra med"}
         </p>
       </div>
 
@@ -67,26 +72,28 @@ export function SlideHero({
         </div>
       )}
 
-      {/* Bottom: AI summary card */}
+      {/* Bottom: summary card */}
       <AISummary>
-        {aiHero === null ? (
-          <p>{AI_INSIGHTS_FALLBACK_TEXT}</p>
-        ) : aiHero ? (
-          <p>{aiHero}</p>
-        ) : (
-          <>
-            <p>
-              Den här perioden fick din hemsida {pos(fmtNum(d.visits))} besök —
-              cirka {pos(fmtNum(Math.abs(d.visits - d.prevVisits)))} fler än förra
-              månaden.
-            </p>
-            <p>
-              Google var din starkaste trafikkälla och växte mest (
-              {trendSpan(d.trafficDelta, sign(d.trafficDelta))}). Samtidigt tappade kontaktsidan trafik,
-              vilket är viktigt eftersom leads ofta kommer därifrån.
-            </p>
-          </>
-        )}
+        {/* Line 1: visit count + delta only when a prior period exists */}
+        <p>
+          Den här perioden fick din hemsida {pos(fmtNum(d.visits))} besök
+          {hasData && d.trafficDelta !== null ? (
+            <> —{" "}
+              <span className="font-bold" style={{ color: isPos ? TREND_POS : TREND_NEG }}>
+                {isPos ? "+" : ""}{d.trafficDelta}%
+              </span>
+              {" "}jämfört med föregående period.</>
+          ) : (
+            <>.</>
+          )}
+        </p>
+        {/* Line 2: shimmer → AI → nothing */}
+        {aiInsights === null
+          ? <Shimmer lines={1} />
+          : aiHero
+            ? <p>{withPeriod(aiHero)}</p>
+            : null
+        }
       </AISummary>
     </div>
   );

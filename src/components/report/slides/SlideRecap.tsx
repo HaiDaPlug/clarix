@@ -3,7 +3,8 @@
 import { Compass, Lightbulb, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { NoiseTexture } from "@/components/ui/noise-texture";
-import { type AiInsightsPayload, AI_INSIGHTS_FALLBACK_TEXT } from "@/lib/ai-insights/types";
+import { type AiInsightsPayload } from "@/lib/ai-insights/types";
+import { withPeriod } from "@/lib/utils/text";
 import { TREND_POS, TREND_POS_BG, ACCENT } from "../tokens";
 import { SlideHeading } from "../primitives/SlideHeading";
 
@@ -31,9 +32,7 @@ export function SlideRecap({
     },
   ].map((bullet, index) => ({
     ...bullet,
-    b: aiRecap === null
-      ? AI_INSIGHTS_FALLBACK_TEXT
-      : aiRecap?.[index]?.body ?? bullet.b,
+    b: aiInsights === null ? null : aiRecap?.[index]?.body ?? bullet.b,
   }));
 
   return (
@@ -65,7 +64,10 @@ export function SlideRecap({
               </span>
               <div>
                 <p className="font-semibold">{b.t}</p>
-                <p className="mt-1 text-[20px] text-foreground">{b.b}</p>
+                {b.b === null
+                  ? <div className="mt-1 flex flex-col gap-1.5"><div className="h-4 w-[85%] rounded-full animate-pulse bg-muted" /><div className="h-4 w-[55%] rounded-full animate-pulse bg-muted" /></div>
+                  : <p className="mt-1 text-[20px] text-foreground">{withPeriod(b.b)}</p>
+                }
               </div>
             </li>
           ))}

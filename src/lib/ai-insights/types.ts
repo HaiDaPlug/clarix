@@ -3,7 +3,7 @@ import { z } from "zod";
 export const AI_INSIGHTS_FALLBACK_TEXT =
   "Inte nog med data för att bedöma din digitala närvaro.";
 
-export const AI_INSIGHTS_PROMPT_VERSION = "ai-insights-v3";
+export const AI_INSIGHTS_PROMPT_VERSION = "ai-insights-v11";
 
 export const AiInsightsPayloadSchema = z.object({
   dashboard_hero: z

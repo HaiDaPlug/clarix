@@ -1,7 +1,8 @@
 "use client";
 
 import { PenSquare, Target, Zap } from "lucide-react";
-import { type AiInsightsPayload, AI_INSIGHTS_FALLBACK_TEXT } from "@/lib/ai-insights/types";
+import { type AiInsightsPayload } from "@/lib/ai-insights/types";
+import { withPeriod } from "@/lib/utils/text";
 import { SlideHeading } from "../primitives/SlideHeading";
 
 export function SlideRecommendations({ aiInsights }: { aiInsights: AiInsightsPayload | null }) {
@@ -36,8 +37,8 @@ export function SlideRecommendations({ aiInsights }: { aiInsights: AiInsightsPay
       <div className="grid gap-4 md:grid-cols-3">
         {actions.map((a, index) => {
           const Icon = a.icon;
-          const body = aiRecs === null
-            ? AI_INSIGHTS_FALLBACK_TEXT
+          const body = aiInsights === null
+            ? null
             : aiRecs?.[index]?.body ?? a.b;
           return (
             <div
@@ -55,9 +56,12 @@ export function SlideRecommendations({ aiInsights }: { aiInsights: AiInsightsPay
               <h3 className="mt-6 font-display text-[22px] font-semibold leading-tight tracking-tight sm:text-[26px]">
                 {a.t}
               </h3>
-              <p className="mt-3 text-[21px] leading-relaxed text-foreground">
-                {body}
-              </p>
+              <div className="mt-3 text-[21px] leading-relaxed text-foreground">
+                {body === null
+                  ? <div className="flex flex-col gap-2"><div className="h-4 w-[90%] rounded-full animate-pulse bg-muted" /><div className="h-4 w-[65%] rounded-full animate-pulse bg-muted" /></div>
+                  : <p>{withPeriod(body)}</p>
+                }
+              </div>
             </div>
           );
         })}
