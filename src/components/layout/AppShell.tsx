@@ -24,6 +24,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-dvh" style={{ backgroundColor: "var(--parchment)" }}>
+      {/* Mobile hamburger */}
       <button
         type="button"
         aria-label="Open navigation"
@@ -41,28 +42,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Menu className="h-5 w-5" />
       </button>
 
-      {mobileOpen && (
-        <button
-          type="button"
-          aria-label="Close navigation overlay"
-          className="fixed inset-0 z-40 bg-black/25 backdrop-blur-[2px] lg:hidden"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
-
       <Sidebar
         collapsed={desktopCollapsed}
         mobileOpen={mobileOpen}
-        onCollapseToggle={() => setDesktopCollapsed((value) => !value)}
+        onCollapseToggle={() => setDesktopCollapsed((v) => !v)}
         onMobileClose={() => setMobileOpen(false)}
       />
 
+      {/* Content margin tracks the visible sidebar width via CSS transition */}
       <div
-        className={cn(
-          "min-w-0 transition-[margin] duration-300 ease-out",
-          desktopCollapsed ? "lg:ml-20" : "lg:ml-64"
-        )}
+        className="min-w-0 hidden lg:block"
+        style={{
+          marginLeft: desktopCollapsed ? 80 : 256,
+          transition: "margin-left 0.26s cubic-bezier(0.4, 0, 0.2, 1)",
+        }}
       >
+        {children}
+      </div>
+
+      {/* Mobile: no offset */}
+      <div className="min-w-0 lg:hidden">
         {children}
       </div>
     </div>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { useLocale, Locale } from "@/lib/i18n";
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
@@ -17,12 +18,17 @@ const DEV_SCENARIOS = [
   { id: "scenario-3" as const, label: "Partial" },
 ];
 
+const SIDEBAR_WIDTH = 256;
+const COLLAPSED_WIDTH = 80;
+
 type SidebarProps = {
   collapsed: boolean;
   mobileOpen: boolean;
   onCollapseToggle: () => void;
   onMobileClose: () => void;
 };
+
+const EASE: [number, number, number, number] = [0.4, 0, 0.2, 1];
 
 export function Sidebar({
   collapsed,
@@ -34,8 +40,10 @@ export function Sidebar({
   const { t, locale, setLocale } = useLocale();
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
-  const [propertyName, setPropertyName] = useState<string | null>(null);
   const { activeId, setActiveId } = useDevScenario();
+  const prefersReduced = useReducedMotion();
+
+  const dur = prefersReduced ? 0 : 0.26;
 
   useEffect(() => {
     const supabase = createClient();
@@ -50,16 +58,6 @@ export function Sidebar({
         null
       );
     });
-    supabase
-      .from("connected_sources")
-      .select("display_name")
-      .eq("source", "ga4")
-      .neq("property_id", "_pending")
-      .limit(1)
-      .single()
-      .then(({ data }) => {
-        setPropertyName(data?.display_name ?? null);
-      });
   }, []);
 
   const nav = [
@@ -82,113 +80,257 @@ export function Sidebar({
   ];
 
   return (
-    <aside
-      className={cn(
-        "fixed inset-y-0 left-0 z-50 flex w-[min(20rem,calc(100vw-2rem))] shrink-0 flex-col border-r shadow-[18px_0_60px_-36px_rgba(20,18,16,0.45)] transition-all duration-300 ease-out lg:shadow-none",
-        collapsed ? "lg:w-20" : "lg:w-64",
-        mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-      )}
-      style={{ borderColor: "var(--rule)", backgroundColor: "var(--bone)" }}
-    >
-      <div
-        className={cn("border-b px-4 transition-all lg:px-5", collapsed ? "lg:px-3" : "lg:px-6")}
-        style={{ borderColor: "var(--rule)", minHeight: "88px" }}
+    <>
+      {/* ── Desktop sidebar ── */}
+      <aside
+        className="hidden lg:flex fixed inset-y-0 left-0 z-50 flex-col border-r overflow-hidden"
+        style={{
+          width: collapsed ? COLLAPSED_WIDTH : SIDEBAR_WIDTH,
+          borderColor: "var(--rule)",
+          backgroundColor: "var(--bone)",
+          transition: "width 0.26s cubic-bezier(0.4, 0, 0.2, 1)",
+        }}
       >
-        <div className="flex min-h-[88px] items-center gap-3">
-          <Link
-            href="/dashboard"
-            onClick={onMobileClose}
-            className={cn("flex min-w-0 flex-1 items-center gap-3", collapsed && "lg:justify-center")}
-            aria-label="Clarix dashboard"
-          >
-            <Image
-              src="/clarix-logga-transparent.png"
-              alt="Clarix"
-              width={160}
-              height={52}
-              className={cn("h-10 w-auto dark:invert", collapsed ? "lg:h-8" : "lg:h-11")}
-              priority
-            />
-          </Link>
+        <SidebarInner
+          collapsed={collapsed}
+          isMobile={false}
+          onCollapseToggle={onCollapseToggle}
+          onMobileClose={onMobileClose}
+          userName={userName}
+          userEmail={userEmail}
+          pathname={pathname}
+          nav={nav}
+          locale={locale}
+          setLocale={setLocale}
+          activeId={activeId}
+          setActiveId={setActiveId}
+          t={t}
+          dur={dur}
+        />
+      </aside>
 
+      {/* ── Mobile sidebar ───────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <>
+            <motion.div
+              key="backdrop"
+              className="fixed inset-0 z-40 lg:hidden"
+              style={{ backgroundColor: "rgba(20,18,16,0.35)", backdropFilter: "blur(2px)" }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: prefersReduced ? 0 : 0.2, ease: EASE }}
+              onClick={onMobileClose}
+            />
+            <motion.aside
+              key="mobile-sidebar"
+              className="fixed inset-y-0 left-0 z-50 flex flex-col border-r shadow-[18px_0_60px_-36px_rgba(20,18,16,0.45)] lg:hidden"
+              style={{
+                width: "min(20rem, calc(100vw - 2rem))",
+                borderColor: "var(--rule)",
+                backgroundColor: "var(--bone)",
+                willChange: "transform",
+              }}
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ duration: prefersReduced ? 0 : 0.28, ease: EASE }}
+            >
+              <SidebarInner
+                collapsed={false}
+                isMobile={true}
+                onCollapseToggle={onCollapseToggle}
+                onMobileClose={onMobileClose}
+                userName={userName}
+                userEmail={userEmail}
+                pathname={pathname}
+                nav={nav}
+                locale={locale}
+                setLocale={setLocale}
+                activeId={activeId}
+                setActiveId={setActiveId}
+                t={t}
+                dur={dur}
+              />
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
+// ── Inner content ─────────────────────────────────────────────────────────────
+
+type NavGroup = {
+  section: string;
+  items: {
+    label: string;
+    href: string;
+    icon: React.ComponentType<{ size?: number; active?: boolean }>;
+  }[];
+};
+
+type InnerProps = {
+  collapsed: boolean;
+  isMobile: boolean;
+  onCollapseToggle: () => void;
+  onMobileClose: () => void;
+  userName: string | null;
+  userEmail: string | null;
+  pathname: string;
+  nav: NavGroup[];
+  locale: Locale;
+  setLocale: (l: Locale) => void;
+  activeId: string;
+  setActiveId: (id: "scenario-1" | "scenario-2" | "scenario-3") => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  t: any;
+  dur: number;
+};
+
+// Labels fade out when collapsed. Pure opacity = compositor only.
+const LABEL_TRANSITION = { duration: 0.15, ease: [0.4, 0, 1, 1] as const };
+const LABEL_IN_TRANSITION = { duration: 0.2, ease: [0, 0, 0.2, 1] as const };
+
+function FadeLabel({
+  show,
+  children,
+  className,
+  style,
+  slideX = false,
+}: {
+  show: boolean;
+  children: React.ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+  slideX?: boolean;
+}) {
+  return (
+    <AnimatePresence initial={false} mode="wait">
+      {show && (
+        <motion.span
+          key="label"
+          className={cn("block", className)}
+          style={style}
+          initial={{ opacity: 0, ...(slideX ? { x: -6 } : {}) }}
+          animate={{ opacity: 1, ...(slideX ? { x: 0 } : {}) }}
+          exit={{ opacity: 0, ...(slideX ? { x: -6 } : {}) }}
+          transition={show ? LABEL_IN_TRANSITION : LABEL_TRANSITION}
+        >
+          {children}
+        </motion.span>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function SidebarInner({
+  collapsed,
+  isMobile,
+  onCollapseToggle,
+  onMobileClose,
+  userName,
+  userEmail,
+  pathname,
+  nav,
+  locale,
+  setLocale,
+  activeId,
+  setActiveId,
+  t,
+  dur,
+}: InnerProps) {
+  const show = !collapsed || isMobile;
+
+  return (
+    <div className="flex h-full flex-col w-full" style={{ minWidth: SIDEBAR_WIDTH }}>
+      {/* ── Header ── */}
+      <div
+        className="flex items-center px-5"
+        style={{ minHeight: 88 }}
+      >
+        {/* Logo — fades out on collapse */}
+        <div className="flex-1 min-w-0">
+          <AnimatePresence initial={false} mode="wait">
+            {show && (
+              <motion.div
+                key="logo"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: dur * 0.7, ease: EASE }}
+              >
+                <Link
+                  href="/dashboard"
+                  onClick={onMobileClose}
+                  aria-label="Clarix dashboard"
+                  className="flex items-center"
+                >
+                  <Image
+                    src="/clarix-logga-transparent.png"
+                    alt="Clarix"
+                    width={200}
+                    height={66}
+                    className="h-14 w-auto dark:invert"
+                    priority
+                  />
+                </Link>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Mobile close */}
+        {isMobile && (
           <button
             type="button"
             aria-label="Close navigation"
             onClick={onMobileClose}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bone-dark)] lg:hidden"
+            className="shrink-0 inline-flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bone-dark)]"
             style={{ color: "var(--slate)" }}
           >
             <X className="h-4 w-4" />
           </button>
+        )}
 
+        {/* Desktop collapse toggle — always visible at right edge */}
+        {!isMobile && (
           <button
             type="button"
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             onClick={onCollapseToggle}
-            className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bone-dark)] lg:inline-flex"
+            className="shrink-0 flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bone-dark)]"
             style={{ color: "var(--slate)" }}
           >
-            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+            {collapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
           </button>
-        </div>
-
-        {propertyName && (
-          <div
-            className={cn("mb-4", collapsed && "lg:hidden")}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 5,
-              padding: "2px 8px 2px 6px",
-              borderRadius: 6,
-              backgroundColor: "var(--parchment)",
-              border: "1px solid var(--rule)",
-              alignSelf: "flex-start",
-            }}
-          >
-            <span
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: "50%",
-                flexShrink: 0,
-                backgroundColor: "#E8826A",
-              }}
-            />
-            <span
-              style={{
-                fontSize: 10,
-                fontWeight: 600,
-                letterSpacing: "0.04em",
-                color: "var(--slate)",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                maxWidth: 180,
-              }}
-            >
-              {propertyName}
-            </span>
-          </div>
         )}
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-5">
-        <div className="flex flex-col gap-6">
+      {/* ── Nav ── */}
+      <nav className="flex-1 overflow-y-auto px-3 py-4">
+        <div className="flex flex-col gap-5">
           {nav.map((group) => (
             <div key={group.section}>
-              <p
-                className={cn("mb-1.5 px-3", collapsed && "lg:sr-only")}
+              <FadeLabel
+                show={show}
+                className="mb-1.5 px-3"
                 style={{
-                  fontSize: "10px",
+                  fontSize: 10,
                   letterSpacing: "0.1em",
                   textTransform: "uppercase",
                   color: "var(--slate-light)",
                 }}
               >
                 {group.section}
-              </p>
+              </FadeLabel>
+
               <ul className="flex flex-col gap-0.5">
                 {group.items.map(({ label, href, icon: Icon }) => {
                   const active = pathname === href;
@@ -197,11 +339,10 @@ export function Sidebar({
                       <Link
                         href={href}
                         onClick={onMobileClose}
-                        title={collapsed ? label : undefined}
+                        title={!show ? label : undefined}
                         aria-label={label}
                         className={cn(
                           "flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
-                          collapsed && "lg:justify-center lg:px-0",
                           active ? "font-medium" : "hover:bg-[var(--bone-dark)]"
                         )}
                         style={{
@@ -209,8 +350,12 @@ export function Sidebar({
                           color: active ? "var(--parchment)" : "var(--charcoal)",
                         }}
                       >
-                        <Icon size={15} active={active} />
-                        <span className={cn("min-w-0 truncate", collapsed && "lg:hidden")}>{label}</span>
+                        <span className="shrink-0">
+                          <Icon size={15} active={active} />
+                        </span>
+                        <FadeLabel show={show} slideX className="min-w-0 truncate text-sm">
+                          {label}
+                        </FadeLabel>
                       </Link>
                     </li>
                   );
@@ -221,12 +366,13 @@ export function Sidebar({
         </div>
       </nav>
 
-      {process.env.NODE_ENV === "development" && (
-        <div className={cn("border-t px-4 py-3", collapsed && "lg:hidden")} style={{ borderColor: "var(--rule)" }}>
+      {/* ── Dev scenario switcher ── */}
+      {process.env.NODE_ENV === "development" && show && (
+        <div className="border-t px-4 py-3" style={{ borderColor: "var(--rule)" }}>
           <p
             className="mb-2"
             style={{
-              fontSize: "9px",
+              fontSize: 9,
               letterSpacing: "0.1em",
               textTransform: "uppercase",
               color: "var(--slate-light)",
@@ -242,11 +388,13 @@ export function Sidebar({
                 onClick={() => setActiveId(scenario.id)}
                 className="flex-1 rounded-md py-1 transition-colors"
                 style={{
-                  fontSize: "10px",
+                  fontSize: 10,
                   fontWeight: 500,
                   letterSpacing: "0.03em",
-                  backgroundColor: activeId === scenario.id ? "var(--charcoal)" : "var(--bone-dark)",
-                  color: activeId === scenario.id ? "var(--parchment)" : "var(--slate)",
+                  backgroundColor:
+                    activeId === scenario.id ? "var(--charcoal)" : "var(--bone-dark)",
+                  color:
+                    activeId === scenario.id ? "var(--parchment)" : "var(--slate)",
                 }}
               >
                 {scenario.label}
@@ -256,14 +404,12 @@ export function Sidebar({
         </div>
       )}
 
+      {/* ── Footer: locale + theme ── */}
       <div
-        className={cn(
-          "flex items-center justify-between border-t px-5 py-3",
-          collapsed && "lg:flex-col lg:gap-3 lg:px-3"
-        )}
+        className="flex items-center justify-between border-t px-5 py-3"
         style={{ borderColor: "var(--rule)" }}
       >
-        <div className={cn("flex items-center gap-1", collapsed && "lg:hidden")}>
+        <FadeLabel show={show} className="flex items-center gap-1">
           {(["sv", "en"] as Locale[]).map((loc) => (
             <button
               key={loc}
@@ -278,7 +424,7 @@ export function Sidebar({
               {loc}
             </button>
           ))}
-        </div>
+        </FadeLabel>
         <AnimatedThemeToggler
           variant="circle"
           className="flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-[var(--bone-dark)] [&>svg]:h-[14px] [&>svg]:w-[14px]"
@@ -286,58 +432,64 @@ export function Sidebar({
         />
       </div>
 
-      <div className={cn("border-t px-4 py-5", collapsed && "lg:px-3")} style={{ borderColor: "var(--rule)" }}>
-        <div className={cn("flex items-center gap-3", collapsed && "lg:justify-center")}>
+      {/* ── User ── */}
+      <div className="border-t px-4 py-5" style={{ borderColor: "var(--rule)" }}>
+        <div className="flex items-center gap-3">
           <div
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-medium uppercase"
             style={{ backgroundColor: "var(--charcoal)", color: "var(--parchment)" }}
           >
             {(userName ?? userEmail ?? "U").charAt(0)}
           </div>
-          <div className={cn("min-w-0 flex-1", collapsed && "lg:hidden")}>
+          <FadeLabel show={show} slideX className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium" style={{ color: "var(--charcoal)" }}>
               {userName ?? t.nav.user.account}
             </p>
             <p className="truncate text-[11px]" style={{ color: "var(--slate-light)" }}>
               {userEmail ?? t.nav.user.plan}
             </p>
-          </div>
+          </FadeLabel>
         </div>
       </div>
-    </aside>
+    </div>
   );
 }
 
+// ── Icons ─────────────────────────────────────────────────────────────────────
+
 function IconDashboard({ size = 16, active }: { size?: number; active?: boolean }) {
+  const c = active ? "var(--parchment)" : "var(--charcoal)";
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none" className="shrink-0">
-      <rect x="1" y="1" width="6" height="6" rx="1.5" stroke={active ? "var(--parchment)" : "var(--charcoal)"} strokeWidth="1.2" />
-      <rect x="9" y="1" width="6" height="6" rx="1.5" stroke={active ? "var(--parchment)" : "var(--charcoal)"} strokeWidth="1.2" />
-      <rect x="1" y="9" width="6" height="6" rx="1.5" stroke={active ? "var(--parchment)" : "var(--charcoal)"} strokeWidth="1.2" />
-      <rect x="9" y="9" width="6" height="6" rx="1.5" stroke={active ? "var(--parchment)" : "var(--charcoal)"} strokeWidth="1.2" />
+      <rect x="1" y="1" width="6" height="6" rx="1.5" stroke={c} strokeWidth="1.2" />
+      <rect x="9" y="1" width="6" height="6" rx="1.5" stroke={c} strokeWidth="1.2" />
+      <rect x="1" y="9" width="6" height="6" rx="1.5" stroke={c} strokeWidth="1.2" />
+      <rect x="9" y="9" width="6" height="6" rx="1.5" stroke={c} strokeWidth="1.2" />
     </svg>
   );
 }
 
 function IconReport({ size = 16, active }: { size?: number; active?: boolean }) {
+  const c = active ? "var(--parchment)" : "var(--charcoal)";
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none" className="shrink-0">
-      <rect x="2" y="1" width="12" height="14" rx="1.5" stroke={active ? "var(--parchment)" : "var(--charcoal)"} strokeWidth="1.2" />
-      <line x1="5" y1="5" x2="11" y2="5" stroke={active ? "var(--parchment)" : "var(--charcoal)"} strokeWidth="1.2" strokeLinecap="round" />
-      <line x1="5" y1="8" x2="11" y2="8" stroke={active ? "var(--parchment)" : "var(--charcoal)"} strokeWidth="1.2" strokeLinecap="round" />
-      <line x1="5" y1="11" x2="8" y2="11" stroke={active ? "var(--parchment)" : "var(--charcoal)"} strokeWidth="1.2" strokeLinecap="round" />
+      <rect x="2" y="1" width="12" height="14" rx="1.5" stroke={c} strokeWidth="1.2" />
+      <line x1="5" y1="5" x2="11" y2="5" stroke={c} strokeWidth="1.2" strokeLinecap="round" />
+      <line x1="5" y1="8" x2="11" y2="8" stroke={c} strokeWidth="1.2" strokeLinecap="round" />
+      <line x1="5" y1="11" x2="8" y2="11" stroke={c} strokeWidth="1.2" strokeLinecap="round" />
     </svg>
   );
 }
 
 function IconIntegrations({ size = 16, active }: { size?: number; active?: boolean }) {
+  const c = active ? "var(--parchment)" : "var(--charcoal)";
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none" className="shrink-0">
-      <circle cx="3.5" cy="8" r="2" stroke={active ? "var(--parchment)" : "var(--charcoal)"} strokeWidth="1.2" />
-      <circle cx="12.5" cy="3.5" r="2" stroke={active ? "var(--parchment)" : "var(--charcoal)"} strokeWidth="1.2" />
-      <circle cx="12.5" cy="12.5" r="2" stroke={active ? "var(--parchment)" : "var(--charcoal)"} strokeWidth="1.2" />
-      <line x1="5.5" y1="7" x2="10.5" y2="4.5" stroke={active ? "var(--parchment)" : "var(--charcoal)"} strokeWidth="1.2" strokeLinecap="round" />
-      <line x1="5.5" y1="9" x2="10.5" y2="11.5" stroke={active ? "var(--parchment)" : "var(--charcoal)"} strokeWidth="1.2" strokeLinecap="round" />
+      <circle cx="3.5" cy="8" r="2" stroke={c} strokeWidth="1.2" />
+      <circle cx="12.5" cy="3.5" r="2" stroke={c} strokeWidth="1.2" />
+      <circle cx="12.5" cy="12.5" r="2" stroke={c} strokeWidth="1.2" />
+      <line x1="5.5" y1="7" x2="10.5" y2="4.5" stroke={c} strokeWidth="1.2" strokeLinecap="round" />
+      <line x1="5.5" y1="9" x2="10.5" y2="11.5" stroke={c} strokeWidth="1.2" strokeLinecap="round" />
     </svg>
   );
 }
