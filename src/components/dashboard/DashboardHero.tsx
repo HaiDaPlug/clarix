@@ -63,8 +63,8 @@ export function DashboardHero({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={HERO_ENTER}
-      className="relative overflow-hidden rounded-3xl border border-white/20 p-8 shadow-[0_24px_60px_-26px_rgba(255,107,85,0.45)] sm:p-10"
-      style={{ background: "linear-gradient(135deg, #e8336d 0%, #ff6b35 50%, #ffb830 100%)" }}
+      className="relative overflow-hidden rounded-3xl border border-white/15 p-8 shadow-[0_24px_60px_-26px_rgba(180,40,60,0.5)] sm:p-10"
+      style={{ background: "linear-gradient(135deg, #c4245a 0%, #d94f2a 55%, #bf4020 100%)" }}
     >
       <NoiseTexture preset="cinematic" blendMode="overlay" />
       {loading && <ShimmerOverlay />}
