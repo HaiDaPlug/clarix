@@ -45,14 +45,7 @@ export async function POST(request: Request) {
     let accessToken: string | null = null;
 
     if (user && siteUrl) {
-      const { data: { session } } = await supabase.auth.getSession();
-      accessToken = await getValidAccessToken(
-        supabase,
-        user.id,
-        "gsc",
-        siteUrl,
-        session?.provider_token ?? undefined,
-      );
+      accessToken = await getValidAccessToken(supabase, user.id, "gsc", siteUrl);
     }
 
     if (!siteUrl || !accessToken) {

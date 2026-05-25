@@ -54,7 +54,6 @@ export async function buildReportDataForUser({
     return { status: "no_sources", data: null, sources: [] };
   }
 
-  const { data: sessionData } = await supabase.auth.getSession();
   const parts = await Promise.all(
     sources.map((source) =>
       fetchSourceReportPart({
@@ -63,7 +62,6 @@ export async function buildReportDataForUser({
         source,
         dateRange: range,
         locale,
-        sessionToken: sessionData.session?.provider_token ?? undefined,
       }),
     ),
   );
@@ -116,14 +114,12 @@ async function fetchSourceReportPart({
   source,
   dateRange,
   locale,
-  sessionToken,
 }: {
   supabase: SupabaseClient;
   userId: string;
   source: ConnectedSource;
   dateRange: DateRange;
   locale: GoogleReportLocale;
-  sessionToken?: string;
 }): Promise<Partial<ReportData> | undefined> {
   try {
     const accessToken = await getValidAccessToken(
@@ -131,7 +127,6 @@ async function fetchSourceReportPart({
       userId,
       source.source,
       source.property_id,
-      sessionToken,
     );
     if (!accessToken) return undefined;
 

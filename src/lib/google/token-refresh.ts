@@ -55,9 +55,12 @@ export async function getValidAccessToken(
   userId: string,
   source: GoogleSource,
   propertyId: string,
-  sessionToken: string | undefined,
+  // sessionToken kept in signature for backwards compat but intentionally unused.
+  // Using the provider_token from the active Supabase session was wrong: it's the
+  // token for whoever is currently logged in, not for the stored property owner.
+  // Always use the stored access_token / refresh_token instead.
+  _sessionToken?: string | undefined,
 ): Promise<string | null> {
-  if (sessionToken) return sessionToken;
 
   const { data } = await supabase
     .from("connected_sources")
