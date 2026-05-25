@@ -201,8 +201,33 @@ function SidebarContent({
   return (
     <div className="flex h-full flex-col">
 
-      {/* ── Top bar: toggle + logo ── */}
-      <div className="flex h-14 shrink-0 items-center gap-2 px-3">
+      {/* ── Top bar: logo + toggle ── */}
+      <div className="flex h-16 shrink-0 items-center justify-between px-3">
+        {/* Logo — fades out when collapsed */}
+        <AnimatePresence initial={false}>
+          {show && (
+            <motion.div
+              key="logo"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: prefersReduced ? 0 : 0.15, ease: EASE }}
+              className="overflow-hidden min-w-0"
+            >
+              <Link href="/dashboard" onClick={onMobileClose} aria-label="Clarix">
+                <Image
+                  src="/clarix-logga-transparent.png"
+                  alt="Clarix"
+                  width={160}
+                  height={52}
+                  className="h-11 w-auto dark:invert"
+                  priority
+                />
+              </Link>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Toggle / close button */}
         <button
           type="button"
@@ -213,31 +238,6 @@ function SidebarContent({
         >
           {isMobile ? <X className="h-[18px] w-[18px]" /> : <PanelLeft className="h-[18px] w-[18px]" />}
         </button>
-
-        {/* Logo — fades out when collapsed */}
-        <AnimatePresence initial={false}>
-          {show && (
-            <motion.div
-              key="logo"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: prefersReduced ? 0 : 0.15, ease: EASE }}
-              className="overflow-hidden"
-            >
-              <Link href="/dashboard" onClick={onMobileClose} aria-label="Clarix">
-                <Image
-                  src="/clarix-logga-transparent.png"
-                  alt="Clarix"
-                  width={108}
-                  height={36}
-                  className="h-[30px] w-auto dark:invert"
-                  priority
-                />
-              </Link>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
 
       {/* ── Nav ── */}
