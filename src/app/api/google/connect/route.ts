@@ -145,6 +145,7 @@ async function getStoredGoogleCredential(
       (row): row is {
         source: "ga4" | "gsc";
         property_id: string;
+        access_token: string | null;
         refresh_token: string | null;
         token_expires_at: string | null;
       } =>
