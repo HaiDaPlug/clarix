@@ -2,7 +2,6 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useLocale } from "@/lib/i18n";
 import {
@@ -127,8 +126,6 @@ const VISUAL_INTEGRATIONS: VisualIntegration[] = [
 export default function IntegrationsPage() {
   const { locale, t } = useLocale();
   const copy = COPY[locale];
-  const router = useRouter();
-
   const [connectedSources, setConnectedSources] = useState<
     Partial<Record<ConnectableSource, ConnectedSource>>
   >({});
@@ -211,12 +208,6 @@ export default function IntegrationsPage() {
     return () => { cancelled = true; };
   }, [copy.failedProperties, hasMissingGoogleSource, loadingConnections, propertiesRefreshKey]);
 
-  // Auto-redirect to dashboard once both GA4 and GSC are connected
-  useEffect(() => {
-    if (!loadingConnections && connectedSources.ga4 && connectedSources.gsc) {
-      router.push("/dashboard");
-    }
-  }, [loadingConnections, connectedSources.ga4, connectedSources.gsc, router]);
 
   const optionsBySource = useMemo(
     (): Record<ConnectableSource, PropertyOption[]> => ({
