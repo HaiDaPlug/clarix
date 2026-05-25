@@ -53,8 +53,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div
         className="min-w-0 hidden lg:block"
         style={{
-          marginLeft: desktopCollapsed ? 80 : 256,
-          transition: "margin-left 0.26s cubic-bezier(0.4, 0, 0.2, 1)",
+          marginLeft: desktopCollapsed ? 56 : 260,
+          transition: "margin-left 0.22s cubic-bezier(0.4, 0, 0.2, 1)",
         }}
       >
         {children}
