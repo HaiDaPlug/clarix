@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import { cn } from "@/lib/utils";
@@ -18,8 +18,8 @@ const DEV_SCENARIOS = [
   { id: "scenario-3" as const, label: "Partial" },
 ];
 
-const SIDEBAR_WIDTH = 256;
-const COLLAPSED_WIDTH = 80;
+export const SIDEBAR_EXPANDED = 256;
+export const SIDEBAR_COLLAPSED = 80;
 
 type SidebarProps = {
   collapsed: boolean;
@@ -42,7 +42,6 @@ export function Sidebar({
   const [userName, setUserName] = useState<string | null>(null);
   const { activeId, setActiveId } = useDevScenario();
   const prefersReduced = useReducedMotion();
-
   const dur = prefersReduced ? 0 : 0.26;
 
   useEffect(() => {
@@ -81,11 +80,11 @@ export function Sidebar({
 
   return (
     <>
-      {/* ── Desktop sidebar ── */}
+      {/* ── Desktop sidebar ─────────────────────────────────────────────── */}
       <aside
         className="hidden lg:flex fixed inset-y-0 left-0 z-50 flex-col border-r overflow-hidden"
         style={{
-          width: collapsed ? COLLAPSED_WIDTH : SIDEBAR_WIDTH,
+          width: collapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED,
           borderColor: "var(--rule)",
           backgroundColor: "var(--bone)",
           transition: "width 0.26s cubic-bezier(0.4, 0, 0.2, 1)",
@@ -94,7 +93,6 @@ export function Sidebar({
         <SidebarInner
           collapsed={collapsed}
           isMobile={false}
-          onCollapseToggle={onCollapseToggle}
           onMobileClose={onMobileClose}
           userName={userName}
           userEmail={userEmail}
@@ -109,7 +107,31 @@ export function Sidebar({
         />
       </aside>
 
-      {/* ── Mobile sidebar ───────────────────────────────────────────────── */}
+      {/* ── Collapse toggle — floats outside sidebar, always reachable ──── */}
+      {/* Slides horizontally with the sidebar edge via CSS transition.      */}
+      <button
+        type="button"
+        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        onClick={onCollapseToggle}
+        className="hidden lg:flex fixed z-[51] top-1/2 -translate-y-1/2 items-center justify-center"
+        style={{
+          left: (collapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED) - 1,
+          transition: "left 0.26s cubic-bezier(0.4, 0, 0.2, 1)",
+          width: 20,
+          height: 48,
+          borderRadius: "0 8px 8px 0",
+          backgroundColor: "var(--bone)",
+          border: "1px solid var(--rule)",
+          borderLeft: "none",
+          color: "var(--slate)",
+          cursor: "pointer",
+        }}
+      >
+        {/* Animated double-bar icon that morphs to a play arrow on collapse */}
+        <ToggleIcon collapsed={collapsed} />
+      </button>
+
+      {/* ── Mobile sidebar ──────────────────────────────────────────────── */}
       <AnimatePresence>
         {mobileOpen && (
           <>
@@ -130,7 +152,6 @@ export function Sidebar({
                 width: "min(20rem, calc(100vw - 2rem))",
                 borderColor: "var(--rule)",
                 backgroundColor: "var(--bone)",
-                willChange: "transform",
               }}
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
@@ -140,7 +161,6 @@ export function Sidebar({
               <SidebarInner
                 collapsed={false}
                 isMobile={true}
-                onCollapseToggle={onCollapseToggle}
                 onMobileClose={onMobileClose}
                 userName={userName}
                 userEmail={userEmail}
@@ -161,6 +181,31 @@ export function Sidebar({
   );
 }
 
+// ── Toggle icon — two bars (expanded) ↔ single caret (collapsed) ─────────────
+
+function ToggleIcon({ collapsed }: { collapsed: boolean }) {
+  return (
+    <svg width="10" height="14" viewBox="0 0 10 14" fill="none">
+      {collapsed ? (
+        // Single right-pointing caret
+        <path
+          d="M3 2l4 5-4 5"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      ) : (
+        // Two vertical bars (panel close)
+        <>
+          <line x1="3" y1="2" x2="3" y2="12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          <line x1="7" y1="2" x2="7" y2="12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        </>
+      )}
+    </svg>
+  );
+}
+
 // ── Inner content ─────────────────────────────────────────────────────────────
 
 type NavGroup = {
@@ -175,7 +220,6 @@ type NavGroup = {
 type InnerProps = {
   collapsed: boolean;
   isMobile: boolean;
-  onCollapseToggle: () => void;
   onMobileClose: () => void;
   userName: string | null;
   userEmail: string | null;
@@ -190,34 +234,30 @@ type InnerProps = {
   dur: number;
 };
 
-// Labels fade out when collapsed. Pure opacity = compositor only.
-const LABEL_TRANSITION = { duration: 0.15, ease: [0.4, 0, 1, 1] as const };
-const LABEL_IN_TRANSITION = { duration: 0.2, ease: [0, 0, 0.2, 1] as const };
+const LABEL_OUT = { duration: 0.12, ease: [0.4, 0, 1, 1] as const };
+const LABEL_IN  = { duration: 0.18, ease: [0, 0, 0.2, 1] as const };
 
 function FadeLabel({
   show,
   children,
   className,
   style,
-  slideX = false,
 }: {
   show: boolean;
   children: React.ReactNode;
   className?: string;
   style?: React.CSSProperties;
-  slideX?: boolean;
 }) {
   return (
-    <AnimatePresence initial={false} mode="wait">
+    <AnimatePresence initial={false}>
       {show && (
         <motion.span
-          key="label"
-          className={cn("block", className)}
+          className={cn("block overflow-hidden whitespace-nowrap", className)}
           style={style}
-          initial={{ opacity: 0, ...(slideX ? { x: -6 } : {}) }}
-          animate={{ opacity: 1, ...(slideX ? { x: 0 } : {}) }}
-          exit={{ opacity: 0, ...(slideX ? { x: -6 } : {}) }}
-          transition={show ? LABEL_IN_TRANSITION : LABEL_TRANSITION}
+          initial={{ opacity: 0, width: 0 }}
+          animate={{ opacity: 1, width: "auto" }}
+          exit={{ opacity: 0, width: 0 }}
+          transition={show ? LABEL_IN : LABEL_OUT}
         >
           {children}
         </motion.span>
@@ -229,7 +269,6 @@ function FadeLabel({
 function SidebarInner({
   collapsed,
   isMobile,
-  onCollapseToggle,
   onMobileClose,
   userName,
   userEmail,
@@ -245,14 +284,28 @@ function SidebarInner({
   const show = !collapsed || isMobile;
 
   return (
-    <div className="flex h-full flex-col w-full" style={{ minWidth: SIDEBAR_WIDTH }}>
+    <div className="flex h-full flex-col">
+
       {/* ── Header ── */}
-      <div
-        className="flex items-center px-5"
-        style={{ minHeight: 88 }}
-      >
-        {/* Logo — fades out on collapse */}
-        <div className="flex-1 min-w-0">
+      <div className="flex items-center px-4" style={{ minHeight: 88 }}>
+        {isMobile ? (
+          // Mobile: logo + close button
+          <>
+            <Link href="/dashboard" onClick={onMobileClose} className="flex flex-1 items-center" aria-label="Clarix">
+              <Image src="/clarix-logga-transparent.png" alt="Clarix" width={200} height={66} className="h-14 w-auto dark:invert" priority />
+            </Link>
+            <button
+              type="button"
+              aria-label="Close navigation"
+              onClick={onMobileClose}
+              className="shrink-0 inline-flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bone-dark)]"
+              style={{ color: "var(--slate)" }}
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </>
+        ) : (
+          // Desktop: logo fades out on collapse, no toggle here (it floats outside)
           <AnimatePresence initial={false} mode="wait">
             {show && (
               <motion.div
@@ -262,74 +315,36 @@ function SidebarInner({
                 exit={{ opacity: 0 }}
                 transition={{ duration: dur * 0.7, ease: EASE }}
               >
-                <Link
-                  href="/dashboard"
-                  onClick={onMobileClose}
-                  aria-label="Clarix dashboard"
-                  className="flex items-center"
-                >
-                  <Image
-                    src="/clarix-logga-transparent.png"
-                    alt="Clarix"
-                    width={200}
-                    height={66}
-                    className="h-14 w-auto dark:invert"
-                    priority
-                  />
+                <Link href="/dashboard" className="flex items-center" aria-label="Clarix">
+                  <Image src="/clarix-logga-transparent.png" alt="Clarix" width={200} height={66} className="h-14 w-auto dark:invert" priority />
                 </Link>
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
-
-        {/* Mobile close */}
-        {isMobile && (
-          <button
-            type="button"
-            aria-label="Close navigation"
-            onClick={onMobileClose}
-            className="shrink-0 inline-flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bone-dark)]"
-            style={{ color: "var(--slate)" }}
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
-
-        {/* Desktop collapse toggle — always visible at right edge */}
-        {!isMobile && (
-          <button
-            type="button"
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            onClick={onCollapseToggle}
-            className="shrink-0 flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bone-dark)]"
-            style={{ color: "var(--slate)" }}
-          >
-            {collapsed ? (
-              <ChevronRight className="h-4 w-4" />
-            ) : (
-              <ChevronLeft className="h-4 w-4" />
-            )}
-          </button>
         )}
       </div>
 
       {/* ── Nav ── */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4">
+      <nav className="flex-1 overflow-y-auto px-2 py-4">
         <div className="flex flex-col gap-5">
           {nav.map((group) => (
             <div key={group.section}>
-              <FadeLabel
-                show={show}
-                className="mb-1.5 px-3"
-                style={{
-                  fontSize: 10,
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
-                  color: "var(--slate-light)",
-                }}
-              >
-                {group.section}
-              </FadeLabel>
+              {/* Section label — only when expanded */}
+              <AnimatePresence initial={false}>
+                {show && (
+                  <motion.p
+                    key="sec"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={LABEL_IN}
+                    className="mb-1.5 px-3"
+                    style={{ fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--slate-light)" }}
+                  >
+                    {group.section}
+                  </motion.p>
+                )}
+              </AnimatePresence>
 
               <ul className="flex flex-col gap-0.5">
                 {group.items.map(({ label, href, icon: Icon }) => {
@@ -342,7 +357,9 @@ function SidebarInner({
                         title={!show ? label : undefined}
                         aria-label={label}
                         className={cn(
-                          "flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
+                          "flex min-h-11 items-center rounded-lg py-2.5 text-sm transition-colors",
+                          // Collapsed: center icon in the full 80px rail
+                          !show ? "justify-center px-0" : "gap-3 px-3",
                           active ? "font-medium" : "hover:bg-[var(--bone-dark)]"
                         )}
                         style={{
@@ -350,10 +367,10 @@ function SidebarInner({
                           color: active ? "var(--parchment)" : "var(--charcoal)",
                         }}
                       >
-                        <span className="shrink-0">
-                          <Icon size={15} active={active} />
+                        <span className="shrink-0 flex items-center justify-center" style={{ width: 16, height: 16 }}>
+                          <Icon size={16} active={active} />
                         </span>
-                        <FadeLabel show={show} slideX className="min-w-0 truncate text-sm">
+                        <FadeLabel show={show} className="min-w-0 truncate text-sm">
                           {label}
                         </FadeLabel>
                       </Link>
@@ -369,15 +386,7 @@ function SidebarInner({
       {/* ── Dev scenario switcher ── */}
       {process.env.NODE_ENV === "development" && show && (
         <div className="border-t px-4 py-3" style={{ borderColor: "var(--rule)" }}>
-          <p
-            className="mb-2"
-            style={{
-              fontSize: 9,
-              letterSpacing: "0.1em",
-              textTransform: "uppercase",
-              color: "var(--slate-light)",
-            }}
-          >
+          <p className="mb-2" style={{ fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--slate-light)" }}>
             Dev · Scenario
           </p>
           <div className="flex items-center gap-1">
@@ -388,13 +397,9 @@ function SidebarInner({
                 onClick={() => setActiveId(scenario.id)}
                 className="flex-1 rounded-md py-1 transition-colors"
                 style={{
-                  fontSize: 10,
-                  fontWeight: 500,
-                  letterSpacing: "0.03em",
-                  backgroundColor:
-                    activeId === scenario.id ? "var(--charcoal)" : "var(--bone-dark)",
-                  color:
-                    activeId === scenario.id ? "var(--parchment)" : "var(--slate)",
+                  fontSize: 10, fontWeight: 500, letterSpacing: "0.03em",
+                  backgroundColor: activeId === scenario.id ? "var(--charcoal)" : "var(--bone-dark)",
+                  color: activeId === scenario.id ? "var(--parchment)" : "var(--slate)",
                 }}
               >
                 {scenario.label}
@@ -406,25 +411,27 @@ function SidebarInner({
 
       {/* ── Footer: locale + theme ── */}
       <div
-        className="flex items-center justify-between border-t px-5 py-3"
+        className={cn("flex border-t py-3", show ? "items-center justify-between px-5" : "flex-col items-center gap-3 px-2")}
         style={{ borderColor: "var(--rule)" }}
       >
-        <FadeLabel show={show} className="flex items-center gap-1">
-          {(["sv", "en"] as Locale[]).map((loc) => (
-            <button
-              key={loc}
-              type="button"
-              onClick={() => setLocale(loc)}
-              className="rounded-md px-2.5 py-1 text-[11px] font-medium uppercase tracking-wider transition-colors"
-              style={{
-                backgroundColor: locale === loc ? "var(--charcoal)" : "transparent",
-                color: locale === loc ? "var(--parchment)" : "var(--slate-light)",
-              }}
-            >
-              {loc}
-            </button>
-          ))}
-        </FadeLabel>
+        {show && (
+          <div className="flex items-center gap-1">
+            {(["sv", "en"] as Locale[]).map((loc) => (
+              <button
+                key={loc}
+                type="button"
+                onClick={() => setLocale(loc)}
+                className="rounded-md px-2.5 py-1 text-[11px] font-medium uppercase tracking-wider transition-colors"
+                style={{
+                  backgroundColor: locale === loc ? "var(--charcoal)" : "transparent",
+                  color: locale === loc ? "var(--parchment)" : "var(--slate-light)",
+                }}
+              >
+                {loc}
+              </button>
+            ))}
+          </div>
+        )}
         <AnimatedThemeToggler
           variant="circle"
           className="flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-[var(--bone-dark)] [&>svg]:h-[14px] [&>svg]:w-[14px]"
@@ -433,22 +440,24 @@ function SidebarInner({
       </div>
 
       {/* ── User ── */}
-      <div className="border-t px-4 py-5" style={{ borderColor: "var(--rule)" }}>
-        <div className="flex items-center gap-3">
+      <div className={cn("border-t py-4", show ? "px-4" : "px-2")} style={{ borderColor: "var(--rule)" }}>
+        <div className={cn("flex items-center gap-3", !show && "justify-center")}>
           <div
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-medium uppercase"
             style={{ backgroundColor: "var(--charcoal)", color: "var(--parchment)" }}
           >
             {(userName ?? userEmail ?? "U").charAt(0)}
           </div>
-          <FadeLabel show={show} slideX className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium" style={{ color: "var(--charcoal)" }}>
-              {userName ?? t.nav.user.account}
-            </p>
-            <p className="truncate text-[11px]" style={{ color: "var(--slate-light)" }}>
-              {userEmail ?? t.nav.user.plan}
-            </p>
-          </FadeLabel>
+          {show && (
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium" style={{ color: "var(--charcoal)" }}>
+                {userName ?? t.nav.user.account}
+              </p>
+              <p className="truncate text-[11px]" style={{ color: "var(--slate-light)" }}>
+                {userEmail ?? t.nav.user.plan}
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -460,7 +469,7 @@ function SidebarInner({
 function IconDashboard({ size = 16, active }: { size?: number; active?: boolean }) {
   const c = active ? "var(--parchment)" : "var(--charcoal)";
   return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" className="shrink-0">
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
       <rect x="1" y="1" width="6" height="6" rx="1.5" stroke={c} strokeWidth="1.2" />
       <rect x="9" y="1" width="6" height="6" rx="1.5" stroke={c} strokeWidth="1.2" />
       <rect x="1" y="9" width="6" height="6" rx="1.5" stroke={c} strokeWidth="1.2" />
@@ -472,7 +481,7 @@ function IconDashboard({ size = 16, active }: { size?: number; active?: boolean 
 function IconReport({ size = 16, active }: { size?: number; active?: boolean }) {
   const c = active ? "var(--parchment)" : "var(--charcoal)";
   return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" className="shrink-0">
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
       <rect x="2" y="1" width="12" height="14" rx="1.5" stroke={c} strokeWidth="1.2" />
       <line x1="5" y1="5" x2="11" y2="5" stroke={c} strokeWidth="1.2" strokeLinecap="round" />
       <line x1="5" y1="8" x2="11" y2="8" stroke={c} strokeWidth="1.2" strokeLinecap="round" />
@@ -484,7 +493,7 @@ function IconReport({ size = 16, active }: { size?: number; active?: boolean }) 
 function IconIntegrations({ size = 16, active }: { size?: number; active?: boolean }) {
   const c = active ? "var(--parchment)" : "var(--charcoal)";
   return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" className="shrink-0">
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
       <circle cx="3.5" cy="8" r="2" stroke={c} strokeWidth="1.2" />
       <circle cx="12.5" cy="3.5" r="2" stroke={c} strokeWidth="1.2" />
       <circle cx="12.5" cy="12.5" r="2" stroke={c} strokeWidth="1.2" />
@@ -497,7 +506,7 @@ function IconIntegrations({ size = 16, active }: { size?: number; active?: boole
 function IconClients({ size = 16, active }: { size?: number; active?: boolean }) {
   const c = active ? "var(--parchment)" : "var(--charcoal)";
   return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" className="shrink-0">
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
       <circle cx="6" cy="5" r="2.5" stroke={c} strokeWidth="1.2" />
       <path d="M1.5 13.5c0-2.485 2.015-4.5 4.5-4.5s4.5 2.015 4.5 4.5" stroke={c} strokeWidth="1.2" strokeLinecap="round" />
       <path d="M11 7.5a2 2 0 1 0 0-4" stroke={c} strokeWidth="1.2" strokeLinecap="round" />
@@ -509,7 +518,7 @@ function IconClients({ size = 16, active }: { size?: number; active?: boolean })
 function IconData({ size = 16, active }: { size?: number; active?: boolean }) {
   const c = active ? "var(--parchment)" : "var(--charcoal)";
   return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" className="shrink-0">
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
       <ellipse cx="8" cy="4" rx="5.5" ry="2" stroke={c} strokeWidth="1.2" />
       <path d="M2.5 4v4c0 1.1 2.46 2 5.5 2s5.5-.9 5.5-2V4" stroke={c} strokeWidth="1.2" />
       <path d="M2.5 8v4c0 1.1 2.46 2 5.5 2s5.5-.9 5.5-2V8" stroke={c} strokeWidth="1.2" />
@@ -520,7 +529,7 @@ function IconData({ size = 16, active }: { size?: number; active?: boolean }) {
 function IconSettings({ size = 16, active }: { size?: number; active?: boolean }) {
   const c = active ? "var(--parchment)" : "var(--charcoal)";
   return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" className="shrink-0">
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
       <circle cx="8" cy="8" r="2" stroke={c} strokeWidth="1.2" />
       <path d="M8 1.5v1.8M8 12.7v1.8M1.5 8h1.8M12.7 8h1.8M3.4 3.4l1.27 1.27M11.33 11.33l1.27 1.27M12.6 3.4l-1.27 1.27M4.67 11.33l-1.27 1.27" stroke={c} strokeWidth="1.2" strokeLinecap="round" />
     </svg>
