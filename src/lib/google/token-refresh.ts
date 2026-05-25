@@ -80,13 +80,22 @@ export async function getValidAccessToken(
     !Number.isNaN(expiresAtMs) &&
     expiresAtMs - Date.now() >= REFRESH_SKEW_MS;
 
+  // Token is confirmed still valid — use it directly.
   if (hasKnownValidExpiry) return data.access_token;
 
-  if (!data.refresh_token) return null;
-
-  try {
-    return await refreshGoogleToken(supabase, userId, source, propertyId, data.refresh_token);
-  } catch {
-    throw new Error("token_refresh_failed");
+  // Try to refresh if we have a refresh token.
+  if (data.refresh_token) {
+    try {
+      return await refreshGoogleToken(supabase, userId, source, propertyId, data.refresh_token);
+    } catch {
+      throw new Error("token_refresh_failed");
+    }
   }
+
+  // No refresh token and expiry unknown — optimistically return the stored
+  // access_token and let Google tell us if it's actually expired (401/403).
+  // This handles users who connected before refresh tokens were reliably stored.
+  if (data.access_token) return data.access_token;
+
+  return null;
 }

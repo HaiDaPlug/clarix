@@ -115,12 +115,12 @@ export async function POST(request: Request) {
     );
   }
 
-  // Clean up the _pending sentinel row now that a real property is connected.
+  // Clean up the _pending sentinel row for this source now that a real property is connected.
   await supabase
     .from("connected_sources")
     .delete()
     .eq("user_id", user.id)
-    .eq("source", "ga4")
+    .eq("source", parsed.data.source)
     .eq("property_id", "_pending");
 
   return NextResponse.json({ success: true, needsRefresh });
@@ -136,7 +136,7 @@ async function getStoredGoogleCredential(
 } | null> {
   const { data: rows } = await supabase
     .from("connected_sources")
-    .select("source, property_id, refresh_token, token_expires_at")
+    .select("source, property_id, access_token, refresh_token, token_expires_at")
     .eq("user_id", userId)
     .in("source", ["ga4", "gsc"]);
 
