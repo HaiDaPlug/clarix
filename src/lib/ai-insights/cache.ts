@@ -1,3 +1,4 @@
+// SERVER-ONLY — imports Node `crypto`. Do not import from "use client" files.
 import { createHash } from "crypto";
 import { AI_INSIGHTS_CACHE_VERSION } from "@/lib/ai-insights/types";
 import type { ReportData } from "@/types/schema";
@@ -5,16 +6,13 @@ import type { ReportData } from "@/types/schema";
 // ─── Canonical hash input ─────────────────────────────────────────────────────
 // We hash a deterministic subset of ReportData — everything the advisor prompt
 // actually reasons over. Volatile/debug fields (meta.generatedAt, raw API
-// response objects, etc.) are intentionally excluded so they don't cause false
-// cache misses.
+// response objects, etc.) are intentionally excluded to avoid false cache misses.
 //
-// Also included:
-//   AI_INSIGHTS_CACHE_VERSION — bumped when prompt logic / classifier / schema
-//     changes intentionally; this is the single lever to bust all caches.
-//   provider + model — different models produce different output; treat them as
-//     distinct cache namespaces.
+// Also baked in:
+//   AI_INSIGHTS_CACHE_VERSION — single lever to bust all caches on logic changes.
+//   provider + model — different models produce different output.
 
-function canonicalHashInput(data: ReportData): object {
+function canonicalHashInput(data: ReportData): unknown {
   const t = data.trafficOverview;
   const seo = data.seoOverview;
   const conv = data.conversions;
@@ -128,10 +126,25 @@ function canonicalHashInput(data: ReportData): object {
   };
 }
 
+// Recursively sorts object keys so the JSON serialization is stable regardless
+// of property insertion order across V8 versions or data sources.
+function sortKeysDeep(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(sortKeysDeep);
+  }
+  if (value !== null && typeof value === "object") {
+    const sorted: Record<string, unknown> = {};
+    for (const k of Object.keys(value as Record<string, unknown>).sort()) {
+      sorted[k] = sortKeysDeep((value as Record<string, unknown>)[k]);
+    }
+    return sorted;
+  }
+  return value;
+}
+
 export function hashAiInsightMetrics(data: ReportData): string {
   const input = canonicalHashInput(data);
-  // JSON.stringify with sorted keys for determinism across V8 versions.
-  const canonical = JSON.stringify(input, Object.keys(input).sort());
+  const canonical = JSON.stringify(sortKeysDeep(input));
   return createHash("sha256").update(canonical).digest("hex");
 }
 
