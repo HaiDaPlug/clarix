@@ -3,7 +3,13 @@ import { z } from "zod";
 export const AI_INSIGHTS_FALLBACK_TEXT =
   "Inte nog med data för att bedöma din digitala närvaro.";
 
+// Bump when the prompt copy changes (logged only — does not invalidate cache).
 export const AI_INSIGHTS_PROMPT_VERSION = "ai-insights-v11";
+
+// Bump when anything that affects model output changes: prompt logic, classifier
+// rules, derived-insights behavior, schema shape. This is the single lever that
+// intentionally busts all user caches for a given period.
+export const AI_INSIGHTS_CACHE_VERSION = "cache-v1";
 
 export const AiInsightsPayloadSchema = z.object({
   dashboard_hero: z

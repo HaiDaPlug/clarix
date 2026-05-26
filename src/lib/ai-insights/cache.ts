@@ -1,52 +1,138 @@
-import { AI_INSIGHTS_PROMPT_VERSION } from "@/lib/ai-insights/types";
+import { createHash } from "crypto";
+import { AI_INSIGHTS_CACHE_VERSION } from "@/lib/ai-insights/types";
 import type { ReportData } from "@/types/schema";
 
-export function hashAiInsightMetrics(data: ReportData): string {
+// ─── Canonical hash input ─────────────────────────────────────────────────────
+// We hash a deterministic subset of ReportData — everything the advisor prompt
+// actually reasons over. Volatile/debug fields (meta.generatedAt, raw API
+// response objects, etc.) are intentionally excluded so they don't cause false
+// cache misses.
+//
+// Also included:
+//   AI_INSIGHTS_CACHE_VERSION — bumped when prompt logic / classifier / schema
+//     changes intentionally; this is the single lever to bust all caches.
+//   provider + model — different models produce different output; treat them as
+//     distinct cache namespaces.
+
+function canonicalHashInput(data: ReportData): object {
   const t = data.trafficOverview;
+  const seo = data.seoOverview;
   const conv = data.conversions;
   const paid = data.paidOverview;
 
-  // Stable channel signature: sort by channel name so order doesn't affect hash.
-  const channelSig = (t?.channelBreakdown ?? [])
+  // Sort channel breakdown by name so insertion order doesn't affect hash.
+  const channels = (t?.channelBreakdown ?? [])
     .slice()
     .sort((a, b) => a.channel.localeCompare(b.channel))
-    .map((ch) => `${ch.channel}:${ch.share}`)
-    .join(";");
+    .map((ch) => ({ channel: ch.channel, share: ch.share, sessions: ch.sessions ?? null }));
 
-  // Stable top-pages signature: contact page trend drives an insight, so include it.
-  const contactPageSig = (data.topPages?.pages ?? [])
-    .filter((p) => p.url.includes("kontakt") || p.url.includes("contact"))
-    .map((p) => `${p.url}:${p.trend ?? ""}:${p.sessions ?? 0}:${p.clicks ?? 0}`)
-    .join(";");
+  // Contact/enquiry pages drive a classified insight — include all page signals.
+  const topPages = (data.topPages?.pages ?? [])
+    .slice()
+    .sort((a, b) => a.url.localeCompare(b.url))
+    .map((p) => ({
+      url: p.url,
+      sessions: p.sessions ?? null,
+      clicks: p.clicks ?? null,
+      trend: p.trend ?? null,
+    }));
 
-  const key = [
-    AI_INSIGHTS_PROMPT_VERSION,
-    t?.totalSessions?.value ?? 0,
-    t?.totalSessions?.previousValue ?? 0,
-    t?.organicSessions?.value ?? 0,
-    t?.organicSessions?.previousValue ?? 0,
-    t?.paidSessions?.value ?? 0,
-    t?.paidSessions?.previousValue ?? 0,
-    t?.bounceRate?.value ?? 0,
-    t?.bounceRate?.previousValue ?? 0,
-    data.seoOverview?.totalClicks?.value ?? 0,
-    data.seoOverview?.avgPosition?.value ?? 0,
-    data.seoOverview?.avgPosition?.previousValue ?? 0,
-    conv?.conversionRate?.value ?? 0,
-    conv?.conversionRate?.previousValue ?? 0,
-    conv?.totalConversions?.value ?? 0,
-    conv?.totalConversions?.previousValue ?? 0,
-    paid?.totalSpend?.value ?? 0,
-    paid?.totalSpend?.previousValue ?? 0,
-    paid?.roas?.value ?? 0,
-    channelSig,
-    contactPageSig,
-    data.meta.availableSources.join(","),
-  ].join("|");
+  return {
+    _version: AI_INSIGHTS_CACHE_VERSION,
+    _provider: process.env.AI_INSIGHTS_PROVIDER ?? "unknown",
+    _model:
+      process.env.AI_INSIGHTS_PROVIDER === "anthropic"
+        ? (process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6")
+        : (process.env.OPENAI_MODEL ?? "gpt-4o-mini"),
 
-  let h = 5381;
-  for (let i = 0; i < key.length; i++) h = ((h << 5) + h) ^ key.charCodeAt(i);
-  return (h >>> 0).toString(36);
+    availableSources: [...(data.meta.availableSources ?? [])].sort(),
+
+    traffic: {
+      totalSessions: {
+        value: t?.totalSessions?.value ?? null,
+        prev: t?.totalSessions?.previousValue ?? null,
+      },
+      organicSessions: {
+        value: t?.organicSessions?.value ?? null,
+        prev: t?.organicSessions?.previousValue ?? null,
+      },
+      paidSessions: {
+        value: t?.paidSessions?.value ?? null,
+        prev: t?.paidSessions?.previousValue ?? null,
+      },
+      bounceRate: {
+        value: t?.bounceRate?.value ?? null,
+        prev: t?.bounceRate?.previousValue ?? null,
+      },
+      channels,
+    },
+
+    seo: {
+      totalClicks: {
+        value: seo?.totalClicks?.value ?? null,
+        prev: seo?.totalClicks?.previousValue ?? null,
+      },
+      totalImpressions: {
+        value: seo?.totalImpressions?.value ?? null,
+        prev: seo?.totalImpressions?.previousValue ?? null,
+      },
+      avgPosition: {
+        value: seo?.avgPosition?.value ?? null,
+        prev: seo?.avgPosition?.previousValue ?? null,
+      },
+    },
+
+    conversions: {
+      totalConversions: {
+        value: conv?.totalConversions?.value ?? null,
+        prev: conv?.totalConversions?.previousValue ?? null,
+      },
+      conversionRate: {
+        value: conv?.conversionRate?.value ?? null,
+        prev: conv?.conversionRate?.previousValue ?? null,
+      },
+    },
+
+    paid: {
+      totalSpend: {
+        value: paid?.totalSpend?.value ?? null,
+        prev: paid?.totalSpend?.previousValue ?? null,
+      },
+      totalClicks: {
+        value: paid?.totalClicks?.value ?? null,
+        prev: paid?.totalClicks?.previousValue ?? null,
+      },
+      avgCpc: {
+        value: paid?.avgCpc?.value ?? null,
+        prev: paid?.avgCpc?.previousValue ?? null,
+      },
+      avgCtr: {
+        value: paid?.avgCtr?.value ?? null,
+        prev: paid?.avgCtr?.previousValue ?? null,
+      },
+      conversions: {
+        value: paid?.conversions?.value ?? null,
+        prev: paid?.conversions?.previousValue ?? null,
+      },
+      costPerConversion: {
+        value: paid?.costPerConversion?.value ?? null,
+        prev: paid?.costPerConversion?.previousValue ?? null,
+      },
+      roas: {
+        value: paid?.roas?.value ?? null,
+        prev: paid?.roas?.previousValue ?? null,
+      },
+    },
+
+    topPages,
+  };
+}
+
+export function hashAiInsightMetrics(data: ReportData): string {
+  const input = canonicalHashInput(data);
+  // JSON.stringify with sorted keys for determinism across V8 versions.
+  const canonical = JSON.stringify(input, Object.keys(input).sort());
+  return createHash("sha256").update(canonical).digest("hex");
 }
 
 export function isFreshAiInsightsCache(

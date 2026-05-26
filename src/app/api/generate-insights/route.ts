@@ -12,10 +12,7 @@ import {
   createNullAiInsightsPayload,
   type AiInsightsPayload,
 } from "@/lib/ai-insights/types";
-import {
-  hashAiInsightMetrics,
-  isFreshAiInsightsCache,
-} from "@/lib/ai-insights/cache";
+import { hashAiInsightMetrics } from "@/lib/ai-insights/cache";
 import { deriveNextSteps } from "@/lib/dashboard/next-steps";
 import { buildReportDataForUser } from "@/lib/report-data/server";
 import type { ReportData } from "@/types/schema";
@@ -357,25 +354,50 @@ export async function POST(req: Request) {
 
     const reportData = report.data;
     const metricsHash = hashAiInsightMetrics(reportData);
-    const { data: cached } = await supabase
-      .from("ai_report_cache")
-      .select("insights, metrics_hash, generated_at")
-      .eq("user_id", user.id)
-      .eq("period_start", period.start)
-      .eq("period_end", period.end)
-      .maybeSingle();
 
-    if (isFreshAiInsightsCache(cached, metricsHash)) {
+    // ── Atomic generation lease via RPC ─────────────────────────────────────
+    // claim_ai_insights_generation serialises concurrent requests at the DB level.
+    // It returns one of three states:
+    //   { claimed: true,  cached: false } → we own generation
+    //   { claimed: false, cached: true  } → fresh done row exists, read it
+    //   { claimed: false, cached: false } → another request is generating; tell client to poll
+    const { data: claim, error: claimError } = await supabase.rpc(
+      "claim_ai_insights_generation",
+      {
+        p_user_id:       user.id,
+        p_period_start:  period.start,
+        p_period_end:    period.end,
+        p_metrics_hash:  metricsHash,
+        p_lease_seconds: 60,
+      },
+    );
+
+    if (claimError) {
+      // RPC failure is non-fatal — fall through to generate without a lock.
+      // Worst case: two requests generate in parallel and the last write wins.
+      console.error("[generate-insights] claim RPC failed:", claimError.message);
+    } else if (claim?.cached === true) {
+      // Fresh done row — read insights directly.
+      const { data: cached } = await supabase
+        .from("ai_report_cache")
+        .select("insights")
+        .eq("user_id", user.id)
+        .eq("period_start", period.start)
+        .eq("period_end", period.end)
+        .maybeSingle();
+
       const result = AiInsightsPayloadSchema.safeParse(cached?.insights);
-      // Only serve the cache if at least one slot has real content.
-      // An all-null payload means a previous generation failed — don't
-      // short-circuit; let the request retry the LLM call.
-      const hasAnyContent = result.success &&
-        Object.values(result.data).some((v) => v !== null);
+      const hasAnyContent =
+        result.success && Object.values(result.data).some((v) => v !== null);
       if (hasAnyContent) {
         return NextResponse.json({ insights: result.data, cached: true });
       }
+      // Cache row exists but content is all-null — fall through and generate.
+    } else if (claim?.claimed === false && claim?.cached === false) {
+      // Another request holds the lease. Tell the client to poll.
+      return NextResponse.json({ generating: true }, { status: 202 });
     }
+    // claim?.claimed === true → we own the lease, proceed with generation.
 
     const insights = deriveInsights(reportData);
     const sufficient: Record<InsightSurface, boolean> = {
@@ -395,6 +417,8 @@ export async function POST(req: Request) {
           period_start: period.start,
           period_end: period.end,
           metrics_hash: metricsHash,
+          generation_status: "done",
+          generation_expires_at: null,
           generated_at: new Date().toISOString(),
           insights: payload,
         },
@@ -402,6 +426,17 @@ export async function POST(req: Request) {
       );
       return NextResponse.json({ insights: payload, cached: false });
     }
+
+    // Helper: mark our lease as failed so the next request can reclaim it
+    // immediately rather than waiting for the 60-second TTL to expire.
+    const releaseLeaseFailed = () =>
+      supabase.from("ai_report_cache").update({
+        generation_status: "failed",
+        generation_expires_at: null,
+      })
+      .eq("user_id", user.id)
+      .eq("period_start", period.start)
+      .eq("period_end", period.end);
 
     const prompt = buildPrompt(insights, reportData, sufficient, period.label);
     let raw: string;
@@ -413,8 +448,9 @@ export async function POST(req: Request) {
       } else {
         console.error("[generate-insights] provider call failed:", err);
       }
-      // Do not cache — a config error or transient outage should not poison the
-      // cache. The next request will retry the LLM call.
+      // Release the lease so the next request can retry. A config error or
+      // transient outage should not block future requests for 60 seconds.
+      await releaseLeaseFailed();
       return NextResponse.json({ insights: createNullAiInsightsPayload(), cached: false });
     }
 
@@ -429,9 +465,10 @@ export async function POST(req: Request) {
     }
 
     if (!payload) {
-      // Model returned malformed/unparseable JSON. Log for prompt debugging but
-      // do not cache — so a refresh can retry after prompt/model tweaks.
+      // Model returned malformed/unparseable JSON. Release lease so next
+      // request can retry after prompt/model tweaks.
       console.error("[generate-insights] failed to parse model output:", raw.slice(0, 500));
+      await releaseLeaseFailed();
       return NextResponse.json({ insights: createNullAiInsightsPayload(), cached: false });
     }
 
@@ -441,6 +478,8 @@ export async function POST(req: Request) {
         period_start: period.start,
         period_end: period.end,
         metrics_hash: metricsHash,
+        generation_status: "done",
+        generation_expires_at: null,
         generated_at: new Date().toISOString(),
         insights: payload,
       },
