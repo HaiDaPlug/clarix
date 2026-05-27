@@ -343,9 +343,15 @@ export async function POST(req: Request) {
       dateRange: { startDate: period.start, endDate: period.end },
       periodLabel: period.label,
       locale: "sv",
+      caller: "generate-insights",
     });
 
     if (report.status !== "ok") {
+      console.warn("[generate-insights] buildReportData did not return ok", {
+        user: user.id.slice(0, 8),
+        period: `${period.start}..${period.end}`,
+        status: report.status,
+      });
       return NextResponse.json({
         insights: createNullAiInsightsPayload(),
         reason: report.status,
@@ -354,6 +360,12 @@ export async function POST(req: Request) {
 
     const reportData = report.data;
     const metricsHash = hashAiInsightMetrics(reportData);
+    const logContext = {
+      user: user.id.slice(0, 8),
+      period: `${period.start}..${period.end}`,
+      label: period.label,
+      hash: metricsHash.slice(0, 12),
+    };
 
     // ── Atomic generation lease via RPC ─────────────────────────────────────
     // claim_ai_insights_generation serialises concurrent requests at the DB level.
@@ -371,6 +383,12 @@ export async function POST(req: Request) {
         p_lease_seconds: 60,
       },
     );
+
+    console.log("[generate-insights] cache claim", {
+      ...logContext,
+      claim,
+      claimError: claimError?.message ?? null,
+    });
 
     if (claimError) {
       // RPC failure is non-fatal — fall through to generate without a lock.
@@ -390,11 +408,14 @@ export async function POST(req: Request) {
       const hasAnyContent =
         result.success && Object.values(result.data).some((v) => v !== null);
       if (hasAnyContent) {
+        console.log("[generate-insights] cache hit", logContext);
         return NextResponse.json({ insights: result.data, cached: true });
       }
+      console.log("[generate-insights] cache row ignored: empty payload", logContext);
       // Cache row exists but content is all-null — fall through and generate.
     } else if (claim?.claimed === false && claim?.cached === false) {
       // Another request holds the lease. Tell the client to poll.
+      console.log("[generate-insights] generation pending", logContext);
       return NextResponse.json({ generating: true }, { status: 202 });
     }
     // claim?.claimed === true → we own the lease, proceed with generation.
@@ -408,6 +429,15 @@ export async function POST(req: Request) {
       slide_recap: hasSufficientData("slide_recap", insights, reportData),
       next_steps: hasSufficientData("next_steps", insights, reportData),
     };
+
+    console.log("[generate-insights] sufficiency + insights", {
+      ...logContext,
+      sufficient,
+      insightCount: insights.length,
+      insightTypes: insights.map((i) => `${i.type}:${i.severity}`),
+      totalSessions: reportData.trafficOverview?.totalSessions?.value ?? null,
+      availableSources: reportData.meta.availableSources,
+    });
 
     if (!Object.values(sufficient).some(Boolean)) {
       const payload = createNullAiInsightsPayload();
@@ -424,6 +454,7 @@ export async function POST(req: Request) {
         },
         { onConflict: "user_id,period_start,period_end" },
       );
+      console.log("[generate-insights] cached null payload: insufficient data", logContext);
       return NextResponse.json({ insights: payload, cached: false });
     }
 
@@ -441,7 +472,16 @@ export async function POST(req: Request) {
     const prompt = buildPrompt(insights, reportData, sufficient, period.label);
     let raw: string;
     try {
+      console.log("[generate-insights] provider call start", {
+        ...logContext,
+        insightCount: insights.length,
+        sufficient,
+      });
       raw = await generateAiInsightsText(prompt);
+      console.log("[generate-insights] provider call done", {
+        ...logContext,
+        chars: raw.length,
+      });
     } catch (err) {
       if (err instanceof AiInsightsProviderError) {
         console.error("[generate-insights] provider config error:", err.message);
@@ -451,6 +491,7 @@ export async function POST(req: Request) {
       // Release the lease so the next request can retry. A config error or
       // transient outage should not block future requests for 60 seconds.
       await releaseLeaseFailed();
+      console.log("[generate-insights] lease marked failed after provider error", logContext);
       return NextResponse.json({ insights: createNullAiInsightsPayload(), cached: false });
     }
 
@@ -469,6 +510,7 @@ export async function POST(req: Request) {
       // request can retry after prompt/model tweaks.
       console.error("[generate-insights] failed to parse model output:", raw.slice(0, 500));
       await releaseLeaseFailed();
+      console.log("[generate-insights] lease marked failed after parse error", logContext);
       return NextResponse.json({ insights: createNullAiInsightsPayload(), cached: false });
     }
 
@@ -485,6 +527,13 @@ export async function POST(req: Request) {
       },
       { onConflict: "user_id,period_start,period_end" },
     );
+
+    console.log("[generate-insights] cache write done", {
+      ...logContext,
+      slots: Object.entries(payload)
+        .filter(([, value]) => value !== null)
+        .map(([slot]) => slot),
+    });
 
     return NextResponse.json({ insights: payload, cached: false });
   } catch (err) {
