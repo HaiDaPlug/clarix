@@ -218,9 +218,9 @@ function SidebarContent({
                 <Image
                   src="/clarix-logga-transparent.png"
                   alt="Clarix"
-                  width={160}
-                  height={52}
-                  className="h-11 w-auto dark:invert"
+                  width={200}
+                  height={65}
+                  className="h-16 w-auto dark:invert"
                   priority
                 />
               </Link>
