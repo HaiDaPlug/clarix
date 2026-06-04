@@ -62,6 +62,7 @@ export function useAiInsights(
       if (cancelled) return;
 
       try {
+        console.log("[useAiInsights] fetch start", { key, attempt });
         const res = await fetch("/api/generate-insights", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -72,31 +73,52 @@ export function useAiInsights(
 
         if (cancelled) return;
 
+        console.log("[useAiInsights] fetch response", {
+          key,
+          attempt,
+          status: res.status,
+        });
+
         // 202: server is generating (another request holds the lease). Poll.
         if (res.status === 202) {
           if (attempt < MAX_POLL_ATTEMPTS) {
+            console.log("[useAiInsights] generation pending, polling again", {
+              key,
+              nextAttempt: attempt + 1,
+            });
             await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
             return fetchInsights(attempt + 1);
           }
           // Gave up polling — show null rather than spinner forever.
+          console.log("[useAiInsights] polling exhausted", { key });
           setInsightsState({ key, payload: createNullAiInsightsPayload() });
           return;
         }
 
         if (!res.ok) {
+          console.log("[useAiInsights] fetch failed", { key, status: res.status });
           setInsightsState({ key, payload: createNullAiInsightsPayload() });
           return;
         }
 
         const json = await res.json();
         if (json.insights) {
+          console.log("[useAiInsights] insights received", {
+            key,
+            cached: json.cached ?? false,
+            slots: Object.entries(json.insights)
+              .filter(([, value]) => value !== null)
+              .map(([slot]) => slot),
+          });
           setInsightsState({ key, payload: json.insights });
         } else {
+          console.log("[useAiInsights] response without insights", { key, json });
           setInsightsState({ key, payload: createNullAiInsightsPayload() });
         }
       } catch {
         if (!cancelled) {
           // Silent fail: UI shows the honest null state.
+          console.log("[useAiInsights] fetch threw", { key });
           setInsightsState({ key, payload: createNullAiInsightsPayload() });
         }
       }
