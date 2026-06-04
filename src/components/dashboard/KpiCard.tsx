@@ -212,8 +212,8 @@ export function KpiCard({
           <div
             className="inline-flex items-center gap-1 rounded-full px-3 py-1 self-start"
             style={{
-              background: state.change.direction === "up" ? "oklch(0.92 0.1 145)" : "oklch(0.92 0.08 20)",
-              color: state.change.direction === "up" ? "oklch(0.35 0.18 145)" : "oklch(0.4 0.2 20)",
+              background: state.isGood ? "oklch(0.92 0.1 145)" : "oklch(0.92 0.08 20)",
+              color: state.isGood ? "oklch(0.35 0.18 145)" : "oklch(0.4 0.2 20)",
             }}
           >
             {state.change.direction === "up"
