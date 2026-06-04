@@ -216,7 +216,7 @@ export function KpiCard({
               color: state.isGood ? "oklch(0.35 0.18 145)" : "oklch(0.4 0.2 20)",
             }}
           >
-            {state.change.direction === "up"
+            {state.isGood
               ? <ArrowUpRight className="h-4 w-4" strokeWidth={2.5} />
               : <ArrowDownRight className="h-4 w-4" strokeWidth={2.5} />
             }
