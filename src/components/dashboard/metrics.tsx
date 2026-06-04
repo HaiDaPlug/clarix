@@ -16,7 +16,7 @@ export function getChangeState(metric: Metric, itemId?: DashboardItemId) {
   if (metric.previousValue === undefined) return null;
 
   const change = formatChange(metric.value, metric.previousValue);
-  const upIsGood = itemId === "engagement-kpi" ? false : metric.trendGood !== false;
+  const upIsGood = metric.trendGood !== false;
   const isGood =
     change.direction === "flat"
       ? null

@@ -50,10 +50,7 @@ function getSparkData(itemId: DashboardItemId, data: ReportData): { i: number; v
       series = data.conversions?.timeSeries ?? data.trafficOverview?.timeSeries;
       break;
     case "engagement-kpi":
-      series = data.trafficOverview?.timeSeries?.map((pt, i) => ({
-        ...pt,
-        value: pt.value > 0 ? 100 - pt.value : pt.value,
-      }));
+      series = data.trafficOverview?.timeSeries;
       break;
     case "organic-reach-kpi":
       series = data.trafficOverview?.timeSeries;
@@ -216,7 +213,7 @@ export function KpiCard({
               color: state.isGood ? "oklch(0.35 0.18 145)" : "oklch(0.4 0.2 20)",
             }}
           >
-            {state.isGood
+            {state.change.direction === "up"
               ? <ArrowUpRight className="h-4 w-4" strokeWidth={2.5} />
               : <ArrowDownRight className="h-4 w-4" strokeWidth={2.5} />
             }

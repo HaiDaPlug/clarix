@@ -116,6 +116,14 @@ export function mapGa4Report(params: {
       label: label(params.locale, "bounceRate"),
       trendGoodKey: "bounceRate",
     }),
+    engagementRate: createMetric({
+      value: summary.engagementRate * 100,
+      previousValue:
+        priorSummary === undefined ? undefined : priorSummary.engagementRate * 100,
+      unit: "percent",
+      label: label(params.locale, "engagementRate"),
+      trendGoodKey: "engagementRate",
+    }),
     avgSessionDuration: createMetric({
       value: summary.averageSessionDuration,
       previousValue: priorSummary?.averageSessionDuration,

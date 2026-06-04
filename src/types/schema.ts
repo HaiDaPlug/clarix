@@ -115,6 +115,7 @@ export const TrafficOverviewSchema = z.object({
   referralSessions: MetricSchema.optional(),
   paidSessions: MetricSchema.optional(),
   bounceRate: MetricSchema.optional(),
+  engagementRate: MetricSchema.optional(),
   avgSessionDuration: MetricSchema.optional(),
   timeSeries: z.array(TimeSeriesPointSchema),
   channelBreakdown: z
