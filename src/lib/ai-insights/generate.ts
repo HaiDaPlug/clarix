@@ -39,7 +39,8 @@ Språkregler:
 - Runda siffror för tydlighet: 4 963 → "cirka 5 000", men behåll precision för pengar och kostnader
 - Nämn aldrig att du är en AI
 - Hitta aldrig på siffror, kanaler eller orsaker som datan inte stöder
-- Returnera alltid giltig JSON och inget annat — inga markdown-block, inga kommentarer`;
+- Returnera alltid giltig JSON och inget annat — inga markdown-block, inga kommentarer
+- Använd aldrig typografiska citationstecken (" " ' ') i JSON-strängar — använd alltid raka enkla citationstecken (') om du vill markera ett ord`;
 
 export class AiInsightsProviderError extends Error {
   constructor(message: string) {

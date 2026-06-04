@@ -124,7 +124,7 @@ function DonutChart({
   hoveredIndex: number | null;
   onHover: (i: number | null) => void;
 }) {
-  const R = 84, CX = 110, CY = 110, strokeW = 22, gapDeg = 2.8;
+  const R = 84, CX = 110, CY = 110, strokeW = 20, gapDeg = 3.5;
   const circumference = 2 * Math.PI * R;
 
   type Arc = { color: string; dashArray: string; dashOffset: string; rotation: number; index: number };
@@ -149,7 +149,7 @@ function DonutChart({
 
   return (
     <svg viewBox="0 0 220 220" width="220" height="220" style={{ display: "block", overflow: "visible" }}>
-      <circle cx={CX} cy={CY} r={R} fill="none" stroke="var(--rule)" strokeWidth={strokeW} />
+      <circle cx={CX} cy={CY} r={R} fill="none" stroke="var(--rule)" strokeWidth={strokeW + 2} />
       {arcs.map((arc) => {
         const isHovered = hoveredIndex === arc.index;
         const isDimmed = hoveredIndex !== null && !isHovered;
@@ -160,10 +160,10 @@ function DonutChart({
             cx={CX} cy={CY} r={R}
             fill="none"
             stroke={arc.color}
-            strokeWidth={isHovered ? strokeW + 4 : strokeW}
+            strokeWidth={strokeW}
             strokeDasharray={arc.dashArray}
             strokeDashoffset={arc.dashOffset}
-            strokeLinecap="round"
+            strokeLinecap="butt"
             transform={`rotate(${arc.rotation}, ${CX}, ${CY})`}
             style={{ cursor: "pointer" }}
             initial={{ strokeDashoffset: parseFloat(arc.dashOffset) + dashLen, opacity: 0 }}

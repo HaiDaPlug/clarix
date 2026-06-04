@@ -291,7 +291,18 @@ Byt ut null mot genererat värde för varje yta med STATUS: GENERATE.`;
 }
 
 function extractJsonObject(raw: string): unknown {
-  const trimmed = raw.trim();
+  // Models occasionally wrap Swedish/English words in Unicode smart quotes
+  // (“ “ ‘ ‘) inside JSON string values. These are valid Unicode but invalid
+  // inside JSON strings and cause JSON.parse to throw. Replace smart double
+  // quotes with single quotes (preserves readability, keeps JSON valid) and
+  // smart single quotes with plain apostrophes.
+  const normalized = raw
+    // U+201C/U+201D left/right double quotation marks → plain single quote
+    .replace(/[“”]/g, "'")
+    // U+2018/U+2019 left/right single quotation marks → plain apostrophe
+    .replace(/[‘’]/g, "'");
+
+  const trimmed = normalized.trim();
   if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
     return JSON.parse(trimmed);
   }
