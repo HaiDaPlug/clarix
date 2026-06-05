@@ -6,7 +6,7 @@ import { NoiseTexture } from "@/components/ui/noise-texture";
 import { type AiInsightsPayload } from "@/lib/ai-insights/types";
 import { withPeriod } from "@/lib/utils/text";
 import { highlightNumbers } from "@/lib/utils/highlight-numbers";
-import { TREND_POS, TREND_POS_BG, ACCENT } from "../tokens";
+import { TREND_POS, TREND_POS_BG, ACCENT, AI_GRADIENT, AI_TEXT_PRIMARY, AI_TEXT_SECONDARY, AI_BORDER } from "../tokens";
 import { SlideHeading } from "../primitives/SlideHeading";
 
 export function SlideRecap({
@@ -75,19 +75,19 @@ export function SlideRecap({
         </ul>
       </div>
       <div
-        className="relative overflow-hidden flex flex-col justify-between gap-6 rounded-3xl border border-white/20 p-8 shadow-[0_24px_60px_-26px_rgba(255,107,85,0.45)]"
-        style={{ background: "linear-gradient(135deg, #e8336d 0%, #ff6b35 50%, #ffb830 100%)" }}
+        className="relative overflow-hidden flex flex-col justify-between gap-6 rounded-3xl p-8"
+        style={{ background: AI_GRADIENT, border: `1px solid ${AI_BORDER}`, boxShadow: "0 24px 60px -26px rgba(139,92,246,0.25)" }}
       >
         <NoiseTexture preset="cinematic" blendMode="overlay" />
         <div className="relative z-10 flex flex-col justify-between gap-6 flex-1">
           <div>
-            <p className="text-[16px] font-semibold uppercase tracking-[0.24em] text-white">
+            <p className="text-[16px] font-semibold uppercase tracking-[0.24em]" style={{ color: AI_TEXT_SECONDARY }}>
               Vill du ha hjälp att gå från insikt till handling?
             </p>
-            <h2 className="mt-4 font-display text-4xl tracking-tight text-white sm:text-5xl">
+            <h2 className="mt-4 font-display text-4xl tracking-tight sm:text-5xl" style={{ color: AI_TEXT_PRIMARY }}>
               Boka en kort genomgång — vi går igenom rapporten tillsammans.
             </h2>
-            <p className="mt-3 text-[20px] text-white">
+            <p className="mt-3 text-[20px]" style={{ color: AI_TEXT_PRIMARY }}>
               30 minuter. Inga säljpitcher. Bara konkreta nästa steg för din sida.
             </p>
           </div>

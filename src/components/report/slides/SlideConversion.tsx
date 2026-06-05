@@ -3,7 +3,7 @@
 import { CheckCircle2, Plug } from "lucide-react";
 import { NoiseTexture } from "@/components/ui/noise-texture";
 import { type SlideData } from "../slide-data";
-import { TREND_POS, ACCENT } from "../tokens";
+import { TREND_POS, ACCENT, AI_GRADIENT, AI_TEXT_PRIMARY, AI_TEXT_SECONDARY, AI_BORDER } from "../tokens";
 import { fmtNum, sign } from "../primitives/TrendPill";
 import { SlideHeading } from "../primitives/SlideHeading";
 
@@ -59,12 +59,12 @@ export function SlideConversion({ d }: { d: SlideData }) {
         </button>
       </div>
       <div
-        className="relative overflow-hidden rounded-3xl border border-white/20 p-8 shadow-[0_24px_60px_-26px_rgba(255,107,85,0.45)] flex flex-col justify-center"
-        style={{ background: "linear-gradient(135deg, #e8336d 0%, #ff6b35 50%, #ffb830 100%)" }}
+        className="relative overflow-hidden rounded-3xl p-8 flex flex-col justify-center"
+        style={{ background: AI_GRADIENT, border: `1px solid ${AI_BORDER}`, boxShadow: "0 24px 60px -26px rgba(139,92,246,0.25)" }}
       >
         <NoiseTexture preset="cinematic" blendMode="overlay" />
         <div className="relative z-10">
-          <p className="text-[13px] font-semibold uppercase tracking-[0.24em] text-white/70 mb-5">
+          <p className="text-[13px] font-semibold uppercase tracking-[0.24em] mb-5" style={{ color: AI_TEXT_SECONDARY }}>
             Vad du får
           </p>
           <ul className="space-y-4">
@@ -75,8 +75,8 @@ export function SlideConversion({ d }: { d: SlideData }) {
               "Bästa kampanj baserat på riktig data",
             ].map((t) => (
               <li key={t} className="flex items-center gap-3">
-                <CheckCircle2 className="h-6 w-6 shrink-0 text-white" />
-                <span className="text-[22px] font-semibold text-white">{t}</span>
+                <CheckCircle2 className="h-6 w-6 shrink-0" style={{ color: ACCENT }} />
+                <span className="text-[22px] font-semibold" style={{ color: AI_TEXT_PRIMARY }}>{t}</span>
               </li>
             ))}
           </ul>

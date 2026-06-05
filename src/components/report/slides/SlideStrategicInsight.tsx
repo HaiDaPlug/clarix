@@ -4,7 +4,7 @@ import { NoiseTexture } from "@/components/ui/noise-texture";
 import { type AiInsightsPayload } from "@/lib/ai-insights/types";
 import { withPeriod } from "@/lib/utils/text";
 import { highlightNumbers } from "@/lib/utils/highlight-numbers";
-import { TREND_POS, TREND_NEG, ACCENT } from "../tokens";
+import { TREND_POS, TREND_NEG, ACCENT, AI_GRADIENT, AI_TEXT_PRIMARY, AI_TEXT_SECONDARY, AI_BORDER, AI_SHIMMER } from "../tokens";
 
 export function SlideStrategicInsight({
   aiInsights,
@@ -63,21 +63,21 @@ export function SlideStrategicInsight({
 
       {/* Right: expanded summary card */}
       <div
-        className="relative overflow-hidden rounded-3xl border border-white/20 p-8 shadow-[0_24px_60px_-26px_rgba(255,107,85,0.45)] flex flex-col justify-between"
-        style={{ background: "linear-gradient(135deg, #e8336d 0%, #ff6b35 50%, #ffb830 100%)" }}
+        className="relative overflow-hidden rounded-3xl p-8 flex flex-col justify-between"
+        style={{ background: AI_GRADIENT, border: `1px solid ${AI_BORDER}`, boxShadow: "0 24px 60px -26px rgba(139,92,246,0.25)" }}
       >
         <NoiseTexture preset="cinematic" blendMode="overlay" />
         <div className="relative z-10 flex flex-col h-full gap-5">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/70">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.24em]" style={{ color: AI_TEXT_SECONDARY }}>
             Det vi ser just nu
           </p>
-          <div className="flex-1 space-y-4 text-[1.15rem] font-medium leading-[1.65] tracking-[-0.01em] text-white/95">
+          <div className="flex-1 space-y-4 text-[1.15rem] font-medium leading-[1.65] tracking-[-0.01em]" style={{ color: AI_TEXT_PRIMARY }}>
             {aiInsights === null ? (
               <div className="flex flex-col gap-3">
-                {[90, 80, 65].map((w, i) => <div key={i} className="h-4 rounded-full animate-pulse bg-white/25" style={{ width: `${w}%` }} />)}
+                {[90, 80, 65].map((w, i) => <div key={i} className="h-4 rounded-full animate-pulse" style={{ width: `${w}%`, background: AI_SHIMMER }} />)}
               </div>
             ) : aiInsight ? (
-              aiInsight.body.map((paragraph) => <p key={paragraph}>{highlightNumbers(withPeriod(paragraph), "dark")}</p>)
+              aiInsight.body.map((paragraph) => <p key={paragraph}>{highlightNumbers(withPeriod(paragraph), "light")}</p>)
             ) : (
               <>
                 <p>Trafiken ökar — men trafik som inte konverterar är bara en kostnad utan avkastning. Det intressanta den här perioden är gapet som börjar öppna sig mellan synlighet och affärseffekt.</p>
@@ -86,17 +86,17 @@ export function SlideStrategicInsight({
               </>
             )}
           </div>
-          <div className="flex items-start gap-3 border-t border-white/20 pt-4">
+          <div className="flex items-start gap-3 pt-4" style={{ borderTop: `1px solid ${AI_BORDER}` }}>
             <span
               className="shrink-0 rounded-full px-2.5 py-0.5 text-[0.68rem] font-bold uppercase tracking-widest text-white"
               style={{ background: ACCENT }}
             >
               Bottom line
             </span>
-            <p className="text-white font-semibold text-[1.05rem] leading-snug">
+            <p className="font-semibold text-[1.05rem] leading-snug" style={{ color: AI_TEXT_PRIMARY }}>
               {aiInsights === null
-                ? <span className="block h-4 w-[75%] rounded-full animate-pulse bg-white/25" />
-                : highlightNumbers(withPeriod(aiInsight?.bottom_line ?? "Synligheten förbättras. Men om engagemanget fortsätter sjunka och kontaktsidan inte återhämtar sig, riskerar ni att trafiktillväxten inte omvandlas till affärer."), "dark")
+                ? <span className="block h-4 w-[75%] rounded-full animate-pulse" style={{ background: AI_SHIMMER }} />
+                : highlightNumbers(withPeriod(aiInsight?.bottom_line ?? "Synligheten förbättras. Men om engagemanget fortsätter sjunka och kontaktsidan inte återhämtar sig, riskerar ni att trafiktillväxten inte omvandlas till affärer."), "light")
               }
             </p>
           </div>

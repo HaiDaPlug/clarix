@@ -212,61 +212,61 @@ export function AiInsightPanel() {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: "-80px" }}
         transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        className="relative overflow-hidden rounded-[1.4rem] border border-white/15 p-5 shadow-[0_30px_80px_-30px_rgba(180,40,60,0.5)] sm:rounded-[2rem] sm:p-10 lg:p-16"
-        style={{ background: "linear-gradient(135deg, #c4245a 0%, #d94f2a 55%, #bf4020 100%)" }}
+        className="relative overflow-hidden rounded-[1.4rem] p-5 shadow-[0_30px_80px_-30px_rgba(139,92,246,0.4)] sm:rounded-[2rem] sm:p-10 lg:p-16"
+        style={{ background: "linear-gradient(135deg, oklch(0.97 0.04 300) 0%, oklch(0.93 0.08 295) 55%, oklch(0.97 0.04 350) 100%)", border: "1px solid oklch(0.78 0.06 295 / 0.5)" }}
       >
         <div
           className="pointer-events-none absolute -left-20 -top-32 h-80 w-80 rounded-full opacity-30 blur-3xl"
-          style={{ background: "radial-gradient(circle, rgba(255,180,160,0.5), transparent 70%)" }}
+          style={{ background: "radial-gradient(circle, oklch(0.85 0.16 300 / 0.55), transparent 70%)" }}
         />
         <div
           className="pointer-events-none absolute -bottom-32 -right-10 h-96 w-96 rounded-full opacity-20 blur-3xl"
-          style={{ background: "radial-gradient(circle, rgba(255,200,140,0.4), transparent 70%)" }}
+          style={{ background: "radial-gradient(circle, oklch(0.88 0.12 320 / 0.3), transparent 70%)" }}
         />
         <div className="relative grid grid-cols-1 items-center gap-8 sm:gap-10 lg:grid-cols-12">
           <div className="lg:col-span-5">
             <div
-              className="inline-flex h-12 w-12 items-center justify-center rounded-2xl shadow-[0_10px_30px_-8px_rgba(0,0,0,0.3)] sm:h-14 sm:w-14"
-              style={{ background: "rgba(255,255,255,0.2)" }}
+              className="inline-flex h-12 w-12 items-center justify-center rounded-2xl shadow-[0_10px_30px_-8px_rgba(139,92,246,0.3)] sm:h-14 sm:w-14"
+              style={{ background: "linear-gradient(135deg, oklch(0.62 0.22 295), oklch(0.65 0.2 255))" }}
             >
               <Sparkles className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
             </div>
             <p
               className="mt-6 text-[11px] font-semibold uppercase tracking-[0.22em]"
-              style={{ color: "rgba(255,255,255,0.65)" }}
+              style={{ color: "oklch(0.45 0.18 290)" }}
             >
               AI-sammanfattning
             </p>
             <h2
               className="font-display2 mt-4 text-[2.15rem] leading-[1.08] tracking-normal sm:text-5xl md:text-[3.25rem] md:leading-[1.05]"
-              style={{ color: "rgba(255,255,255,0.97)" }}
+              style={{ color: "oklch(0.2 0.04 290)" }}
             >
               Som att ha en analytiker i fickan.
             </h2>
-            <p className="mt-5 max-w-md text-base leading-[1.6] sm:text-lg" style={{ color: "rgba(255,255,255,0.8)" }}>
+            <p className="mt-5 max-w-md text-base leading-[1.6] sm:text-lg" style={{ color: "oklch(0.35 0.06 290)" }}>
               Få veckans eller månadens viktigaste siffror förklarade så du kan ta action och datadrivna beslut.
             </p>
           </div>
 
           <div className="lg:col-span-7">
-            <div className="rounded-2xl border border-white/20 bg-black/20 p-5 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.3)] backdrop-blur-sm sm:p-7 lg:p-9">
+            <div className="rounded-2xl p-5 shadow-[0_20px_50px_-20px_rgba(139,92,246,0.15)] backdrop-blur-sm sm:p-7 lg:p-9" style={{ background: "oklch(1 0 0 / 0.7)", border: "1px solid oklch(0.78 0.06 295 / 0.4)" }}>
               <div className="flex items-center gap-2">
-                <span className="inline-flex h-1.5 w-1.5 animate-pulse rounded-full bg-white/60" />
+                <span className="inline-flex h-1.5 w-1.5 animate-pulse rounded-full" style={{ background: "oklch(0.62 0.22 295)" }} />
                 <p
                   className="text-[11px] font-semibold uppercase tracking-[0.22em]"
-                  style={{ color: "rgba(255,255,255,0.65)" }}
+                  style={{ color: "oklch(0.45 0.18 290)" }}
                 >
                   Denna vecka
                 </p>
               </div>
               <p
                 className="mt-5 text-[1.25rem] font-medium leading-[1.45] tracking-normal sm:text-[1.7rem]"
-                style={{ color: "rgba(255,255,255,0.95)" }}
+                style={{ color: "rgba(30,20,60,0.9)" }}
               >
                 Intäkterna växte{" "}
-                <span className="font-bold" style={{ color: "#6EF5A8" }}>+18,6 %</span> till{" "}
-                <span className="font-bold text-white">1,85 mn kr</span>. Snittordervärdet ökade{" "}
-                <span className="font-bold" style={{ color: "#6EF5A8" }}>+4,2 %</span>. Aurora Pro driver
+                <span className="font-bold" style={{ color: "oklch(0.45 0.18 155)" }}>+18,6 %</span> till{" "}
+                <span className="font-bold" style={{ color: "rgba(30,20,60,0.92)", textDecoration: "underline", textUnderlineOffset: "3px", textDecorationColor: "rgba(0,0,0,0.25)" }}>1,85 mn kr</span>. Snittordervärdet ökade{" "}
+                <span className="font-bold" style={{ color: "oklch(0.45 0.18 155)" }}>+4,2 %</span>. Aurora Pro driver
                 fortsatt störst andel av försäljningen.
               </p>
               <div className="mt-7 flex flex-wrap gap-2">
@@ -274,7 +274,7 @@ export function AiInsightPanel() {
                   <span
                     key={t}
                     className="rounded-full px-3 py-1.5 text-xs font-semibold"
-                    style={{ background: "rgba(255,255,255,0.18)", color: "rgba(255,255,255,0.9)", border: "1px solid rgba(255,255,255,0.2)" }}
+                    style={{ background: "rgba(139,92,246,0.1)", color: "oklch(0.4 0.18 290)", border: "1px solid rgba(139,92,246,0.2)" }}
                   >
                     {t}
                   </span>

@@ -92,7 +92,7 @@ export function SlideHero({
         {aiInsights === null
           ? <Shimmer lines={1} />
           : aiHero
-            ? <p>{highlightNumbers(withPeriod(aiHero), "dark")}</p>
+            ? <p>{highlightNumbers(withPeriod(aiHero), "light")}</p>
             : null
         }
       </AISummary>

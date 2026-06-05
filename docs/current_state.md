@@ -2,9 +2,59 @@
 
 ---
 
-## NOW — Open priorities (2026-05-24)
+## NOW — Open priorities (2026-05-27)
 
-### Done this session
+### Done this session (2026-05-26/27)
+
+**AI insights cache — production-grade upgrade**
+
+*SHA-256 + canonical hash*
+- `hashAiInsightMetrics` rewritten: `sortKeysDeep()` recursively sorts all object keys before `JSON.stringify` so nested fields (`value`, `prev`, `channels`, etc.) are always included. Previous `JSON.stringify(obj, keysArray)` replacer silently dropped all nested data — different metric values could produce identical hashes.
+- Hash input broadened from a hand-picked flat list to a canonical normalized object covering all advisor-relevant fields: traffic (sessions, organic, paid, bounce, channels), SEO (clicks, impressions, position), conversions (total, rate), paid (spend, clicks, CPC, CTR, conversions, CPA, ROAS), top pages, available sources.
+- `AI_INSIGHTS_CACHE_VERSION` added to `types.ts` (separate from `AI_INSIGHTS_PROMPT_VERSION`). Single lever to bust all user caches on prompt/classifier/schema changes. Provider + model included in hash so model switches invalidate stale copy.
+- `cache.ts` marked SERVER-ONLY — no client imports.
+
+*Generation lease (stampede guard)*
+- Two migrations added: `20260526000000_ai_cache_generation_lock.sql` adds `generation_status ('pending'|'done'|'failed')` and `generation_expires_at` columns. `claim_ai_insights_generation` Postgres RPC atomically claims the generation slot using `FOR UPDATE` locking — no race window. Returns `{claimed, cached}`.
+- `20260526001000_ai_cache_rpc_ttl_and_auth.sql` patches the RPC: adds 24h TTL check to the done case (previously cached forever), adds `auth.uid() = p_user_id` guard so users cannot claim another user's row, adds `set search_path = public`.
+- Route uses RPC before generating: `cached=true` → read and return; `claimed=false, cached=false` → return `{generating: true}` with HTTP 202; `claimed=true` → proceed with generation.
+- On provider error or parse failure, route marks lease as `failed` (not pending) so next request can reclaim immediately without waiting 60s.
+
+*Client hook polling*
+- `useAiInsights` no longer imports `hashAiInsightMetrics` (Node `crypto`, server-only). Replaced with `clientDataFingerprint()` — plain string from 5 numbers + sorted sources, purely for React dedup.
+- 202 response triggers `fetchInsights(attempt+1)` after 3s delay, up to 8 attempts (~24s total). `cancelled` flag prevents `setState` after unmount.
+
+**Structured observability in `buildReportDataForUser`**
+- Each source fetch now returns typed `SourceResult {ok, reason, detail}` instead of `Partial<ReportData> | undefined`. Failure reasons: `token_missing`, `token_refresh_failed`, `google_401`, `google_403`, `google_5xx`, `unknown` — logged with source + property_id.
+- DB query errors now logged (previously silent). `caller` param threads through so logs show which route triggered the build.
+- `generate-insights` route logs `report.status` when build does not return ok, and logs full sufficiency map + insight types + totalSessions + availableSources before the provider call.
+
+**AI insights parse error fix (smart quotes)**
+- Model was returning Swedish curly quotes (`"direkt"`) inside JSON string values. `JSON.parse` rejects these because U+201C/U+201D are not ASCII `"` (U+0022).
+- `extractJsonObject` now normalizes U+201C/201D → `'` and U+2018/2019 → `'` before parsing using Unicode escape sequences in the regex (avoids editor encoding issues with literal smart quote characters in source).
+- System prompt updated to explicitly instruct the model not to use typographic quotes in JSON strings.
+
+**Donut chart overlap fix**
+- `strokeLinecap="round"` extended each arc ~11px beyond its endpoint (≈7.5° at R=84), swallowing the 2.8° gap entirely. Changed to `"butt"` — clean cut at arc boundary.
+- Gap widened from 2.8° to 3.5°. Hover `strokeWidth` bump removed (incompatible with butt linecap; opacity handles hover/dim instead). Track circle `strokeWidth` widened by 2px to sit flush behind segments.
+
+**Engagement KPI badge color fix**
+- Badge colored red for a bounce rate drop because `KpiCard` keyed the color off `change.direction` (down = red) instead of `state.isGood`. `getChangeState` already computed `isGood` correctly for `engagement-kpi` (upIsGood=false), so fix was one line: `state.isGood` now drives background/color.
+
+**Sidebar logo size**
+- Logo enlarged from `h-11` (44px) to `h-16` (64px).
+
+**Token handling fixes (multi-user support)**
+- `getValidAccessToken` no longer returns `session.provider_token` as a shortcut. The provider_token is the OAuth token for whoever is currently logged in — for any other user it pointed at the wrong Google account → 403. All token fetches now always read from `connected_sources`.
+- `getStoredGoogleCredential` in connect route was selecting `refresh_token, token_expires_at` but not `access_token`. Fixed.
+- `_pending` cleanup in connect route now filters by source (not hardcoded to ga4).
+- Optimistic fallback: when token is expired and no refresh_token exists, returns stored `access_token` and lets Google return 401/403 rather than pre-emptively returning null.
+
+**AI gradient applied globally**
+- `AI_GRADIENT` and `AI_SHADOW` tokens added to `src/components/report/tokens.ts`.
+- `AISummary`, `DashboardHero`, `NextStepsCard`, and landing AI section all use the shared token. Gradient: deep red→coral→amber. NextStepsCard upgraded from plain bone to full gradient treatment.
+
+### Done this session (2026-05-24)
 
 **Responsive shell + dashboard/report mobile pass (2026-05-24)**
 - Landing page mobile optimization completed: header, hero sizing, CTA stacking, showcase visuals, cards, pricing, final CTA, and footer now use tighter mobile spacing and safer text/container sizing.

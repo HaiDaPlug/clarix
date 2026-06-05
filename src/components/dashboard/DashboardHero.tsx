@@ -11,7 +11,7 @@ import { FALLBACK_TEXT } from "@/lib/hooks/useAiInsights";
 import { ShimmerOverlay } from "@/components/primitives/ShimmerCard";
 import { withPeriod } from "@/lib/utils/text";
 import { highlightNumbers } from "@/lib/utils/highlight-numbers";
-import { AI_GRADIENT } from "@/components/report/tokens";
+import { AI_GRADIENT, AI_SHADOW, AI_TEXT_PRIMARY, AI_TEXT_SECONDARY, AI_BORDER, AI_SHIMMER } from "@/components/report/tokens";
 
 const HERO_ENTER = { duration: 0.5, ease: [0.0, 0.0, 0.2, 1] as const, delay: 0 };
 
@@ -43,33 +43,33 @@ export function DashboardHero({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={HERO_ENTER}
-      className="relative overflow-hidden rounded-3xl border border-white/15 p-8 shadow-[0_24px_60px_-26px_rgba(180,40,60,0.5)] sm:p-10"
-      style={{ background: AI_GRADIENT }}
+      className="relative overflow-hidden rounded-3xl p-8 sm:p-10"
+      style={{ background: AI_GRADIENT, boxShadow: AI_SHADOW.replace(/_/g, " "), border: `1px solid ${AI_BORDER}` }}
     >
       <NoiseTexture preset="cinematic" blendMode="overlay" />
       {loading && <ShimmerOverlay />}
       <div className="relative z-10 flex flex-col">
         <div className="flex items-center gap-2">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em]" style={{ color: "rgba(255,255,255,0.7)" }}>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em]" style={{ color: AI_TEXT_SECONDARY }}>
             {loading ? "Analyserar data" : "Insikter från proffset"}
           </p>
-          <span className="text-[11px]" style={{ color: "rgba(255,255,255,0.7)" }}>—</span>
-          <span className="text-[11px] font-semibold uppercase tracking-[0.22em]" style={{ color: "rgba(255,255,255,0.7)" }}>
+          <span className="text-[11px]" style={{ color: AI_TEXT_SECONDARY }}>—</span>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.22em]" style={{ color: AI_TEXT_SECONDARY }}>
             {data.meta.period.label}
           </span>
         </div>
 
         {loading ? (
           <div className="mt-6 flex flex-col gap-3" aria-label="AI-insikt laddas">
-            <div className="h-9 w-[82%] rounded-full bg-white/35" />
-            <div className="h-9 w-[58%] rounded-full bg-white/25" />
-            <div className="mt-3 h-5 w-[70%] rounded-full bg-white/20" />
+            <div className="h-9 w-[82%] rounded-full" style={{ background: AI_SHIMMER }} />
+            <div className="h-9 w-[58%] rounded-full" style={{ background: AI_SHIMMER }} />
+            <div className="mt-3 h-5 w-[70%] rounded-full" style={{ background: AI_SHIMMER }} />
           </div>
         ) : (
           <>
-            <p className="mt-5 text-[2rem] font-semibold leading-[1.25] tracking-[-0.02em] sm:text-[2.4rem]" style={{ color: "rgba(255,255,255,0.95)" }}>
+            <p className="mt-5 text-[2rem] font-semibold leading-[1.25] tracking-[-0.02em] sm:text-[2.4rem]" style={{ color: AI_TEXT_PRIMARY }}>
               <span className="relative inline">
-                {highlightNumbers(headline)}
+                {highlightNumbers(headline, "light")}
                 {!noData && (
                   <svg
                     viewBox="0 0 300 10"
@@ -81,7 +81,7 @@ export function DashboardHero({
                     <path
                       d="M0,6 C20,1 40,9 60,5 C80,1 100,9 120,5 C140,1 160,9 180,5 C200,1 220,9 240,5 C260,1 280,9 300,5"
                       fill="none"
-                      stroke="rgba(255,255,255,0.4)"
+                      stroke="rgba(139,92,246,0.35)"
                       strokeWidth="2.5"
                       strokeLinecap="round"
                     />
@@ -91,8 +91,8 @@ export function DashboardHero({
             </p>
 
             {!noData && sub && (
-              <p className="mt-6 text-lg font-normal leading-relaxed" style={{ color: "rgba(255,255,255,0.85)" }}>
-                {highlightNumbers(sub)}
+              <p className="mt-6 text-lg font-normal leading-relaxed" style={{ color: AI_TEXT_PRIMARY }}>
+                {highlightNumbers(sub, "light")}
               </p>
             )}
           </>
@@ -101,8 +101,8 @@ export function DashboardHero({
         <div className="mt-7">
           <Link
             href={reportHref}
-            className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/70 px-5 py-2.5 text-sm font-semibold shadow-sm backdrop-blur transition hover:bg-white"
-            style={{ color: "oklch(0.35 0.15 290)", textDecoration: "none" }}
+            className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold shadow-sm backdrop-blur transition hover:opacity-90"
+            style={{ background: "rgba(139,92,246,0.15)", border: `1px solid ${AI_BORDER}`, color: "oklch(0.35 0.2 290)", textDecoration: "none" }}
           >
             {t.dashboard.hero.readReport}
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">

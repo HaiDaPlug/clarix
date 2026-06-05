@@ -2,7 +2,7 @@
 
 import { Bot } from "lucide-react";
 import { NoiseTexture } from "@/components/ui/noise-texture";
-import { ACCENT } from "../tokens";
+import { ACCENT, AI_GRADIENT, AI_TEXT_PRIMARY, AI_TEXT_SECONDARY, AI_BORDER, AI_SHIMMER } from "../tokens";
 import { SlideHeading } from "../primitives/SlideHeading";
 
 export function SlideAIVisibility() {
@@ -42,25 +42,26 @@ export function SlideAIVisibility() {
         </button>
       </div>
       <div
-        className="relative overflow-hidden rounded-3xl border border-white/20 p-7 shadow-[0_24px_60px_-26px_rgba(255,107,85,0.45)]"
-        style={{ background: "linear-gradient(135deg, #e8336d 0%, #ff6b35 50%, #ffb830 100%)" }}
+        className="relative overflow-hidden rounded-3xl p-7"
+        style={{ background: AI_GRADIENT, border: `1px solid ${AI_BORDER}`, boxShadow: "0 24px 60px -26px rgba(139,92,246,0.25)" }}
       >
         <NoiseTexture preset="cinematic" blendMode="overlay" />
         <div className="relative z-10">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/70">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.24em]" style={{ color: AI_TEXT_SECONDARY }}>
             Status per AI-källa
           </p>
           <div className="mt-4 grid grid-cols-2 gap-3">
             {sources.map((s) => (
               <div
                 key={s.n}
-                className="rounded-2xl border border-white/20 bg-white/15 p-4 backdrop-blur"
+                className="rounded-2xl p-4 backdrop-blur"
+                style={{ border: `1px solid ${AI_BORDER}`, background: AI_SHIMMER }}
               >
-                <p className="text-sm font-semibold text-white">{s.n}</p>
-                <p className="mt-2 font-display text-2xl font-semibold tracking-tight text-white/80">
+                <p className="text-sm font-semibold" style={{ color: AI_TEXT_PRIMARY }}>{s.n}</p>
+                <p className="mt-2 font-display text-2xl font-semibold tracking-tight" style={{ color: AI_TEXT_SECONDARY }}>
                   —
                 </p>
-                <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-white/60">
+                <p className="mt-1 text-[10px] uppercase tracking-[0.2em]" style={{ color: AI_TEXT_SECONDARY }}>
                   {s.state}
                 </p>
               </div>
