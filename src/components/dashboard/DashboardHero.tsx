@@ -10,29 +10,8 @@ import type { AiInsightsPayload } from "@/lib/hooks/useAiInsights";
 import { FALLBACK_TEXT } from "@/lib/hooks/useAiInsights";
 import { ShimmerOverlay } from "@/components/primitives/ShimmerCard";
 import { withPeriod } from "@/lib/utils/text";
+import { highlightNumbers } from "@/lib/utils/highlight-numbers";
 import { AI_GRADIENT } from "@/components/report/tokens";
-
-// Splits a string on numeric tokens (e.g. "1 234", "87%", "3,5x") and wraps
-// each number in a bright green span so visit counts pop on the gradient card.
-// Matches: optional leading sign, digits with Swedish thousand-space separators,
-// optional decimal comma/period, optional trailing % or x.
-// Split pattern — capturing group means the matched tokens are kept in the array.
-const NUM_SPLIT = /([+-]?\d[\d\s]*(?:[,.]\d+)?(?:\s*[%x])?)/g;
-// Test pattern — separate instance to avoid stateful lastIndex issues.
-const NUM_TEST = /^[+-]?\d[\d\s]*(?:[,.]\d+)?(?:\s*[%x])?$/;
-
-function highlightNumbers(text: string) {
-  const parts = text.split(NUM_SPLIT);
-  return parts.map((part, i) =>
-    NUM_TEST.test(part) ? (
-      <span key={i} style={{ color: "#6EF5A8", fontWeight: 700 }}>
-        {part}
-      </span>
-    ) : (
-      part
-    ),
-  );
-}
 
 const HERO_ENTER = { duration: 0.5, ease: [0.0, 0.0, 0.2, 1] as const, delay: 0 };
 

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { NoiseTexture } from "@/components/ui/noise-texture";
 import { type AiInsightsPayload } from "@/lib/ai-insights/types";
 import { withPeriod } from "@/lib/utils/text";
+import { highlightNumbers } from "@/lib/utils/highlight-numbers";
 import { TREND_POS, TREND_POS_BG, ACCENT } from "../tokens";
 import { SlideHeading } from "../primitives/SlideHeading";
 
@@ -66,7 +67,7 @@ export function SlideRecap({
                 <p className="font-semibold">{b.t}</p>
                 {b.b === null
                   ? <div className="mt-1 flex flex-col gap-1.5"><div className="h-4 w-[85%] rounded-full animate-pulse bg-muted" /><div className="h-4 w-[55%] rounded-full animate-pulse bg-muted" /></div>
-                  : <p className="mt-1 text-[20px] text-foreground">{withPeriod(b.b)}</p>
+                  : <p className="mt-1 text-[20px] text-foreground">{highlightNumbers(withPeriod(b.b), "light")}</p>
                 }
               </div>
             </li>

@@ -3,6 +3,7 @@
 import { NoiseTexture } from "@/components/ui/noise-texture";
 import { type AiInsightsPayload } from "@/lib/ai-insights/types";
 import { withPeriod } from "@/lib/utils/text";
+import { highlightNumbers } from "@/lib/utils/highlight-numbers";
 import { TREND_POS, TREND_NEG, ACCENT } from "../tokens";
 
 export function SlideStrategicInsight({
@@ -76,7 +77,7 @@ export function SlideStrategicInsight({
                 {[90, 80, 65].map((w, i) => <div key={i} className="h-4 rounded-full animate-pulse bg-white/25" style={{ width: `${w}%` }} />)}
               </div>
             ) : aiInsight ? (
-              aiInsight.body.map((paragraph) => <p key={paragraph}>{withPeriod(paragraph)}</p>)
+              aiInsight.body.map((paragraph) => <p key={paragraph}>{highlightNumbers(withPeriod(paragraph), "dark")}</p>)
             ) : (
               <>
                 <p>Trafiken ökar — men trafik som inte konverterar är bara en kostnad utan avkastning. Det intressanta den här perioden är gapet som börjar öppna sig mellan synlighet och affärseffekt.</p>
@@ -95,7 +96,7 @@ export function SlideStrategicInsight({
             <p className="text-white font-semibold text-[1.05rem] leading-snug">
               {aiInsights === null
                 ? <span className="block h-4 w-[75%] rounded-full animate-pulse bg-white/25" />
-                : withPeriod(aiInsight?.bottom_line ?? "Synligheten förbättras. Men om engagemanget fortsätter sjunka och kontaktsidan inte återhämtar sig, riskerar ni att trafiktillväxten inte omvandlas till affärer.")
+                : highlightNumbers(withPeriod(aiInsight?.bottom_line ?? "Synligheten förbättras. Men om engagemanget fortsätter sjunka och kontaktsidan inte återhämtar sig, riskerar ni att trafiktillväxten inte omvandlas till affärer."), "dark")
               }
             </p>
           </div>

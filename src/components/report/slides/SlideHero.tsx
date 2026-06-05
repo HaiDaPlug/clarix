@@ -19,6 +19,7 @@ function Shimmer({ lines = 2 }: { lines?: number }) {
 import { type SlideData } from "../slide-data";
 import { TREND_POS, TREND_NEG } from "../tokens";
 import { withPeriod } from "@/lib/utils/text";
+import { highlightNumbers } from "@/lib/utils/highlight-numbers";
 import { AISummary, pos } from "../primitives/AISummary";
 import { fmtNum } from "../primitives/TrendPill";
 
@@ -91,7 +92,7 @@ export function SlideHero({
         {aiInsights === null
           ? <Shimmer lines={1} />
           : aiHero
-            ? <p>{withPeriod(aiHero)}</p>
+            ? <p>{highlightNumbers(withPeriod(aiHero), "dark")}</p>
             : null
         }
       </AISummary>
