@@ -108,7 +108,14 @@ export function buildSlideData(reportData: ReportData | null): SlideData {
   const totalVisits =
     rawChannels.reduce((s, c) => s + (c.sessions ?? 0), 0) || visits;
 
-  const topChannels = rawChannels.map((c, i) => {
+  // Sort by visits so "top channels" really are the biggest, regardless of GA4 order.
+  const sorted = [...rawChannels].sort((a, b) => (b.sessions ?? 0) - (a.sessions ?? 0));
+
+  const TOP_N = 4;
+  const head = sorted.slice(0, TOP_N);
+  const tail = sorted.slice(TOP_N);
+
+  const topChannels = head.map((c, i) => {
     const prev = c.previousSessions ?? 0;
     const curr = c.sessions ?? 0;
     const delta = prev > 0 ? Math.round(((curr - prev) / prev) * 100) : null;
@@ -123,6 +130,31 @@ export function buildSlideData(reportData: ReportData | null): SlideData {
       featured: i === 0,
     };
   });
+
+  // Roll the long tail into one honest "Övriga kanaler" card so the page stays clean
+  // but the numbers still sum to 100% — nothing is silently dropped.
+  if (tail.length > 0) {
+    const tailVisits = tail.reduce((s, c) => s + (c.sessions ?? 0), 0);
+    const tailPrev = tail.reduce((s, c) => s + (c.previousSessions ?? 0), 0);
+    const tailDelta =
+      tailPrev > 0 ? Math.round(((tailVisits - tailPrev) / tailPrev) * 100) : null;
+    if (tailVisits > 0) {
+      topChannels.push({
+        name: "Övriga kanaler",
+        sub: `${tail.length} mindre källor sammanslagna`,
+        tip: {
+          title: "Vad är övriga kanaler?",
+          body: "De mindre trafikkällorna sammanslagna till en rad — var och en står för en liten andel av besöken.",
+          example: "Enskilda kanaler under några procent samlas här så rapporten håller fokus på det som driver mest trafik.",
+        },
+        pct: totalVisits > 0 ? Math.round((tailVisits / totalVisits) * 100) : 0,
+        visits: tailVisits,
+        delta: tailDelta,
+        icon: Globe,
+        featured: false,
+      });
+    }
+  }
 
   const rawSeries = traffic?.timeSeries ?? [];
   const timeSeries = rawSeries.map((p) => ({ date: p.date, sessions: p.value }));
