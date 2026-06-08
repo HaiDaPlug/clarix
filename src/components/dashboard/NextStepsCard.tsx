@@ -41,7 +41,7 @@ export function NextStepsCard({
       className="relative overflow-hidden rounded-2xl p-6"
       style={{ background: AI_GRADIENT, border: "1px solid rgba(255,255,255,0.15)" }}
     >
-      <NoiseTexture preset="cinematic" blendMode="overlay" />
+      <NoiseTexture preset="fine" blendMode="soft-light" opacity={0.45} />
       <div className="relative z-10 flex items-baseline justify-between mb-6">
         <div>
           <p className="eyebrow mb-1" style={{ color: "rgba(255,255,255,0.65)" }}>Prioriterat</p>
