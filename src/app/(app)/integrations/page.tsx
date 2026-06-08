@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { AI_GRADIENT, AI_BORDER } from "@/components/report/tokens";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useLocale } from "@/lib/i18n";
@@ -327,9 +328,8 @@ export default function IntegrationsPage() {
           transition={{ duration: 0.5, ease: EASING }}
           className="relative overflow-hidden rounded-3xl px-8 py-10 sm:px-12 sm:py-14"
           style={{
-            background:
-              "linear-gradient(135deg, oklch(0.97 0.04 300) 0%, oklch(0.96 0.05 260) 45%, oklch(0.97 0.04 350) 100%)",
-            border: "1px solid rgba(139,92,246,0.2)",
+            background: AI_GRADIENT,
+            border: `1px solid ${AI_BORDER}`,
           }}
         >
           <div

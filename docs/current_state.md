@@ -2,7 +2,56 @@
 
 ---
 
-## NOW — Open priorities (2026-05-27)
+## NOW — Open priorities (2026-06-06)
+
+### Done this session (2026-06-06)
+
+**AI card purple palette — exact color match + grain**
+- `AI_GRADIENT` token corrected to exact source values: `oklch(0.97 0.04 300) → oklch(0.96 0.05 260) → oklch(0.97 0.04 350)`. Middle stop `260` (blue-purple) is the key — previous `280/295` values were too neutral.
+- Two glow orbs added to all AI surfaces: top-left violet `oklch(0.85 0.16 300 / 0.55)` + bottom-right blue `oklch(0.86 0.14 220 / 0.5)`, both `opacity-60 blur-3xl`.
+- `NoiseTexture` upgraded from `cinematic/overlay` to `fine/soft-light opacity={0.45}` across all AI cards — gentler grain on light surfaces.
+- Global positive color updated to `oklch(0.7 0.16 155)` (`≈ #2db87a`) in `tokens.ts` (`TREND_POS`), `highlight-numbers.tsx` (both themes), and `landing-sections.tsx` hardcoded spans.
+- Landing panel pills reverted to original: `border-white/70 bg-white/60 backdrop-blur-sm` with `color: oklch(0.35 0.15 290)`.
+- `integrations/page.tsx` wired to `AI_GRADIENT` + `AI_BORDER` tokens (was hardcoded).
+- Orbital rings SVG added to all AI card surfaces: 3 concentric circles, `r=120/180/240`, purple stroke `oklch(0.62 0.22 295)` at `0.25/0.15/0.08` opacity, anchored to right edge.
+
+**DashboardHero — split layout matching homepage**
+- Rebuilt to mirror the landing `AiInsightPanel` exactly: `5/12` left + `7/12` right on `lg`.
+- Left: AI headline (`dashboard_hero.headline`) as the big display text (`3rem`, font-display, dark indigo).
+- Right: white glass card `oklch(1 0 0 / 0.7)` with `"Denna vecka"` pulsing dot label outside the card, sub text at `1.7rem` inside, CTA pill at bottom.
+- Removed: Sparkles icon, "AI-sammanfattning" eyebrow, period label inside card, supporting tagline.
+- Card padding `p-5/sm:p-7/lg:p-9`, outer card `p-5/sm:p-10/lg:p-16` matching homepage proportions.
+
+---
+
+### Done this session (2026-06-05)
+
+**Engagement KPI: switched from bounceRate to engagementRate**
+- Root issue: `engagement-kpi` was reading `trafficOverview.bounceRate` (a low-is-good metric, 30–70%) under the label "Engagemang". This caused reversed arrows, inverted sparklines, and wrong badge colors.
+- `ga4-mapper.ts`: added `engagementRate` metric (`summary.engagementRate * 100`, `trendGoodKey: "engagementRate"`). `TREND_GOOD_WHEN_UP.engagementRate = true` already existed.
+- `schema.ts`: added `engagementRate: MetricSchema.optional()` to `TrafficOverviewSchema`.
+- `registry.ts`: `engagement-kpi` `metricPath` changed from `trafficOverview.bounceRate` to `trafficOverview.engagementRate`.
+- `dashboard/metrics.tsx`: removed the special-case `upIsGood` inversion for `engagement-kpi`.
+- `KpiCard.tsx`: removed sparkline inversion (`100 - pt.value` → `pt.value`), reverted arrow direction to use `state.change.direction` (now naturally correct).
+
+**Smart number highlighting utility (`highlight-numbers.tsx`)**
+- `src/lib/utils/text.ts`: added exported regex constants `NUM_SPLIT`, `NUM_TEST`, `POS_TEST`, `NEG_TEST`.
+- `src/lib/utils/highlight-numbers.tsx` (new): `highlightNumbers(text, theme)` splits text by number tokens and wraps them in `<span>`. Positive (`+x%`) → green, negative (`-x%`) → red, plain numbers → underline. Two themes: `"dark"` (white card on gradient) and `"light"` (dark card on light bg).
+- Applied to: `SlideHero`, `SlideRecommendations`, `SlideStrategicInsight`, `SlideRecap`, `DashboardHero`, `AISummary`, and the landing `AiInsightPanel`.
+
+**New merged `CLARIX_SYSTEM_PROMPT`**
+- Old prompt: priority ordering + JSON rules. New prompt (user-provided): pedagogical advisor persona, 4-question framework, ❌/✅ vocabulary rules.
+- Merged in `src/lib/ai-insights/generate.ts`: new advisor voice ("senior digital rådgivare med över 20 års erfarenhet"), 4-question framework (Vad har hänt / Varför / Positivt eller negativt / Nästa steg), priority ordering from old prompt rewritten in plain Swedish, forbidden vocabulary with ❌/✅ examples, anti-hallucination rule ("Hitta aldrig på siffror"), rounding rule (4 963 → "cirka 5 000"), JSON rules block at bottom.
+
+**AI cards recolored to purple oklch palette**
+- Replaced red/coral gradient with the violet/purple aurora palette from the landing page.
+- `src/components/report/tokens.ts`: new token set — `AI_GRADIENT` (oklch 300→295→350 arc), `AI_SHADOW` (purple), `AI_TEXT_PRIMARY` (dark indigo), `AI_TEXT_SECONDARY` (medium violet), `AI_BORDER` (soft purple), `AI_SHIMMER` (pulse shimmer).
+- Applied to 7 files: `tokens.ts`, `AISummary.tsx`, `DashboardHero.tsx`, `SlideStrategicInsight.tsx`, `SlideRecap.tsx`, `SlideConversion.tsx`, `SlideAIVisibility.tsx`, and `landing-sections.tsx` (`AiInsightPanel`).
+
+**Debug logging in `useAiInsights.ts`**
+- Added `console.log` statements throughout fetch lifecycle to diagnose production failure (missing env vars on hosted domain: `AI_INSIGHTS_PROVIDER`, `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` not set in deployment environment).
+
+---
 
 ### Done this session (2026-05-26/27)
 

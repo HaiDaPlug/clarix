@@ -5,12 +5,12 @@ export type HighlightTheme = "dark" | "light";
 
 const THEME = {
   dark: {
-    pos:     { color: "#6EF5A8", fontWeight: 700 } as React.CSSProperties,
+    pos:     { color: "oklch(0.7 0.16 155)", fontWeight: 700 } as React.CSSProperties,
     neg:     { color: "#FF8A80", fontWeight: 700 } as React.CSSProperties,
     neutral: { textDecoration: "underline", textUnderlineOffset: "3px", textDecorationColor: "rgba(255,255,255,0.45)", fontWeight: 600 } as React.CSSProperties,
   },
   light: {
-    pos:     { color: "oklch(0.45 0.18 155)", fontWeight: 700 } as React.CSSProperties,
+    pos:     { color: "oklch(0.7 0.16 155)", fontWeight: 700 } as React.CSSProperties,
     neg:     { color: "oklch(0.5 0.2 22)",    fontWeight: 700 } as React.CSSProperties,
     neutral: { textDecoration: "underline", textUnderlineOffset: "3px", textDecorationColor: "rgba(0,0,0,0.3)", fontWeight: 600 } as React.CSSProperties,
   },

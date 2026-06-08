@@ -62,7 +62,10 @@ export function SlideConversion({ d }: { d: SlideData }) {
         className="relative overflow-hidden rounded-3xl p-8 flex flex-col justify-center"
         style={{ background: AI_GRADIENT, border: `1px solid ${AI_BORDER}`, boxShadow: "0 24px 60px -26px rgba(139,92,246,0.25)" }}
       >
-        <NoiseTexture preset="cinematic" blendMode="overlay" />
+        <div className="pointer-events-none absolute -top-24 -left-16 h-72 w-72 rounded-full opacity-60 blur-3xl" style={{ background: "radial-gradient(circle, oklch(0.85 0.16 300 / 0.55), transparent 70%)" }} />
+        <div className="pointer-events-none absolute -bottom-24 -right-10 h-72 w-72 rounded-full opacity-60 blur-3xl" style={{ background: "radial-gradient(circle, oklch(0.86 0.14 220 / 0.5), transparent 70%)" }} />
+        <svg aria-hidden className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-0" width="500" height="500" viewBox="0 0 500 500" fill="none"><circle cx="250" cy="250" r="120" stroke="oklch(0.62 0.22 295)" strokeWidth="1.5" opacity="0.25" /><circle cx="250" cy="250" r="180" stroke="oklch(0.62 0.22 295)" strokeWidth="1" opacity="0.15" /><circle cx="250" cy="250" r="240" stroke="oklch(0.62 0.22 295)" strokeWidth="0.75" opacity="0.08" /></svg>
+        <NoiseTexture preset="fine" blendMode="soft-light" opacity={0.45} />
         <div className="relative z-10">
           <p className="text-[13px] font-semibold uppercase tracking-[0.24em] mb-5" style={{ color: AI_TEXT_SECONDARY }}>
             Vad du får

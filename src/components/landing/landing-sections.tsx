@@ -15,6 +15,7 @@ import {
   Palette,
 } from "lucide-react";
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
+import { NoiseTexture } from "@/components/ui/noise-texture";
 import {
   Showcase,
   DashboardKpiVisual,
@@ -213,16 +214,17 @@ export function AiInsightPanel() {
         viewport={{ once: true, margin: "-80px" }}
         transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
         className="relative overflow-hidden rounded-[1.4rem] p-5 shadow-[0_30px_80px_-30px_rgba(139,92,246,0.4)] sm:rounded-[2rem] sm:p-10 lg:p-16"
-        style={{ background: "linear-gradient(135deg, oklch(0.97 0.04 300) 0%, oklch(0.93 0.08 295) 55%, oklch(0.97 0.04 350) 100%)", border: "1px solid oklch(0.78 0.06 295 / 0.5)" }}
+        style={{ background: "linear-gradient(135deg, oklch(0.97 0.04 300) 0%, oklch(0.96 0.05 260) 50%, oklch(0.97 0.04 350) 100%)", border: "1px solid oklch(0.78 0.06 295 / 0.5)" }}
       >
         <div
-          className="pointer-events-none absolute -left-20 -top-32 h-80 w-80 rounded-full opacity-30 blur-3xl"
+          className="pointer-events-none absolute -top-32 -left-20 h-80 w-80 rounded-full opacity-60 blur-3xl"
           style={{ background: "radial-gradient(circle, oklch(0.85 0.16 300 / 0.55), transparent 70%)" }}
         />
         <div
-          className="pointer-events-none absolute -bottom-32 -right-10 h-96 w-96 rounded-full opacity-20 blur-3xl"
-          style={{ background: "radial-gradient(circle, oklch(0.88 0.12 320 / 0.3), transparent 70%)" }}
+          className="pointer-events-none absolute -bottom-32 -right-10 h-96 w-96 rounded-full opacity-60 blur-3xl"
+          style={{ background: "radial-gradient(circle, oklch(0.86 0.14 220 / 0.5), transparent 70%)" }}
         />
+        <NoiseTexture preset="fine" blendMode="soft-light" opacity={0.45} />
         <div className="relative grid grid-cols-1 items-center gap-8 sm:gap-10 lg:grid-cols-12">
           <div className="lg:col-span-5">
             <div
@@ -264,17 +266,17 @@ export function AiInsightPanel() {
                 style={{ color: "rgba(30,20,60,0.9)" }}
               >
                 Intäkterna växte{" "}
-                <span className="font-bold" style={{ color: "oklch(0.45 0.18 155)" }}>+18,6 %</span> till{" "}
+                <span className="font-bold" style={{ color: "oklch(0.7 0.16 155)" }}>+18,6 %</span> till{" "}
                 <span className="font-bold" style={{ color: "rgba(30,20,60,0.92)", textDecoration: "underline", textUnderlineOffset: "3px", textDecorationColor: "rgba(0,0,0,0.25)" }}>1,85 mn kr</span>. Snittordervärdet ökade{" "}
-                <span className="font-bold" style={{ color: "oklch(0.45 0.18 155)" }}>+4,2 %</span>. Aurora Pro driver
+                <span className="font-bold" style={{ color: "oklch(0.7 0.16 155)" }}>+4,2 %</span>. Aurora Pro driver
                 fortsatt störst andel av försäljningen.
               </p>
               <div className="mt-7 flex flex-wrap gap-2">
                 {["Höj Meta-budget +30 %", "Fixa checkout iOS", "Skala blogg-format"].map((t) => (
                   <span
                     key={t}
-                    className="rounded-full px-3 py-1.5 text-xs font-semibold"
-                    style={{ background: "rgba(139,92,246,0.1)", color: "oklch(0.4 0.18 290)", border: "1px solid rgba(139,92,246,0.2)" }}
+                    className="rounded-full border border-white/70 bg-white/60 px-3 py-1.5 text-xs font-semibold shadow-sm backdrop-blur-sm"
+                    style={{ color: "oklch(0.35 0.15 290)" }}
                   >
                     {t}
                   </span>
