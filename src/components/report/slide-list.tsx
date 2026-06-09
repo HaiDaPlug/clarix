@@ -29,7 +29,7 @@ export function buildSlides(
     { id: "trend", title: "Trafikutveckling", render: () => <SlideTrend d={d} /> },
     { id: "channels", title: "Trafikkällor", render: () => <SlideChannels d={d} /> },
     { id: "pages", title: "Bästa sidor", render: () => <SlidePages d={d} /> },
-    { id: "insight", title: "Strategisk bedömning", render: () => <SlideStrategicInsight aiInsights={aiInsights} /> },
+    { id: "insight", title: "Strategisk bedömning", render: () => <SlideStrategicInsight aiInsights={aiInsights} insights={insights} /> },
     { id: "recs", title: "Rekommendationer", render: () => <SlideRecommendations aiInsights={aiInsights} /> },
     { id: "conv", title: "Konvertering", render: () => <SlideConversion d={d} /> },
     { id: "ai", title: "AI-synlighet", render: () => <SlideAIVisibility /> },

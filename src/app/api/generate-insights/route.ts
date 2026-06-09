@@ -209,6 +209,11 @@ ${reasoningRules}
 Generera copy för följande ytor. Varje yta har en ROLL, DATA och ett CONSTRAINT.
 Om en yta är markerad INSUFFICIENT DATA, returnera null för den nyckeln.
 
+SIFFERFORMAT (gäller all text du skriver):
+- När du nämner en förändring mot förra perioden, skriv siffran med tecken: "+3,5 %" för uppgång, "−9 %" för nedgång (använd minustecknet −, inte bindestreck). Tecknet ersätter inte ordet — skriv gärna "en nedgång på −9 %", men siffran SKA bära tecknet.
+- Absoluta tal som inte är en jämförelse (t.ex. "2 656 besök", "127 besök", "111 konverteringar") skrivs UTAN tecken.
+- Skriv aldrig tecken på ett tal som inte faktiskt gått upp eller ner mot förra perioden.
+
 === dashboard_hero ===
 ROLL: Du är en kunnig rådgivare som ger ägaren en omedelbar känsla för läget. Rubriken ska fånga den viktigaste förändringen — inte vara generisk. Undertexten förklarar vad mätningen visar som starkaste kanal, hur det har gått jämfört med förra perioden, och lyfter en konkret signal (positiv eller negativ). Om attributionen är osäker ska du säga det tydligt och lugnt. Nämn faktiska siffror. Skriv som om du pratar direkt med ägaren.
 DATA: visits=${fmtNum(visits)}, visitsDelta=${fmtDelta(visitsDelta)}, topChannel=${topChannelLabel}${topChannelPct != null ? ` (${topChannelPct}%)` : ""}, attributionUnclear=${attributionUnclear}, attributionNote=${attributionNote ?? "ingen"}, bounceRate=${bounceRate != null ? `${bounceRate.toFixed(1)}%` : "ej mätt"}
@@ -234,9 +239,9 @@ EXEMPEL:
 STATUS: GENERATE
 
 === slide_insight ===
-ROLL: Strategisk analytiker. Din uppgift är att förklara vad som faktiskt händer i affären — inte bara lista siffror. Svara på tre frågor: Vad har hänt? Varför kan det vara så? Vad bör ägaren göra? Skriv som en kunnig rådgivare som pratar direkt med ägaren, inte som ett rapportsystem.
+ROLL: Strategisk analytiker. Din uppgift är att förklara vad som faktiskt händer i affären — inte bara lista siffror. Lär ägaren något: förklara vad en siffra betyder, inte bara att den ändrats. Stycke 1: vad har hänt (med siffra). Stycke 2: varför kan det vara så, och vad bör ägaren göra. Skriv som en kunnig rådgivare som pratar direkt med ägaren, inte som ett rapportsystem.
 DATA: ${JSON.stringify(insightsForSurface(insights, "slide_insight").map((i) => ({ type: i.type, severity: i.severity, metrics: i.metrics })))}
-CONSTRAINT: Returnera { "body": ["stycke 1", "stycke 2", "stycke 3"], "bottom_line": "1 skarp mening som sammanfattar affärsläget" }. Varje stycke: 2–3 meningar. bottom_line ska kännas som rådet från en erfaren analytiker — inte en rubrik.
+CONSTRAINT: Returnera { "body": ["stycke 1", "stycke 2"], "bottom_line": "1 skarp mening som sammanfattar affärsläget" }. EXAKT 2 stycken, max 2 meningar per stycke. Var pedagogisk men koncis — varje mening ska bära information, ingen utfyllnad. bottom_line ska kännas som rådet från en erfaren analytiker — inte en rubrik.
 STATUS: ${sufficient.slide_insight ? "GENERATE" : "INSUFFICIENT DATA"}
 
 === slide_recs ===

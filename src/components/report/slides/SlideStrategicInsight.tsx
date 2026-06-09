@@ -2,33 +2,21 @@
 
 import { NoiseTexture } from "@/components/ui/noise-texture";
 import { type AiInsightsPayload } from "@/lib/ai-insights/types";
+import { type Insight } from "@/lib/engine/derive-insights";
+import { deriveSignalCards } from "@/lib/engine/signal-cards";
 import { withPeriod } from "@/lib/utils/text";
 import { highlightNumbers } from "@/lib/utils/highlight-numbers";
 import { TREND_POS, TREND_NEG, ACCENT, AI_GRADIENT, AI_TEXT_PRIMARY, AI_TEXT_SECONDARY, AI_BORDER, AI_SHIMMER } from "../tokens";
 
 export function SlideStrategicInsight({
   aiInsights,
+  insights,
 }: {
   aiInsights: AiInsightsPayload | null;
+  insights: Insight[];
 }) {
   const aiInsight = aiInsights?.slide_insight;
-  const signals = [
-    {
-      label: "Trafiken växer",
-      body: "Google driver merparten av ökningen. Det beror på konsekvens — håll publiceringstempot uppe.",
-      positive: true,
-    },
-    {
-      label: "Engagemanget sjunker",
-      body: "Fler hittar sidan, men stannar kortare. Det kan betyda att innehållet inte matchar det besökarna söker.",
-      positive: false,
-    },
-    {
-      label: "Kontaktsidan tappade synlighet",
-      body: "Det är sidan där leads konverterar. En svagare ingång dit påverkar affären direkt.",
-      positive: false,
-    },
-  ];
+  const signals = deriveSignalCards(insights);
 
   return (
     <div className="grid h-full grid-cols-[1fr_1.05fr] gap-6 content-center">
@@ -42,6 +30,7 @@ export function SlideStrategicInsight({
             Vad siffrorna faktiskt betyder för er, bortom dashboarden.
           </p>
         </div>
+        {signals.length > 0 && (
         <ul className="space-y-3">
           {signals.map((s) => (
             <li
@@ -59,6 +48,7 @@ export function SlideStrategicInsight({
             </li>
           ))}
         </ul>
+        )}
       </div>
 
       {/* Right: expanded summary card */}
@@ -68,7 +58,6 @@ export function SlideStrategicInsight({
       >
         <div className="pointer-events-none absolute -top-24 -left-16 h-72 w-72 rounded-full opacity-60 blur-3xl" style={{ background: "radial-gradient(circle, oklch(0.85 0.16 300 / 0.55), transparent 70%)" }} />
         <div className="pointer-events-none absolute -bottom-24 -right-10 h-72 w-72 rounded-full opacity-60 blur-3xl" style={{ background: "radial-gradient(circle, oklch(0.86 0.14 220 / 0.5), transparent 70%)" }} />
-        <svg aria-hidden className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-0" width="500" height="500" viewBox="0 0 500 500" fill="none"><circle cx="250" cy="250" r="120" stroke="oklch(0.62 0.22 295)" strokeWidth="1.5" opacity="0.25" /><circle cx="250" cy="250" r="180" stroke="oklch(0.62 0.22 295)" strokeWidth="1" opacity="0.15" /><circle cx="250" cy="250" r="240" stroke="oklch(0.62 0.22 295)" strokeWidth="0.75" opacity="0.08" /></svg>
         <NoiseTexture preset="fine" blendMode="soft-light" opacity={0.45} />
         <div className="relative z-10 flex flex-col h-full gap-5">
           <p className="text-[11px] font-semibold uppercase tracking-[0.24em]" style={{ color: AI_TEXT_SECONDARY }}>
