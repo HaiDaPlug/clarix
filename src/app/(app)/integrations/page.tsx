@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { AI_GRADIENT, AI_BORDER } from "@/components/report/tokens";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useLocale } from "@/lib/i18n";
 import {
   ArrowRight,
@@ -127,6 +128,7 @@ const VISUAL_INTEGRATIONS: VisualIntegration[] = [
 export default function IntegrationsPage() {
   const { locale, t } = useLocale();
   const copy = COPY[locale];
+  const router = useRouter();
   const [connectedSources, setConnectedSources] = useState<
     Partial<Record<ConnectableSource, ConnectedSource>>
   >({});
@@ -157,6 +159,10 @@ export default function IntegrationsPage() {
       try {
         const response = await fetch("/api/google/connections", { cache: "no-store" });
         if (cancelled) return;
+        if (response.status === 401) {
+          router.push("/login");
+          return;
+        }
         if (!response.ok) {
           setError(copy.failedConnections);
           setLoadingConnections(false);
@@ -186,7 +192,7 @@ export default function IntegrationsPage() {
     }
     loadConnections();
     return () => { cancelled = true; };
-  }, [copy.failedConnections]);
+  }, [copy.failedConnections, router]);
 
   useEffect(() => {
     if (loadingConnections || !hasMissingGoogleSource) return;

@@ -284,6 +284,7 @@ function mapGa4TopPages(
           url,
           title: dimension(row, current, "pageTitle", 1),
           sessions,
+          previousSessions,
           bounceRate: multiplyPercent(metricNumber(row, current, "bounceRate", 1)),
           trend:
             previousSessions === undefined

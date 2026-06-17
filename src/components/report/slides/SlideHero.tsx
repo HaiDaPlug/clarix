@@ -1,6 +1,5 @@
 "use client";
 
-import { Area, AreaChart, ResponsiveContainer } from "recharts";
 import { type AiInsightsPayload } from "@/lib/ai-insights/types";
 
 function Shimmer({ lines = 2 }: { lines?: number }) {
@@ -44,34 +43,9 @@ export function SlideHero({
           {headline}<span style={{ color: "#FF6B55" }}>.</span>
         </h1>
         <p className="text-[1.2rem] text-foreground/50 font-medium tracking-tight">
-          {hasData ? "Jämfört med föregående period" : "Ingen föregående period att jämföra med"}
+          {hasData ? "Jämfört med föregående period." : "Ingen föregående period att jämföra med."}
         </p>
       </div>
-
-      {/* Middle: sparkline */}
-      {d.timeSeries.length > 1 && (
-        <div className="w-full h-[72px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={d.timeSeries} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="hero-spark" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#FF6B55" stopOpacity={0.18} />
-                  <stop offset="100%" stopColor="#FF6B55" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <Area
-                type="monotone"
-                dataKey="sessions"
-                stroke="#FF6B55"
-                strokeWidth={2}
-                fill="url(#hero-spark)"
-                dot={false}
-                activeDot={false}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      )}
 
       {/* Bottom: summary card */}
       <AISummary>

@@ -1,51 +1,96 @@
 "use client";
 
-import { InfoTooltip } from "@/components/primitives/InfoTooltip";
+import { useState } from "react";
 import { type SlideData } from "../slide-data";
-import { TrendPill, fmtNum, sign } from "../primitives/TrendPill";
 import { SlideHeading } from "../primitives/SlideHeading";
+import { TREND_POS, TREND_NEG } from "../tokens";
+
+function TrendCell({ trend, delta }: { trend: "up" | "down" | "flat" | null; delta: number | null }) {
+  if (!trend || trend === "flat") {
+    return <span className="text-[15px]" style={{ color: "var(--muted-foreground)" }}>—</span>;
+  }
+  const isUp = trend === "up";
+  const color = isUp ? TREND_POS : TREND_NEG;
+  return (
+    <span className="inline-flex items-center gap-1 text-[14px] font-semibold tabular-nums" style={{ color }}>
+      <svg width="13" height="13" viewBox="0 0 12 12" fill="none" style={{ flexShrink: 0 }}>
+        {isUp
+          ? <path d="M6 10V2M2 6l4-4 4 4" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+          : <path d="M6 2v8M2 6l4 4 4-4" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+        }
+      </svg>
+      {delta !== null ? `${delta > 0 ? "+" : ""}${delta}%` : null}
+    </span>
+  );
+}
+
+function Favicon({ domain, fallbackLetter }: { domain: string; fallbackLetter: string }) {
+  const [failed, setFailed] = useState(false);
+  const cleanDomain = domain.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+  const src = `/api/favicon?domain=${cleanDomain}`;
+
+  if (failed) {
+    return (
+      <div className="shrink-0 h-8 w-8 rounded-lg flex items-center justify-center text-[15px] font-bold" style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}>
+        {fallbackLetter}
+      </div>
+    );
+  }
+
+  return (
+    <div className="shrink-0 h-8 w-8 rounded-lg flex items-center justify-center overflow-hidden" style={{ background: "var(--muted)" }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt="" width={20} height={20} onError={() => setFailed(true)} />
+    </div>
+  );
+}
 
 export function SlidePages({ d }: { d: SlideData }) {
-  const rankColors = [
-    { tint: "oklch(0.95 0.05 22)", fg: "oklch(0.55 0.18 22)" },
-    { tint: "oklch(0.96 0.06 75)", fg: "oklch(0.55 0.14 75)" },
-    { tint: "oklch(0.94 0.06 290)", fg: "oklch(0.5 0.18 290)" },
-  ];
-  const neutral = { tint: "oklch(0.97 0.005 270)", fg: "oklch(0.45 0.02 270)" };
+  const domain = d.clientDomain ?? "example.com";
+  const fallback = domain.replace("www.", "").slice(0, 1).toUpperCase();
+
   return (
-    <div className="space-y-7">
-      <div>
-        <SlideHeading sub="De mest besökta sidorna under perioden, topp 6 ser du nedan:">
-          Dina mest besökta sidor
-        </SlideHeading>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {d.topPages.map((row, i) => {
-          const positive = row.d !== null && row.d > 0;
-          const r = i < 3 ? rankColors[i] : neutral;
+    <div className="flex flex-col gap-6 h-full">
+      <SlideHeading sub="De mest besökta sidorna under perioden.">
+        Dina mest besökta sidor
+      </SlideHeading>
+
+      <div className="flex flex-col divide-y divide-border/75 rounded-2xl border border-border bg-background/90 overflow-hidden">
+        {/* Header */}
+        <div className="grid items-center px-5 py-3.5" style={{ gridTemplateColumns: "1fr 120px 110px" }}>
+          <span className="text-[13px] font-bold uppercase tracking-[0.18em] text-foreground/50">Sida</span>
+          <span className="text-[13px] font-bold uppercase tracking-[0.18em] text-foreground/50 text-center">Trend</span>
+          <span className="text-[13px] font-bold uppercase tracking-[0.18em] text-foreground/50 text-right">Besök</span>
+        </div>
+
+        {d.topPages.map((row) => {
+          const label = row.title ?? row.p;
+          const shortUrl = row.p.length > 42 ? row.p.slice(0, 42) + "…" : row.p;
           return (
             <div
               key={row.p}
-              className="relative flex flex-col rounded-2xl border border-border bg-background/90 p-5 shadow-[0_2px_4px_rgba(15,23,42,0.03),0_14px_36px_-22px_rgba(15,23,42,0.18)]"
+              className="grid items-center px-5 py-4 hover:bg-muted/30 transition-colors"
+              style={{ gridTemplateColumns: "1fr 120px 110px" }}
             >
-              <div className="flex items-center justify-between">
-                <span
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-sm font-bold tabular-nums"
-                  style={{ background: r.tint, color: r.fg }}
-                >
-                  {i + 1}
-                </span>
-                <TrendPill delta={sign(row.d)} positive={positive} size="sm" />
+              {/* Page */}
+              <div className="flex items-center gap-3.5 min-w-0">
+                <Favicon domain={domain} fallbackLetter={fallback} />
+                <div className="min-w-0">
+                  <p className="text-[17px] font-semibold leading-tight truncate text-foreground">{label}</p>
+                  <p className="text-[14px] text-foreground/50 truncate mt-0.5">{shortUrl}</p>
+                </div>
               </div>
-              <p className="mt-4 truncate font-display text-[24px] font-semibold tracking-tight">
-                {row.p}
-              </p>
-              <div className="mt-1 flex items-baseline gap-1.5">
-                <p className="font-display text-[30px] font-semibold tabular-nums">
-                  {fmtNum(row.v)}
-                </p>
-                <span className="text-[20px] font-medium text-foreground">besök</span>
-                <InfoTooltip title="Vad räknas som ett sidbesök?" body="Antal gånger den här sidan laddades under perioden." example="En besökare som återkommer tre gånger bidrar med 3 sidbesök." side="above" />
+
+              {/* Trend + delta */}
+              <div className="flex items-center justify-center">
+                <TrendCell trend={row.trend} delta={row.d} />
+              </div>
+
+              {/* Visit count */}
+              <div className="text-right">
+                <span className="font-display text-[22px] font-bold tabular-nums tracking-tight text-foreground">
+                  {row.v.toLocaleString("sv-SE")}
+                </span>
               </div>
             </div>
           );

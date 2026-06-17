@@ -29,9 +29,10 @@ export interface SlideData {
     icon: React.ElementType;
     featured?: boolean;
   }[];
-  topPages: { p: string; v: number; d: number | null }[];
+  topPages: { p: string; title: string | null; v: number; d: number | null; trend: "up" | "down" | "flat" | null }[];
   timeSeries: { date: string; sessions: number }[];
   hasConversions: boolean;
+  clientDomain: string | null;
 }
 
 const channelIcons: Record<string, React.ElementType> = {
@@ -160,11 +161,14 @@ export function buildSlideData(reportData: ReportData | null): SlideData {
   const timeSeries = rawSeries.map((p) => ({ date: p.date, sessions: p.value }));
 
   const rawPages = reportData?.topPages?.pages ?? [];
-  const topPages = rawPages.slice(0, 6).map((p) => ({
-    p: p.url,
-    v: p.sessions ?? p.clicks ?? 0,
-    d: null,
-  }));
+  const topPages = rawPages.slice(0, 6).map((p) => {
+    const prev = p.previousSessions;
+    const sessions = p.sessions ?? p.clicks ?? 0;
+    const d = prev != null && prev > 0
+      ? Math.round(((sessions - prev) / prev) * 100)
+      : null;
+    return { p: p.url, title: p.title ?? null, v: sessions, d, trend: p.trend ?? null };
+  });
 
   const kpiMetrics = kpi?.metrics ?? [];
   const convMetric = kpiMetrics.find((m) =>
@@ -190,5 +194,6 @@ export function buildSlideData(reportData: ReportData | null): SlideData {
     topPages,
     timeSeries,
     hasConversions,
+    clientDomain: reportData?.meta?.clientDomain ?? null,
   };
 }

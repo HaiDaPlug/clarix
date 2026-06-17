@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, Suspense } from "react";
 import { motion } from "motion/react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Download } from "lucide-react";
 import { localizeMockReportData, scenario1, scenario2, scenario3 } from "@/lib/mock-data";
 import { assembleDashboard } from "@/lib/dashboard/assemble";
@@ -61,6 +62,7 @@ function DashboardPageInner() {
   const { locale, t } = useLocale();
   const { activeId } = useDevScenario();
   const dateRange = useDateRange();
+  const router = useRouter();
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [hasConnectedSources, setHasConnectedSources] = useState(false);
   const [connectedSourceTypes, setConnectedSourceTypes] = useState<string[]>([]);
@@ -122,6 +124,14 @@ function DashboardPageInner() {
       setNoDataForPeriod(false);
 
       const supabase = createClient();
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (signal.aborted) return;
+      if (!user) {
+        router.push("/login");
+        return;
+      }
+
       const { data, error } = await supabase
         .from("connected_sources")
         .select("id, source, property_id, display_name, token_expires_at")
@@ -216,7 +226,7 @@ function DashboardPageInner() {
 
     loadRealData();
     return () => controller.abort();
-  }, [fallbackData, locale, dateRange.startDate, dateRange.endDate]);
+  }, [fallbackData, locale, dateRange.startDate, dateRange.endDate, router]);
 
   const heroItem = dashboard.items.find((item) => item.definition.type === "hero");
   const kpiItems = dashboard.items.filter((item) => item.definition.type === "kpi");

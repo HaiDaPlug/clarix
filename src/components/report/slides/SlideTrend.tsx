@@ -11,9 +11,10 @@ import {
 } from "recharts";
 import { type SlideData } from "../slide-data";
 import { TrendPill, sign, formatDuration } from "../primitives/TrendPill";
+import { ACCENT } from "../tokens";
 
 export function SlideTrend({ d }: { d: SlideData }) {
-  const accent = "#FF6B55";
+  const accent = ACCENT;
 
   const topThree = d.topChannels.slice(0, 3);
   const rightStats: { label: string; value: string; delta?: number | null }[] = [

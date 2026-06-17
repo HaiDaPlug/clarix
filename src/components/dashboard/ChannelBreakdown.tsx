@@ -239,18 +239,18 @@ export function ChannelBreakdown({ item, data }: { item: AssembledDashboardItem;
                 <span className="shrink-0 rounded-sm" style={{ width: "3px", height: "24px", background: color.stroke, opacity: isDimmed ? 0.5 : 1, borderRadius: "2px" }} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <p className="truncate" style={{ fontSize: "13px", fontWeight: 500, color: "var(--slate)", lineHeight: 1.2 }}>
+                    <p className="truncate" style={{ fontSize: "15px", fontWeight: 600, color: "var(--charcoal)", lineHeight: 1.2 }}>
                       {info?.name ?? row.label}
                     </p>
                     {info?.info && <InfoTooltip text={info.info} />}
                   </div>
                   {info?.sub && (
-                    <p style={{ fontSize: "11px", color: "var(--slate-light)", lineHeight: 1.3, marginTop: "1px" }}>
+                    <p style={{ fontSize: "13px", color: "var(--charcoal)", opacity: 0.5, lineHeight: 1.3, marginTop: "1px" }}>
                       {info.sub}
                     </p>
                   )}
                   <div className="flex items-baseline gap-1.5 mt-1">
-                    <span style={{ fontFamily: "var(--font-display)", fontSize: "1.35rem", fontWeight: 700, letterSpacing: "-0.03em", color: isActive ? color.label : "var(--charcoal)", lineHeight: 1, fontVariantNumeric: "tabular-nums", transition: "color 0.18s ease" }}>
+                    <span style={{ fontFamily: "var(--font-display)", fontSize: "1.5rem", fontWeight: 700, letterSpacing: "-0.03em", color: isActive ? color.label : "var(--charcoal)", lineHeight: 1, fontVariantNumeric: "tabular-nums", transition: "color 0.18s ease" }}>
                       {formatNumber(row.value, "number")}
                     </span>
                     {isFull && row.metric && <DeltaText metric={row.metric} />}
@@ -264,7 +264,7 @@ export function ChannelBreakdown({ item, data }: { item: AssembledDashboardItem;
                     />
                   </div>
                 </div>
-                <span className="shrink-0 rounded-full px-2 py-1" style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.03em", background: isActive ? color.stroke : "var(--rule)", color: isActive ? "white" : "var(--slate)", transition: "background 0.18s ease, color 0.18s ease", minWidth: "36px", textAlign: "center" }}>
+                <span className="shrink-0 rounded-full px-2 py-1" style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.03em", background: isActive ? color.stroke : "var(--rule)", color: isActive ? "white" : "var(--charcoal)", transition: "background 0.18s ease, color 0.18s ease", minWidth: "36px", textAlign: "center" }}>
                   {pct}%
                 </span>
               </div>

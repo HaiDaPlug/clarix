@@ -9,7 +9,7 @@ export type HighlightTheme = "dark" | "light";
 const NEUTRAL_HIGHLIGHT: React.CSSProperties = {
   background: "rgba(255, 214, 64, 0.32)",
   borderRadius: "0.3em",
-  padding: "0 0.22em",
+  padding: "0.05em 0.12em",
   boxDecorationBreak: "clone",
   WebkitBoxDecorationBreak: "clone",
   fontWeight: 600,

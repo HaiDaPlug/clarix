@@ -179,6 +179,7 @@ export const TopPagesSchema = z.object({
       impressions: z.number().optional(),
       position: z.number().optional(),
       bounceRate: z.number().optional(),
+      previousSessions: z.number().optional(),
       trend: z.enum(["up", "down", "flat"]).optional(),
     })
   ),
