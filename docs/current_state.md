@@ -2,7 +2,40 @@
 
 ---
 
-## NOW — Open priorities (2026-06-06)
+## NOW — Open priorities (2026-06-19)
+
+### Done this session (2026-06-19)
+
+**Shareable report links - snapshot + GDPR-safe token lookup**
+- Added point-in-time shared report snapshots so an authenticated owner can click `Dela` on `/report`, copy a public `/r/<token>` link, and let a viewer open the same slide report without logging in.
+- New `shared_reports` table stores frozen `report_data` JSON and `ai_insights` JSON for the selected period. The shared viewer does not call GA4/GSC or use the owner's OAuth tokens.
+- Share URLs use high-entropy random tokens, but Supabase stores only `sha256(token)` in `shared_reports.share_token_hash`; plaintext share tokens are never persisted.
+- Share creation inserts with the authenticated user's normal Supabase client under RLS. No `SUPABASE_SERVICE_ROLE_KEY` is required.
+- Public shared report lookup uses a narrow `security definer` RPC, `get_shared_report_by_token_hash(p_token_hash)`, which returns only matching non-expired snapshot JSON (`report_data`, `ai_insights`) and does not expose owner IDs, token hashes, or table-wide reads.
+- Shared report pages validate the token format, hash it server-side, call the RPC, parse snapshots with `ReportDataSchema` / `AiInsightsPayloadSchema`, and show a generic error for malformed, missing, expired, or invalid links.
+- Shared report pages are marked `noindex,nofollow`.
+- Existing `/report` flow remains intact: live data loading, date picker, AI insight cache usage, keyboard navigation, and present mode still use the existing report page path.
+- Added `docs/gdpr-report.md` to record current safeguards and deferred GDPR follow-ups: revoke/delete links, default expiry, minimal access logging, rate limiting, snapshot scrubbing, and shared-link management UI.
+
+**Files added/changed for share links**
+- `supabase/migrations/20260618000000_shared_reports.sql`
+- `supabase/migrations/20260618001000_shared_reports_public_lookup_rpc.sql`
+- `src/app/api/reports/share/route.ts`
+- `src/app/(report)/r/[token]/page.tsx`
+- `src/app/(report)/r/[token]/SharedReportClient.tsx`
+- `src/app/(report)/report/page.tsx`
+- `docs/gdpr-report.md`
+- `docs/current_state.md`
+
+**Verification**
+- `npx.cmd tsc --noEmit` passed.
+- Focused ESLint on touched share-link files passed with only the pre-existing `dateRange` dependency warning in `src/app/(report)/report/page.tsx`.
+- `npm.cmd run build` passed.
+
+**Runtime requirement**
+- Apply both shared report migrations in Supabase. The second migration (`20260618001000_shared_reports_public_lookup_rpc.sql`) is required for `/r/<token>` links to resolve through the public RPC.
+
+---
 
 ### Done this session (2026-06-06)
 

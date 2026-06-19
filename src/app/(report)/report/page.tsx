@@ -7,6 +7,7 @@ import {
   ArrowRight,
   Maximize2,
   Minimize2,
+  Share2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
@@ -44,6 +45,9 @@ function ReportPageInner() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isFs, setIsFs] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
+  const [shareFailed, setShareFailed] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -220,6 +224,44 @@ function ReportPageInner() {
     return r.startDate === dateRange.startDate && r.endDate === dateRange.endDate;
   })?.labelSv ?? `${dateRange.startDate} – ${dateRange.endDate}`;
 
+  const handleShare = useCallback(async () => {
+    if (!reportData) return;
+
+    setShareLoading(true);
+    setShareCopied(false);
+    setShareFailed(false);
+
+    try {
+      const res = await fetch("/api/reports/share", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          period: {
+            start: dateRange.startDate,
+            end: dateRange.endDate,
+            label: periodLabel,
+          },
+        }),
+      });
+
+      if (!res.ok) throw new Error("Share request failed");
+
+      const json = await res.json() as { url?: string; absoluteUrl?: string };
+      const shareUrl = json.absoluteUrl ?? (json.url ? new URL(json.url, window.location.origin).toString() : null);
+      if (!shareUrl) throw new Error("Missing share URL");
+
+      await navigator.clipboard.writeText(shareUrl);
+      setShareCopied(true);
+      window.setTimeout(() => setShareCopied(false), 2500);
+    } catch (error) {
+      console.error("[report] share failed", error);
+      setShareFailed(true);
+      window.setTimeout(() => setShareFailed(false), 2500);
+    } finally {
+      setShareLoading(false);
+    }
+  }, [dateRange.endDate, dateRange.startDate, periodLabel, reportData]);
+
   return (
     <div className="relative flex h-dvh flex-col overflow-hidden bg-[oklch(0.965_0.005_270)] text-foreground print:bg-white" style={{ overscrollBehavior: "auto" }}>
 
@@ -264,13 +306,24 @@ function ReportPageInner() {
           )}
         </div>
 
-        <button
-          onClick={togglePresent}
-          className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-        >
-          {isFs ? <Minimize2 className="h-3 w-3" /> : <Maximize2 className="h-3 w-3" />}
-          {isFs ? "Avsluta" : "Present"}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleShare}
+            disabled={shareLoading || !reportData}
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+          >
+            <Share2 className="h-3 w-3" />
+            {shareLoading ? "Skapar..." : shareCopied ? "Kopierat!" : shareFailed ? "Fel" : "Dela"}
+          </button>
+
+          <button
+            onClick={togglePresent}
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+          >
+            {isFs ? <Minimize2 className="h-3 w-3" /> : <Maximize2 className="h-3 w-3" />}
+            {isFs ? "Avsluta" : "Present"}
+          </button>
+        </div>
       </header>
 
       {/* ── Scroll surface ───────────────────────────────────── */}
