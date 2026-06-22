@@ -33,6 +33,7 @@ export interface SlideData {
   timeSeries: { date: string; sessions: number }[];
   hasConversions: boolean;
   clientDomain: string | null;
+  clientName: string | null;
 }
 
 const channelIcons: Record<string, React.ElementType> = {
@@ -195,5 +196,6 @@ export function buildSlideData(reportData: ReportData | null): SlideData {
     timeSeries,
     hasConversions,
     clientDomain: reportData?.meta?.clientDomain ?? null,
+    clientName: reportData?.meta?.clientName ?? null,
   };
 }

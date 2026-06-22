@@ -55,9 +55,28 @@ export async function POST(request: Request) {
     }
 
     const priorDateRange = getPriorDateRange(dateRange);
-    const [current, prior] = await Promise.all([
+    const numericId = propertyId.trim().replace(/^properties\//, "");
+    const dataEndpoint = `https://analyticsdata.googleapis.com/v1beta/properties/${numericId}:runReport`;
+
+    // Query hostname alongside report data — same auth scope, guaranteed to work
+    const [current, prior, websiteUri] = await Promise.all([
       fetchGa4ReportSet({ accessToken, propertyId, dateRange }),
       fetchGa4ReportSet({ accessToken, propertyId, dateRange: priorDateRange }),
+      fetch(dataEndpoint, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dimensions: [{ name: "hostname" }],
+          metrics: [{ name: "sessions" }],
+          dateRanges: [{ startDate: dateRange.startDate, endDate: dateRange.endDate }],
+          limit: 1,
+          orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
+        }),
+      }).then(async (res) => {
+        if (!res.ok) return null;
+        const data = await res.json() as { rows?: { dimensionValues?: { value?: string }[] }[] };
+        return data.rows?.[0]?.dimensionValues?.[0]?.value ?? null;
+      }).catch(() => null),
     ]);
 
     let mapped: ReturnType<typeof mapGa4Report>;
@@ -69,7 +88,7 @@ export async function POST(request: Request) {
         { status: 502 },
       );
     }
-    return NextResponse.json(mapped);
+    return NextResponse.json({ ...mapped, websiteUri });
   } catch (error) {
     return googleRouteError(error, "ga4");
   }

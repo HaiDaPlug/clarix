@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
-  const domain = req.nextUrl.searchParams.get("domain") ?? "example.com";
-  const clean = domain.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+  const domain = req.nextUrl.searchParams.get("domain") ?? "";
+  const clean = domain.replace(/^https?:\/\//, "").replace(/\/.*$/, "").toLowerCase();
+  // Reject anything that doesn't look like a real domain (must have a dot, no bare numbers)
+  if (!clean || !clean.includes(".") || /^\d+(\.\d+)*$/.test(clean)) {
+    return new NextResponse(null, { status: 400 });
+  }
 
   try {
     const res = await fetch(

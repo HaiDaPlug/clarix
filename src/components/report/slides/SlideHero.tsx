@@ -36,9 +36,9 @@ export function SlideHero({
   const aiHero = aiInsights?.slide_hero;
 
   return (
-    <div className="flex h-full flex-col justify-between py-12">
+    <div className="flex h-full flex-col justify-center gap-10 py-8">
       {/* Top: headline + period context */}
-      <div className="text-center space-y-3 mt-16">
+      <div className="text-center space-y-2">
         <h1 className="font-display text-[3.1rem] font-bold leading-[1.05] tracking-tight lg:text-[3.8rem] whitespace-nowrap">
           {headline}<span style={{ color: "#FF6B55" }}>.</span>
         </h1>

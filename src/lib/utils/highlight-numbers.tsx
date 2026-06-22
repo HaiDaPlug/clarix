@@ -23,7 +23,7 @@ const THEME = {
   },
   light: {
     pos:     { color: "oklch(0.7 0.16 155)", fontWeight: 700 } as React.CSSProperties,
-    neg:     { color: "oklch(0.5 0.2 22)",    fontWeight: 700 } as React.CSSProperties,
+    neg:     { color: "oklch(0.62 0.22 22)",   fontWeight: 700 } as React.CSSProperties,
     neutral: NEUTRAL_HIGHLIGHT,
   },
 };

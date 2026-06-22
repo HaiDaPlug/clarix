@@ -56,43 +56,54 @@ export function SlidePages({ d }: { d: SlideData }) {
       </SlideHeading>
 
       <div className="flex flex-col divide-y divide-border/75 rounded-2xl border border-border bg-background/90 overflow-hidden">
-        {/* Header */}
-        <div className="grid items-center px-5 py-3.5" style={{ gridTemplateColumns: "1fr 120px 110px" }}>
-          <span className="text-[13px] font-bold uppercase tracking-[0.18em] text-foreground/50">Sida</span>
-          <span className="text-[13px] font-bold uppercase tracking-[0.18em] text-foreground/50 text-center">Trend</span>
-          <span className="text-[13px] font-bold uppercase tracking-[0.18em] text-foreground/50 text-right">Besök</span>
+        {/* Header — inverted */}
+        <div className="grid items-center px-5 py-3.5 shrink-0" style={{ gridTemplateColumns: "1fr 110px 120px", background: "#1a1714" }}>
+          <span className="text-[13px] font-bold uppercase tracking-[0.18em]" style={{ color: "#ffffff" }}>Sida</span>
+          <span className="text-[13px] font-bold uppercase tracking-[0.18em] text-right" style={{ color: "#ffffff" }}>Besök</span>
+          <span className="text-[13px] font-bold uppercase tracking-[0.18em] text-right" style={{ color: "#ffffff" }}>Trend</span>
         </div>
 
         {d.topPages.map((row) => {
           const label = row.title ?? row.p;
           const shortUrl = row.p.length > 42 ? row.p.slice(0, 42) + "…" : row.p;
+          const href = `https://${domain}${row.p}`;
           return (
-            <div
+            <a
               key={row.p}
-              className="grid items-center px-5 py-4 hover:bg-muted/30 transition-colors"
-              style={{ gridTemplateColumns: "1fr 120px 110px" }}
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="grid items-center hover:bg-muted/30 transition-colors no-underline"
+              style={{
+                gridTemplateColumns: "1fr 110px 120px",
+                color: "inherit",
+                paddingTop: 12,
+                paddingLeft: 20,
+                paddingRight: 20,
+                paddingBottom: 12,
+              }}
             >
               {/* Page */}
               <div className="flex items-center gap-3.5 min-w-0">
                 <Favicon domain={domain} fallbackLetter={fallback} />
                 <div className="min-w-0">
-                  <p className="text-[17px] font-semibold leading-tight truncate text-foreground">{label}</p>
-                  <p className="text-[14px] text-foreground/50 truncate mt-0.5">{shortUrl}</p>
+                  <p className="text-[16px] font-semibold leading-tight truncate text-foreground">{label}</p>
+                  <p className="text-[13px] text-foreground/50 truncate mt-0.5">{shortUrl}</p>
                 </div>
-              </div>
-
-              {/* Trend + delta */}
-              <div className="flex items-center justify-center">
-                <TrendCell trend={row.trend} delta={row.d} />
               </div>
 
               {/* Visit count */}
               <div className="text-right">
-                <span className="font-display text-[22px] font-bold tabular-nums tracking-tight text-foreground">
+                <span className="font-display text-[21px] font-bold tabular-nums tracking-tight text-foreground">
                   {row.v.toLocaleString("sv-SE")}
                 </span>
               </div>
-            </div>
+
+              {/* Trend + delta */}
+              <div className="flex items-center justify-end">
+                <TrendCell trend={row.trend} delta={row.d} />
+              </div>
+            </a>
           );
         })}
       </div>

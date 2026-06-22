@@ -7,6 +7,7 @@ import {
   Maximize2,
   Minimize2,
 } from "lucide-react";
+import { KeyboardHints } from "@/components/report/KeyboardHints";
 import type { AiInsightsPayload } from "@/lib/ai-insights/types";
 import type { ReportData } from "@/types/schema";
 import { SLIDE_GAP } from "@/components/report/tokens";
@@ -14,6 +15,8 @@ import { buildSlideData } from "@/components/report/slide-data";
 import { buildSlides } from "@/components/report/slide-list";
 import { useCardScale } from "@/components/report/layout/useCardScale";
 import { SlideCard } from "@/components/report/layout/SlideCard";
+
+const FULLSCREEN_SCALE_BUMP = 1.04;
 
 export function SharedReportClient({
   reportData,
@@ -24,10 +27,14 @@ export function SharedReportClient({
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isFs, setIsFs] = useState(false);
+  const [presentationScale, setPresentationScale] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const { scale } = useCardScale(containerRef);
+  const { scale } = useCardScale(containerRef, scrollRef);
+  const viewerScale = isFs && presentationScale !== null
+    ? Math.min(scale, presentationScale * FULLSCREEN_SCALE_BUMP)
+    : scale;
 
   const slideData = useMemo(() => buildSlideData(reportData), [reportData]);
   const slides = useMemo(
@@ -87,15 +94,28 @@ export function SharedReportClient({
   }, [activeIndex, total, scrollToIndex]);
 
   useEffect(() => {
-    const onFs = () => setIsFs(!!document.fullscreenElement);
+    const onFs = () => {
+      const fullscreen = !!document.fullscreenElement;
+      setIsFs(fullscreen);
+      if (fullscreen) {
+        setPresentationScale((current) => current ?? scale);
+      } else {
+        setPresentationScale(null);
+      }
+    };
     document.addEventListener("fullscreenchange", onFs);
     return () => document.removeEventListener("fullscreenchange", onFs);
-  }, []);
+  }, [scale]);
 
   const togglePresent = () => {
     const el = document.documentElement;
-    if (!document.fullscreenElement) el.requestFullscreen?.();
-    else document.exitFullscreen?.();
+    if (!document.fullscreenElement) {
+      setPresentationScale(scale);
+      const request = el.requestFullscreen?.();
+      if (request) void request.catch(() => setPresentationScale(null));
+    } else {
+      document.exitFullscreen?.();
+    }
   };
 
   return (
@@ -126,7 +146,7 @@ export function SharedReportClient({
         className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
         style={{ scrollbarWidth: "none", overscrollBehaviorY: "auto" }}
       >
-        <div ref={containerRef} className="mx-auto w-full max-w-[1400px] px-2 sm:px-5 lg:px-8">
+        <div ref={containerRef} className="mx-auto w-full px-2 sm:px-5 lg:px-8 2xl:px-12">
           <div
             className="flex flex-col items-center"
             style={{ gap: SLIDE_GAP, paddingTop: SLIDE_GAP, paddingBottom: SLIDE_GAP }}
@@ -135,7 +155,7 @@ export function SharedReportClient({
               <SlideCard
                 key={slide.id}
                 slide={slide}
-                scale={scale}
+                scale={viewerScale}
                 innerRef={(el) => { cardRefs.current[i] = el; }}
               />
             ))}
@@ -161,26 +181,8 @@ export function SharedReportClient({
         </div>
       </div>
 
-      <div className="fixed bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full px-3 py-2 backdrop-blur-md print:hidden sm:bottom-5 sm:gap-3 sm:px-4 sm:py-2.5" style={{ background: "rgba(255,255,255,0.55)", border: "1px solid rgba(255,255,255,0.7)", boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
-        <button
-          onClick={() => scrollToIndex(activeIndex - 1)}
-          disabled={activeIndex === 0}
-          className="flex h-7 w-7 items-center justify-center rounded-full transition-all hover:bg-black/6 disabled:opacity-25"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-        </button>
-        <div className="flex items-center gap-1.5 text-[11px] text-foreground/40">
-          <kbd className="rounded border border-black/10 bg-black/5 px-1.5 py-0.5 font-mono text-[10px]">&uarr;</kbd>
-          <kbd className="rounded border border-black/10 bg-black/5 px-1.5 py-0.5 font-mono text-[10px]">&darr;</kbd>
-        </div>
-        <span className="tabular-nums text-xs font-medium text-foreground/50">{activeIndex + 1} / {total}</span>
-        <button
-          onClick={() => scrollToIndex(activeIndex + 1)}
-          disabled={activeIndex === total - 1}
-          className="flex h-7 w-7 items-center justify-center rounded-full transition-all hover:bg-black/6 disabled:opacity-25"
-        >
-          <ArrowRight className="h-3.5 w-3.5" />
-        </button>
+      <div className="fixed bottom-5 left-1/2 z-20 -translate-x-1/2 print:hidden">
+        <KeyboardHints />
       </div>
     </div>
   );

@@ -8,9 +8,9 @@ export const AI_BORDER         = "oklch(0.78 0.06 295 / 0.5)";
 export const AI_SHIMMER        = "oklch(0.85 0.16 300 / 0.2)";
 
 export const TREND_POS = "oklch(0.7 0.16 155)";
-export const TREND_NEG = "oklch(0.7 0.18 22)";
+export const TREND_NEG = "oklch(0.62 0.22 22)";
 export const TREND_POS_BG = "oklch(0.7 0.16 155 / 0.14)";
-export const TREND_NEG_BG = "oklch(0.7 0.18 22 / 0.14)";
+export const TREND_NEG_BG = "oklch(0.62 0.22 22 / 0.14)";
 export const ACCENT = "oklch(0.5 0.18 290)";
 
 export const CANVAS_W = 1280;

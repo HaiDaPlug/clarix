@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { AssembledDeck } from "@/types/modules";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/lib/i18n";
+import { KeyboardHints } from "./KeyboardHints";
 
 interface ReportViewerProps {
   deck: AssembledDeck;
@@ -103,13 +104,11 @@ export function ReportViewer({ deck }: ReportViewerProps) {
       {/* Bottom bar — slide counter left, dots center, nav right */}
       <div className="fixed bottom-6 left-0 right-0 z-50 flex items-center justify-between px-8">
 
-        {/* Slide counter */}
-        <p style={{ fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--slate-light)" }}>
-          {currentSlide + 1} / {total}
-        </p>
+        {/* Keyboard hints */}
+        <KeyboardHints />
 
-        {/* Dot indicators — center */}
-        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
+        {/* Dot indicators + counter — center */}
+        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3">
           {deck.slides.map((_, i) => (
             <button
               key={i}
@@ -123,6 +122,9 @@ export function ReportViewer({ deck }: ReportViewerProps) {
               aria-label={t.viewer.goToSlide(i + 1)}
             />
           ))}
+          <span style={{ fontSize: "10px", letterSpacing: "0.08em", color: "var(--slate-light)", marginLeft: 4 }}>
+            {currentSlide + 1} / {total}
+          </span>
         </div>
 
         {/* Prev / Next arrows */}

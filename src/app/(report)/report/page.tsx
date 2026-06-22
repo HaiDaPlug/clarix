@@ -9,6 +9,7 @@ import {
   Minimize2,
   Share2,
 } from "lucide-react";
+import { KeyboardHints } from "@/components/report/KeyboardHints";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import {
@@ -27,7 +28,9 @@ import { buildSlides } from "@/components/report/slide-list";
 import { useCardScale } from "@/components/report/layout/useCardScale";
 import { SlideCard } from "@/components/report/layout/SlideCard";
 
-/* ─── Page ───────────────────────────────────────────────────────────────── */
+const FULLSCREEN_SCALE_BUMP = 1.04;
+
+/* Page */
 
 export default function ReportPage() {
   return (
@@ -44,6 +47,7 @@ function ReportPageInner() {
   const [noSources, setNoSources] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isFs, setIsFs] = useState(false);
+  const [presentationScale, setPresentationScale] = useState<number | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
@@ -51,7 +55,10 @@ function ReportPageInner() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const { scale } = useCardScale(containerRef);
+  const { scale } = useCardScale(containerRef, scrollRef);
+  const viewerScale = isFs && presentationScale !== null
+    ? Math.min(scale, presentationScale * FULLSCREEN_SCALE_BUMP)
+    : scale;
   const dateRange = useDateRange();
   const router = useRouter();
 
@@ -97,6 +104,8 @@ function ReportPageInner() {
         return;
       }
 
+      let ga4WebsiteUri: string | null = null;
+
       const parts = await Promise.all(
         sources.map(async (source) => {
           try {
@@ -106,7 +115,9 @@ function ReportPageInner() {
               : { siteUrl: source.property_id, dateRange, locale: "sv" };
             const res = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
             if (!res.ok) return undefined;
-            return (await res.json()) as Partial<ReportData>;
+            const json = await res.json() as Partial<ReportData> & { websiteUri?: string };
+            if (source.source === "ga4" && json.websiteUri) ga4WebsiteUri = json.websiteUri;
+            return json as Partial<ReportData>;
           } catch { return undefined; }
         }),
       );
@@ -126,6 +137,23 @@ function ReportPageInner() {
         ? mergeReportData(base, realParts.slice(1), connectedIds)
         : { ...base, meta: { ...base.meta, availableSources: connectedIds } };
       if (!merged.executiveSummary) merged.executiveSummary = deriveExecutiveSummary(merged, "sv");
+
+      // Inject source metadata - API routes return no meta, so we derive it here
+      const ga4Source = sources.find((s) => s.source === "ga4");
+      const gscSource = sources.find((s) => s.source === "gsc");
+      const rawName = ga4Source?.display_name ?? gscSource?.display_name ?? null;
+      const sourceName = rawName ? cleanSourceName(rawName) : null;
+      // GSC property_id is always a URL/domain; GA4 property_id is a numeric ID.
+      // Fall back to websiteUri from the GA4 Admin API when GSC isn't connected.
+      const rawPropertyId = gscSource?.property_id ?? ga4WebsiteUri ?? null;
+      const clientDomain = rawPropertyId ? extractDomain(rawPropertyId) : null;
+      const resolvedPeriodLabel = fmtDateRange(dateRange.startDate, dateRange.endDate);
+      merged.meta = {
+        ...merged.meta,
+        ...(sourceName ? { clientName: sourceName } : {}),
+        ...(clientDomain ? { clientDomain } : {}),
+        period: { label: resolvedPeriodLabel, startDate: dateRange.startDate, endDate: dateRange.endDate },
+      };
 
       const {
         data: { user },
@@ -201,18 +229,31 @@ function ReportPageInner() {
 
   // Fullscreen
   useEffect(() => {
-    const onFs = () => setIsFs(!!document.fullscreenElement);
+    const onFs = () => {
+      const fullscreen = !!document.fullscreenElement;
+      setIsFs(fullscreen);
+      if (fullscreen) {
+        setPresentationScale((current) => current ?? scale);
+      } else {
+        setPresentationScale(null);
+      }
+    };
     document.addEventListener("fullscreenchange", onFs);
     return () => document.removeEventListener("fullscreenchange", onFs);
-  }, []);
+  }, [scale]);
 
   const togglePresent = () => {
     const el = document.documentElement;
-    if (!document.fullscreenElement) el.requestFullscreen?.();
-    else document.exitFullscreen?.();
+    if (!document.fullscreenElement) {
+      setPresentationScale(scale);
+      const request = el.requestFullscreen?.();
+      if (request) void request.catch(() => setPresentationScale(null));
+    } else {
+      document.exitFullscreen?.();
+    }
   };
 
-  // Date preset picker — sets ?from=&to= on URL
+  // Date preset picker - sets ?from=&to= on URL
   const applyPreset = (id: DatePresetId) => {
     const r = presetToRange(id);
     router.push(`?from=${r.startDate}&to=${r.endDate}`);
@@ -265,7 +306,7 @@ function ReportPageInner() {
   return (
     <div className="relative flex h-dvh flex-col overflow-hidden bg-[oklch(0.965_0.005_270)] text-foreground print:bg-white" style={{ overscrollBehavior: "auto" }}>
 
-      {/* ── Top bar ───────────────────────────────────────────── */}
+      {/* Top bar */}
       <header className="z-20 flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-2 px-4 py-2 print:hidden sm:px-6 lg:h-12 lg:min-h-12 lg:flex-nowrap">
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           <Link
@@ -326,13 +367,13 @@ function ReportPageInner() {
         </div>
       </header>
 
-      {/* ── Scroll surface ───────────────────────────────────── */}
+      {/* Scroll surface */}
       <div
         ref={scrollRef}
         className="relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden"
         style={{ scrollbarWidth: "none", overscrollBehaviorY: "auto" }}
       >
-        <div ref={containerRef} className="mx-auto w-full max-w-[1400px] px-2 sm:px-5 lg:px-8">
+        <div ref={containerRef} className="mx-auto w-full px-2 sm:px-5 lg:px-8 2xl:px-12">
 
           {/* No sources state */}
           {!loading && noSources && (
@@ -354,8 +395,8 @@ function ReportPageInner() {
                   <div
                     key={i}
                     style={{
-                      height: CANVAS_H * scale,
-                      width: CANVAS_W * scale,
+                      height: CANVAS_H * viewerScale,
+                      width: CANVAS_W * viewerScale,
                       borderRadius: 6,
                       overflow: "hidden",
                       background: "#ffffff",
@@ -368,7 +409,7 @@ function ReportPageInner() {
                       style={{
                         width: CANVAS_W,
                         height: CANVAS_H,
-                        transform: `scale(${scale})`,
+                        transform: `scale(${viewerScale})`,
                         transformOrigin: "top left",
                         padding: "48px 64px",
                       }}
@@ -381,7 +422,7 @@ function ReportPageInner() {
                   <SlideCard
                     key={slide.id}
                     slide={slide}
-                    scale={scale}
+                    scale={viewerScale}
                     innerRef={(el) => { cardRefs.current[i] = el; }}
                   />
                 ))
@@ -389,7 +430,7 @@ function ReportPageInner() {
           </div>
         </div>
 
-        {/* Dot nav — fixed right edge */}
+        {/* Dot nav - fixed right edge */}
         <div className="fixed right-3 top-1/2 z-20 hidden -translate-y-1/2 flex-col items-center gap-[7px] print:hidden sm:flex lg:right-4">
           {slides.map((s, i) => (
             <button
@@ -409,28 +450,51 @@ function ReportPageInner() {
         </div>
       </div>
 
-      {/* ── Bottom controls ──────────────────────────────────── */}
-      <div className="fixed bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full px-3 py-2 backdrop-blur-md print:hidden sm:bottom-5 sm:gap-3 sm:px-4 sm:py-2.5" style={{ background: "rgba(255,255,255,0.55)", border: "1px solid rgba(255,255,255,0.7)", boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
-        <button
-          onClick={() => scrollToIndex(activeIndex - 1)}
-          disabled={activeIndex === 0}
-          className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-black/6 disabled:opacity-25 transition-all"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-        </button>
-        <div className="flex items-center gap-1.5 text-[11px] text-foreground/40">
-          <kbd className="rounded border border-black/10 bg-black/5 px-1.5 py-0.5 font-mono text-[10px]">↑</kbd>
-          <kbd className="rounded border border-black/10 bg-black/5 px-1.5 py-0.5 font-mono text-[10px]">↓</kbd>
-        </div>
-        <span className="text-xs font-medium tabular-nums text-foreground/50">{activeIndex + 1} / {total}</span>
-        <button
-          onClick={() => scrollToIndex(activeIndex + 1)}
-          disabled={activeIndex === total - 1}
-          className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-black/6 disabled:opacity-25 transition-all"
-        >
-          <ArrowRight className="h-3.5 w-3.5" />
-        </button>
+      {/* Bottom controls */}
+      <div className="fixed bottom-5 left-1/2 z-20 -translate-x-1/2 print:hidden">
+        <KeyboardHints />
       </div>
     </div>
   );
+}
+
+const MONTHS_SV = ["jan","feb","mar","apr","maj","jun","jul","aug","sep","okt","nov","dec"];
+
+function fmtDateRange(startIso: string, endIso: string): string {
+  const [sy, sm, sd] = startIso.split("-").map(Number);
+  const [ey, em, ed] = endIso.split("-").map(Number);
+  const start = `${sd} ${MONTHS_SV[sm - 1]}`;
+  const end = `${ed} ${MONTHS_SV[em - 1]} ${ey}`;
+  return sy === ey ? `${start} – ${end}` : `${start} ${sy} – ${end}`;
+}
+
+function cleanSourceName(name: string): string {
+  const noise = [
+    "GA4",
+    "Google Analytics 4",
+    "Google Analytics",
+    "Analytics",
+    "GSC",
+    "Google Search Console",
+    "Search Console",
+    "Google Ads",
+    "Ads",
+  ];
+  const pattern = noise.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  const re = new RegExp(
+    `(?:[\\s\\-–“|]+(?:${pattern})\\s*$|^\\s*(?:${pattern})[\\s\\-–“|]+|\\s*[\\(\\[](?:${pattern})[\\)\\]])`,
+    "gi",
+  );
+  return name.replace(re, "").trim();
+}
+
+function extractDomain(propertyId: string): string {
+  if (propertyId.startsWith("sc-domain:")) return propertyId.slice("sc-domain:".length);
+  try {
+    // Full URL like https://example.com/
+    return new URL(propertyId).hostname.replace(/^www\./, "");
+  } catch {
+    // Bare hostname like "www.example.com" from GA4 hostname dimension
+    return propertyId.replace(/^www\./, "");
+  }
 }

@@ -2,7 +2,103 @@
 
 ---
 
-## NOW — Open priorities (2026-06-19)
+## NOW — Open priorities (2026-06-22)
+
+### Done this session (2026-06-22) — polish + login
+
+**Encoding fix — period label mojibake**
+- `fmtDateRange()` in `report/page.tsx` had UTF-8 en dash bytes saved as Latin-1, rendering "1 jun â€" 21 jun 2026" in SlideIntro. Fixed all three occurrences: the `fmtDateRange` return (×2) and the `currentLabel` fallback (line 246). Also fixed the same corrupted bytes in the `cleanSourceName` regex character class.
+
+**SlideIntro — larger favicon**
+- Favicon bumped from 44×44 to 72×72px, border-radius 12 → 16 to match.
+
+**SlidePages redesign**
+- Inverted header bar: `#1a1714` background, pure white uppercase labels (Sida / Besök / Trend).
+- Column order swapped: Besök now comes before Trend.
+- Restored 6 rows (had been accidentally reduced to 5 during overflow fix).
+- Row padding tightened 16 → 12px so 6 rows fit cleanly within the 720px canvas.
+- Removed `flex-1` stretch from table container — table now shrink-wraps to its content, no empty space below last row.
+
+**Login page — form center + DiaTextReveal tagline**
+- Form column centered horizontally (`items-center` on column, `w-full` on inner card) — was left-aligned within the 35% column.
+- Replaced AuroraText on "klarhet"/"Clarix" with `DiaTextReveal` on the full tagline lines: "Få klarhet i din data," and "med Clarix." sweep with brand palette (#FF4D9E → #FF6B55 → #FFB830 → #ffffff), settling on white.
+- Fixed animation-kill bug: `startOnView={false}` caused `isInView` dep change to fire cleanup mid-sweep, leaving text transparent. Fixed by using default `startOnView={true}` — element is already in viewport on load.
+
+**Files changed**
+- `src/app/(report)/report/page.tsx` (encoding fix × 3)
+- `src/components/report/slides/SlideIntro.tsx` (favicon size)
+- `src/components/report/slides/SlidePages.tsx` (inverted header, column order, row padding, no stretch)
+- `src/components/report/slide-data.tsx` (6 rows restored)
+- `src/app/login/page.tsx` (form center, DiaTextReveal tagline)
+
+---
+
+### Done this session (2026-06-22)
+
+**SlideChannels — horizontal bar chart with world-class animation**
+
+Full redesign of the traffic sources slide (slide 5) from a 2×2 pastel card grid to a horizontal bar chart with staggered entrance animation.
+
+*Iteration sequence:*
+- **Polish pass 1** — added colored left accent bar (3px inset pill, icon color) to existing card grid; replaced white icon containers with icon-color-tinted badges (`${color}20` bg). Removed pastel card backgrounds entirely — cards went to white with `#D1D5DB` border. Centered the 5th odd card with `max-w-[50%] mx-auto`.
+- **Layout switch** — replaced card grid with horizontal bar rows. Each row: label col (200px, icon badge + channel name + visit count) → flex-1 bar track → right col (percentage + optional positive TrendPill). Color system: `CHANNEL_COLORS` array (rose/amber/blue/green/purple/orange) shared across icon badge tints and bar fills.
+- **Animation** — `useInView` on the container ref, each bar fill grows `width: 0% → barPct%` with ease-out-expo `[0.22, 1, 0.36, 1]`, `duration: 1.5s`, stagger `i * 0.12s`. Percentage and visit count fade in after bar lands (`delay + 0.85 / 0.9`).
+- **Bar refinement** — slower animation (0.9→1.5s), removed negative TrendPills (only positive shown), less-round bars (`rounded-full → rounded-[10px]` track, `rounded-r-[8px]` fill). Fixed overlap bug: TrendPill was ~90px inside an 88px right column → widened to 112px.
+- **Thinner bars + grain** — height `68px → 40px`, freed vertical space redistributed into row gaps (`space-y-5 → space-y-12`, 60px at the 20px rem base). Added `NoiseTexture preset="fine" blendMode="soft-light" opacity={0.3}` inside each fill div (fill has `overflow-hidden` to clip it to the bar boundary).
+- **True 100% scale + floating label** — bars represent actual traffic share (not normalized to max). Percentage label floats at `left: calc(${barPct}% + 10px)` on a `relative` wrapper that sits *outside* the `overflow-hidden` track, so it's never clipped by it.
+- **Animation audit** — fixed 3 bugs: (1) reduced-motion text transitions still carried `delay + 0.9 / + 0.85` hardcoded offsets; (2) `initial={{ ... }}` caused 1-frame flash on reduced motion — replaced with `initial={reduced ? false : { ... }}`; (3) `!!prefersReduced` coerced `null` ambiguously — changed to `useReducedMotion() === true`. Added `x: -8 → 0` slide to label entrance for "annotation follows bar" feel.
+
+**Files changed**
+- `src/components/report/slides/SlideChannels.tsx` (full rewrite — card grid → animated horizontal bar chart)
+
+---
+
+### Done this session (2026-06-21)
+
+**SlideIntro — world-class cover slide (slide 0)**
+- New `SlideIntro` component added as the first slide in the report deck (before SlideHero), registered in `slide-list.tsx` with `id: "intro"`.
+- Layout: property name (`clientName`) as 72px bold display headline top-left with coral period mark; "Trafikrapport från föregående period." as muted subtext; `domain · period` in very muted meta text. Site favicon (44×44px, rounded) absolutely positioned top-right.
+- No eyebrow, no orbital rings, no gradients — restrained brand touch is only the coral `.` on the property name.
+
+**Fixed: `clientName`, `clientDomain`, and `period.label` all null in report**
+- Root cause: GA4 and GSC API routes return no `meta` field — all three fell back to defaults ("Din webbplats", null, "Senaste perioden").
+- Fix in `report/page.tsx` `load()`: after building `merged`, injects `clientName` from `connected_sources.display_name`, `clientDomain` derived from source property IDs, and `period.label` from the active date preset.
+
+**Fixed: `clientDomain` was the raw GA4 numeric property ID ("323738268")**
+- GA4 `property_id` in `connected_sources` is a numeric ID, not a domain. Only GSC `property_id` is a domain/URL format.
+- Fix: `rawPropertyId = gscSource?.property_id ?? ga4WebsiteUri ?? null` — never touches the GA4 numeric ID.
+
+**Fixed: domain derivation for GA4-only users via hostname dimension query**
+- `/api/ga4/route.ts` now runs a third parallel request alongside the two report fetches: a GA4 Data API `hostname` dimension query (same auth scope). Returns the top hostname by sessions (e.g. `www.citylaser.se`). Zero added latency.
+- `page.tsx` captures `websiteUri` from the GA4 JSON response as the fallback when GSC is absent.
+- `extractDomain()` strips `www.` from bare hostnames (GA4 returns `www.example.com`, not a URL, so `new URL()` throws — catch branch handles it).
+
+**Fixed: favicon proxy accepting invalid domains**
+- `/api/favicon/route.ts` now validates: must contain a dot and must not be purely numeric. Invalid inputs return HTTP 400 so `onError` fires cleanly.
+
+**Fixed: SlideIntro favicon — correct proxy, `useState` error pattern**
+- Favicon moved to `position: absolute, top: 0, right: 0` (top-right of padded slide area).
+- Switched from `s2/favicons` (never 404s, returns generic globe) to `/api/favicon?domain=...` (proxy that returns real 404s).
+- Uses `useState(failed)` error pattern matching `SlidePages`'s `Favicon` component.
+
+**SlidePages — clickable rows + last-row padding**
+- Every row in "Dina mest besökta sidor" is now an `<a>` tag linking to `https://<domain><path>`, opening in a new tab. Hover state unchanged.
+- Last row gets `paddingBottom: 36` (vs 16 for other rows) — all padding driven inline to avoid Tailwind class conflicts with `overflow-hidden` container.
+
+**SlideIntro — period label and property name cleanup**
+- Period label changed from preset name ("Denna månad") to actual formatted date range ("1 jun – 21 jun 2026"). `fmtDateRange()` helper formats ISO dates to Swedish short-month format; handles cross-year ranges.
+- `cleanSourceName()` strips common tool-name noise from GA4/GSC `display_name` before showing it as the report title. Covers: `GA4`, `Google Analytics 4`, `Google Analytics`, `Analytics`, `GSC`, `Google Search Console`, `Search Console`, `Google Ads`, `Ads` — in trailing, leading, and parenthesised/bracketed positions (case-insensitive). "Citylaser GA4" → "Citylaser".
+
+**Files changed**
+- `src/components/report/slides/SlideIntro.tsx` (new)
+- `src/components/report/slides/SlidePages.tsx` (clickable rows, last-row padding)
+- `src/components/report/slide-list.tsx`
+- `src/components/report/slide-data.tsx` (added `clientName: string | null`)
+- `src/app/(report)/report/page.tsx` (meta injection + domain derivation + `extractDomain` fix + `fmtDateRange` + `cleanSourceName`)
+- `src/app/api/ga4/route.ts` (parallel hostname dimension query)
+- `src/app/api/favicon/route.ts` (domain validation gate)
+
+---
 
 ### Done this session (2026-06-19)
 

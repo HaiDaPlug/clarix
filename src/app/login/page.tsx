@@ -8,7 +8,6 @@ import { createClient } from "@/utils/supabase/client";
 import { LocaleProvider, useLocale } from "@/lib/i18n";
 import { DiaTextReveal } from "@/components/ui/dia-text-reveal";
 import { NoiseTexture } from "@/components/ui/noise-texture";
-import { AuroraText } from "@/components/ui/aurora-text";
 
 
 function LoginContent() {
@@ -71,9 +70,9 @@ function LoginContent() {
       </div>
 
       {/* Form column — 35% */}
-      <div className="flex flex-col justify-center px-10 lg:px-14 w-full lg:w-[35%] min-h-dvh">
+      <div className="flex flex-col items-center justify-center px-10 lg:px-14 w-full lg:w-[35%] min-h-dvh">
         <motion.div
-          className="flex flex-col gap-8 max-w-[320px]"
+          className="flex flex-col gap-8 w-full max-w-[320px]"
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
@@ -267,24 +266,20 @@ function RightPanel() {
       {/* Tagline — bottom left */}
       <div className="absolute bottom-10 left-10 z-20 pointer-events-none">
         <p className="font-display text-[2.6rem] leading-[1.2] tracking-tight text-left text-white">
-          {/* Line 1 */}
-          <span>Få </span>
-          <AuroraText className="font-semibold"
-            colors={["#FF4D9E", "#FF6B55", "#FFB830", "#FF6B55"]}
-            speed={0.5}
-          >
-            klarhet
-          </AuroraText>
-          <span> i din data,</span>
+          <DiaTextReveal
+            text="Få klarhet i din data,"
+            colors={["#FF4D9E", "#FF6B55", "#FFB830", "#FF6B55", "#ffffff"]}
+            textColor="white"
+            duration={1.6}
+          />
           <br />
-          <span>med </span>
-          <AuroraText className="font-semibold"
-            colors={["#FFB830", "#FF6B55", "#FF4D9E", "#FF6B55"]}
-            speed={1.4}
-          >
-            Clarix
-          </AuroraText>
-          <span>.</span>
+          <DiaTextReveal
+            text="med Clarix."
+            colors={["#FFB830", "#FF6B55", "#FF4D9E", "#FF6B55", "#ffffff"]}
+            textColor="white"
+            duration={1.4}
+            delay={0.3}
+          />
         </p>
       </div>
     </div>

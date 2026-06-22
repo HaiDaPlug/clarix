@@ -215,27 +215,27 @@ SIFFERFORMAT (gäller all text du skriver):
 - Skriv aldrig tecken på ett tal som inte faktiskt gått upp eller ner mot förra perioden.
 
 === dashboard_hero ===
-ROLL: Du är en kunnig rådgivare som ger ägaren en omedelbar känsla för läget. Rubriken ska fånga den viktigaste förändringen — inte vara generisk. Undertexten förklarar vad mätningen visar som starkaste kanal, hur det har gått jämfört med förra perioden, och lyfter en konkret signal (positiv eller negativ). Om attributionen är osäker ska du säga det tydligt och lugnt. Nämn faktiska siffror. Skriv som om du pratar direkt med ägaren.
+ROLL: Du ger ägaren ett omedelbart svar på om det gick bra eller dåligt — och varför det spelar roll för verksamheten. Inte en sammanfattning av mätningen. Ett omdöme. Ta ställning: är det positivt, negativt, eller blandat? Varje mening har ett enda jobb. Ägaren ska läsa tre meningar och känna "nu vet jag hur det gick."
 DATA: visits=${fmtNum(visits)}, visitsDelta=${fmtDelta(visitsDelta)}, topChannel=${topChannelLabel}${topChannelPct != null ? ` (${topChannelPct}%)` : ""}, attributionUnclear=${attributionUnclear}, attributionNote=${attributionNote ?? "ingen"}, bounceRate=${bounceRate != null ? `${bounceRate.toFixed(1)}%` : "ej mätt"}
-CONSTRAINT: Returnera { "headline": "max 8 ord", "sub": "2 meningar. Mening 1: hur många besök, vad mätningen visar som starkaste kanal, och hur det jämförs med förra perioden. Mening 2: den viktigaste signalen ägaren bör känna till just nu." }
+CONSTRAINT: Returnera { "headline": "max 8 ord — ta ställning, nämn det viktigaste som hänt", "sub": "Exakt 3 meningar, max 15 ord vardera. Mening 1: vad hände (ett tal, ingen kanal). Mening 2: är det bra eller dåligt — ta ställning, förklara affärsmässigt. Mening 3: det enda ägaren bör hålla koll på nu." }
 EXEMPEL:
-  FEL headline: "Ökning i besök denna period" — för generisk, nämner ingenting specifikt
-  FEL headline: "Trafiken har ökat" — beskriver inte vad som faktiskt hänt eller var
-  RÄTT headline: "Google driver mer trafik i maj" — konkret kanal, konkret period
-  RÄTT headline: "Mätningen visar osäker direkttrafik" — korrekt när Direct/okänd dominerar
-  FEL sub: "Det har varit 114 besök, alla från direkttrafik." — konstaterar bara siffran, ingen signal
-  RÄTT sub: "Den här månaden kom 1 240 besök, varav 68 % via Google — en ökning med 18 % mot förra månaden. Engagemanget är starkt, men kontaktsidan tappade trafik vilket är värt att följa upp."
+  FEL headline: "Trafiken har ökat" — ingen ståndpunkt, kunde gälla vem som helst
+  FEL headline: "Ökning i besök denna period" — generisk, inget omdöme
+  RÄTT headline: "Färre besök – men fler verkar vara rätt besökare" — tar ställning, blandat läge
+  RÄTT headline: "Google driver mer trafik – en tydlig förbättring" — konkret, med omdöme
+  FEL sub: "Det kom 6 182 besök från obetald trafik från sociala medier som stod för 90 % av trafiken, en nedgång på −15 %." — en mening med tre fakta, inget omdöme
+  RÄTT sub: "Webbplatsen fick 6 182 besök — 15 % färre än förra perioden. Det är en nedgång, men besökarna som kom verkar mer intresserade än tidigare. Håll koll på om konverteringsgraden håller i sig när trafiken återhämtar sig."
 STATUS: ${sufficient.dashboard_hero ? "GENERATE" : "INSUFFICIENT DATA"}
 
 === slide_hero ===
-ROLL: Rådgivare i fickan. Ägaren har precis sett rubriken och besöksantalet — nu vill de förstå vad som faktiskt händer. Skriv ett kort stycke som förklarar: vad mätningen visar, varför det kan vara så (möjliga orsaker, aldrig säker), och vad ägaren bör hålla koll på härnäst. Gör dem nyfikna på att läsa vidare — men ge dem redan ett svar.
+ROLL: Ägaren har redan läst omdömet på dashboarden och öppnat rapporten för att förstå varför. Din uppgift är att förklara orsaken — inte upprepa vad som hände. Vad ligger bakom förändringen? Vad bör de förstå innan de går igenom resten av rapporten? Skriv som en erfaren kollega som förklarar sammanhanget, inte som ett system som rapporterar mätvärden.
 DATA: visits=${fmtNum(visits)}, visitsDelta=${fmtDelta(visitsDelta)}, topChannel=${topChannelLabel}${topChannelPct != null ? ` (${topChannelPct}%)` : ""}, attributionUnclear=${attributionUnclear}, attributionNote=${attributionNote ?? "ingen"}, bounceRate=${bounceRate != null ? `${bounceRate.toFixed(1)}%` : "ej mätt"}
-CONSTRAINT: MÅSTE returnera en sträng — aldrig null. 2–4 meningar. Börja inte med "Besöken" eller "Trafiken". Inga rubriker, inga listor — flytande text som en kunnig kollega skulle säga det.
+CONSTRAINT: MÅSTE returnera en sträng — aldrig null. Exakt 3 meningar. Börja INTE med "Besöken", "Trafiken" eller en siffra — börja med orsaken eller sammanhanget. Mening 1: den troligaste förklaringen till det som hänt (använd "Det kan bero på", "En sannolik förklaring är" — aldrig tvärsäker). Mening 2: vad det betyder för verksamheten, inte för mätningen. Mening 3: vad de ska ha i bakhuvudet när de läser resten av rapporten. Inga rubriker, inga listor.
 EXEMPEL:
-  FEL: "Direkttrafiken stod för 69 % av besöken och avvisningsfrekvensen var 48,2 %." — räknar upp siffror utan att förklara något
-  FEL: "Trafiken ökade denna period med stöd från direkttrafik." — börjar fel, ingen förklaring, ingen signal
-  RÄTT: "Merparten av besöken kom direkt — utan att passera Google eller sociala medier. Det kan tyda på att varumärket är välkänt bland besökarna, men det kan också betyda att spårningen inte fångar alla kanaler korrekt. Värt att kontrollera om GA4-taggningen sitter rätt innan du drar slutsatser om kanalbilden."
-  RÄTT: "Google driver nästan all trafik just nu, vilket är ett styrketecken för er synlighet i sökresultaten. Avvisningsfrekvensen på 48 % är helt normal — men om den börjar stiga är det ett tecken på att besökarna inte hittar det de letar efter direkt."
+  FEL: "Besöken minskade med 15 % och direkttrafiken stod för 90 % av trafiken." — upprepar dashboarden, förklarar ingenting
+  FEL: "Trafiken ökade denna period med stöd från direkttrafik." — börjar med trafiken, ingen förklaring
+  RÄTT: "Det kan bero på att synligheten från obetald trafik via sociala medier minskade under perioden — en vanlig orsak är att publiceringsfrekvensen gått ner eller att räckvidden förändrats. För verksamheten betyder det att färre nya personer hittar till webbplatsen just nu. Ha det i bakhuvudet när du tittar på konverteringarna — en lägre volym kan ändå dölja en bättre kvalitet."
+  RÄTT: "En sannolik förklaring är att Google-synligheten förbättrades under perioden, vilket brukar ta några veckor att synas i trafiken. Det är positivt för verksamheten eftersom obetald trafik från Google ofta ger besökare med tydligare syfte. Titta särskilt på vilka sidor som fått mest trafik — det berättar vad besökarna faktiskt letar efter."
 STATUS: GENERATE
 
 === slide_insight ===
