@@ -7,6 +7,11 @@ import {
 } from "lucide-react";
 import type { ReportData } from "@/types/schema";
 
+// Below this many sessions, a percent-change trend is mostly noise (e.g. 1→14
+// visits reads as "+1300%" but is not a real signal) — same minimum-volume
+// guard used for conversionRate deltas in derive-insights.ts.
+const MIN_PAGE_TREND_SESSIONS = 10;
+
 export interface SlideData {
   visits: number;
   prevVisits: number;
@@ -165,10 +170,13 @@ export function buildSlideData(reportData: ReportData | null): SlideData {
   const topPages = rawPages.slice(0, 6).map((p) => {
     const prev = p.previousSessions;
     const sessions = p.sessions ?? p.clicks ?? 0;
-    const d = prev != null && prev > 0
+    const hasEnoughVolume =
+      prev != null && prev >= MIN_PAGE_TREND_SESSIONS && sessions >= MIN_PAGE_TREND_SESSIONS;
+    const d = hasEnoughVolume
       ? Math.round(((sessions - prev) / prev) * 100)
       : null;
-    return { p: p.url, title: p.title ?? null, v: sessions, d, trend: p.trend ?? null };
+    const trend = hasEnoughVolume ? p.trend ?? null : null;
+    return { p: p.url, title: p.title ?? null, v: sessions, d, trend };
   });
 
   const kpiMetrics = kpi?.metrics ?? [];
