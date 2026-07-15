@@ -19,10 +19,12 @@ export function DashboardHero({
   data,
   aiInsights,
   loading,
+  minHeight,
 }: {
   data: ReportData;
   aiInsights: AiInsightsPayload | null;
   loading: boolean;
+  minHeight?: string;
 }) {
   const { t } = useLocale();
   const params = useSearchParams();
@@ -39,15 +41,15 @@ export function DashboardHero({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={HERO_ENTER}
-      className="relative overflow-hidden rounded-[1.4rem] p-5 sm:rounded-[2rem] sm:p-10 lg:p-16"
-      style={{ background: AI_GRADIENT, boxShadow: AI_SHADOW.replace(/_/g, " "), border: `1px solid ${AI_BORDER}` }}
+      className="relative flex-1 overflow-hidden rounded-[1.4rem] p-5 sm:rounded-[2rem] sm:p-10 lg:p-16"
+      style={{ background: AI_GRADIENT, boxShadow: AI_SHADOW.replace(/_/g, " "), border: `1px solid ${AI_BORDER}`, minHeight }}
     >
       <div className="pointer-events-none absolute -top-32 -left-20 h-80 w-80 rounded-full opacity-60 blur-3xl" style={{ background: "radial-gradient(circle, oklch(0.85 0.16 300 / 0.55), transparent 70%)" }} />
       <div className="pointer-events-none absolute -bottom-32 -right-10 h-96 w-96 rounded-full opacity-60 blur-3xl" style={{ background: "radial-gradient(circle, oklch(0.86 0.14 220 / 0.5), transparent 70%)" }} />
       <NoiseTexture preset="fine" blendMode="soft-light" opacity={0.45} />
       {loading && <ShimmerOverlay />}
 
-      <div className="relative z-10 grid grid-cols-1 items-center gap-8 sm:gap-10 lg:grid-cols-12">
+      <div className="relative z-10 grid h-full grid-cols-1 items-center gap-8 sm:gap-10 lg:grid-cols-12">
         {/* Left: "Denna vecka" label + headline */}
         <div className="lg:col-span-5 flex flex-col gap-3">
           <div className="flex items-center gap-2">
@@ -57,9 +59,10 @@ export function DashboardHero({
             </p>
           </div>
           {loading ? (
-            <div className="flex flex-col gap-3">
-              <div className="h-8 w-[90%] rounded-full" style={{ background: AI_SHIMMER }} />
-              <div className="h-8 w-[70%] rounded-full" style={{ background: AI_SHIMMER }} />
+            <div className="flex flex-col gap-3 sm:gap-4">
+              <div className="h-8 w-[95%] rounded-full sm:h-11 md:h-12" style={{ background: AI_SHIMMER }} />
+              <div className="h-8 w-[85%] rounded-full sm:h-11 md:h-12" style={{ background: AI_SHIMMER }} />
+              <div className="h-8 w-[55%] rounded-full sm:h-11 md:h-12" style={{ background: AI_SHIMMER }} />
             </div>
           ) : (
             <h2
@@ -78,10 +81,16 @@ export function DashboardHero({
             style={{ background: "oklch(1 0 0 / 0.7)", border: "1px solid oklch(0.78 0.06 295 / 0.4)" }}
           >
             {loading ? (
-              <div className="flex flex-col gap-2.5" aria-label="AI-insikt laddas">
-                <div className="h-6 w-[90%] rounded-full" style={{ background: AI_SHIMMER }} />
-                <div className="h-6 w-[78%] rounded-full" style={{ background: AI_SHIMMER }} />
-                <div className="h-6 w-[60%] rounded-full" style={{ background: AI_SHIMMER }} />
+              <div aria-label="AI-insikt laddas">
+                <div className="flex flex-col gap-3 sm:gap-4">
+                  <div className="h-6 w-[92%] rounded-full sm:h-8" style={{ background: AI_SHIMMER }} />
+                  <div className="h-6 w-[88%] rounded-full sm:h-8" style={{ background: AI_SHIMMER }} />
+                  <div className="h-6 w-[80%] rounded-full sm:h-8" style={{ background: AI_SHIMMER }} />
+                  <div className="h-6 w-[45%] rounded-full sm:h-8" style={{ background: AI_SHIMMER }} />
+                </div>
+                <div className="mt-6">
+                  <div className="h-10 w-40 rounded-full" style={{ background: AI_SHIMMER }} />
+                </div>
               </div>
             ) : (
               <>

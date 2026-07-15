@@ -8,7 +8,7 @@ import { Download } from "lucide-react";
 import { localizeMockReportData, scenario1, scenario2, scenario3 } from "@/lib/mock-data";
 import { assembleDashboard } from "@/lib/dashboard/assemble";
 import { useLocale } from "@/lib/i18n";
-import { ShimmerCard } from "@/components/primitives/ShimmerCard";
+import { ShimmerCard, ShimmerOverlay } from "@/components/primitives/ShimmerCard";
 import { ConnectableSource, ConnectedSource, mergeReportData } from "@/lib/google/connected-sources";
 import { useDateRange } from "@/lib/google/date-presets";
 import { DateRangePicker } from "@/components/primitives/DateRangePicker";
@@ -42,6 +42,26 @@ function formatDateRangeLabel(range: { startDate: string }, locale: string): str
 }
 
 const EASING = [0.25, 0.1, 0.25, 1] as const;
+
+function TextShimmer({ width, height }: { width: string; height: string }) {
+  return (
+    <span
+      aria-hidden
+      style={{
+        position: "relative",
+        display: "inline-block",
+        overflow: "hidden",
+        width,
+        height,
+        borderRadius: "4px",
+        backgroundColor: "var(--bone)",
+        verticalAlign: "middle",
+      }}
+    >
+      <ShimmerOverlay />
+    </span>
+  );
+}
 
 function SectionItem({ item, data }: { item: AssembledDashboardItem; data: ReportData }) {
   if (item.itemId === "channel-breakdown") return <ChannelBreakdown item={item} data={data} />;
@@ -236,19 +256,23 @@ function DashboardPageInner() {
   return (
     <div className="flex min-h-dvh flex-1 flex-col">
       <header
-        className="sticky top-0 z-30 flex shrink-0 flex-col items-start justify-center gap-3 border-b py-4 pl-16 pr-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8 lg:pl-8"
+        className="sticky top-0 z-30 grid shrink-0 grid-cols-[minmax(0,1fr)_auto] grid-rows-[44px_auto] items-center gap-x-3 gap-y-2 border-b px-4 py-4 sm:flex sm:min-h-[88px] sm:items-center sm:justify-between sm:px-6 lg:px-8"
         style={{ borderColor: "var(--rule)", backgroundColor: "var(--parchment)", minHeight: "88px" }}
       >
-        <div className="min-w-0">
-          <p className="eyebrow" style={{ color: "var(--slate)" }}>{activeData.meta.period.label}</p>
+        <div className="col-start-1 row-start-2 min-w-0 sm:block">
+          <p className="eyebrow" style={{ color: "var(--slate)" }}>
+            {isLoadingRealData || aiInsightsLoading ? <TextShimmer width="72px" height="13px" /> : activeData.meta.period.label}
+          </p>
           <h1 style={{ fontFamily: "var(--font-display)", fontSize: "1.5rem", fontWeight: 600, color: "var(--charcoal)", letterSpacing: "-0.02em", marginTop: "2px" }}>
-            {t.dashboard.heading}
+            {isLoadingRealData || aiInsightsLoading ? <TextShimmer width="140px" height="20px" /> : t.dashboard.heading}
           </h1>
         </div>
-        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
-          <DateRangePicker locale={locale} />
+        <div className="contents sm:flex sm:w-auto sm:items-center sm:justify-end sm:gap-2">
+          <div className="col-start-2 row-start-2 justify-self-end">
+            <DateRangePicker locale={locale} />
+          </div>
           <button
-            className="inline-flex min-h-10 items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-80"
+            className="col-start-2 row-start-1 inline-flex min-h-11 items-center gap-2 justify-self-end rounded-xl px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-80 sm:min-h-10"
             style={{ backgroundColor: "var(--charcoal)", color: "var(--parchment)" }}
           >
             <Download className="h-4 w-4" />
@@ -325,11 +349,15 @@ function DashboardPageInner() {
           </motion.div>
         )}
 
-        {heroItem && !isLoadingRealData && (
-          <div className="flex flex-col gap-6">
+        {heroItem && (
+          <div
+            className="flex flex-col gap-6 min-h-[calc(100dvh-88px-2.5rem)] sm:min-h-[calc(100dvh-88px-4rem)]"
+          >
             <div>
               <p style={{ fontFamily: "var(--font-display)", fontSize: "clamp(1.75rem, 3vw, 2.75rem)", fontWeight: 700, color: "var(--charcoal)", letterSpacing: "-0.03em", lineHeight: 1.1 }}>
-                {propertyName ? (
+                {isLoadingRealData || aiInsightsLoading ? (
+                  <TextShimmer width="240px" height="2.75rem" />
+                ) : propertyName ? (
                   <>
                     <span style={{ color: "var(--slate)", fontWeight: 400 }}>Välkommen, </span>
                     {propertyName}
@@ -339,56 +367,66 @@ function DashboardPageInner() {
                 )}
               </p>
               <p style={{ marginTop: "6px", fontSize: "15px", color: "var(--slate)", lineHeight: 1.5 }}>
-                {activeData.meta.period.label} · Din digitala rapport är redo.
+                {isLoadingRealData || aiInsightsLoading ? (
+                  <TextShimmer width="200px" height="15px" />
+                ) : (
+                  `${activeData.meta.period.label} · Din digitala rapport är redo.`
+                )}
               </p>
             </div>
             <DashboardHero
               data={activeData}
               aiInsights={aiInsights}
-              loading={aiInsightsLoading}
+              loading={isLoadingRealData || aiInsightsLoading}
+              minHeight="0"
             />
           </div>
         )}
 
         {isLoadingRealData ? (
-          skeletonKpiCount > 0 && (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {Array.from({ length: skeletonKpiCount }).map((_, i) => (
-                <ShimmerCard key={i} loading height={160} />
-              ))}
+          <>
+            {skeletonKpiCount > 0 && (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {Array.from({ length: skeletonKpiCount }).map((_, i) => (
+                  <ShimmerCard key={i} loading height={160} />
+                ))}
+              </div>
+            )}
+            <ShimmerCard loading height={340} />
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <ShimmerCard loading height={280} />
+              <ShimmerCard loading height={280} />
             </div>
-          )
+          </>
         ) : (
-          kpiItems.length > 0 && (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {kpiItems.map((item, index) => (
-                <KpiCard key={item.itemId} item={item} data={activeData} index={index} loading={false} animateNumbers={hasConnectedSources} />
-              ))}
-            </div>
-          )
-        )}
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: EASING }}
+            className="flex flex-col gap-5 sm:gap-7"
+          >
+            {kpiItems.length > 0 && (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {kpiItems.map((item, index) => (
+                  <KpiCard key={item.itemId} item={item} data={activeData} index={index} loading={false} animateNumbers={hasConnectedSources} />
+                ))}
+              </div>
+            )}
 
-        {isLoadingRealData ? (
-          <ShimmerCard loading height={340} />
-        ) : (
-          chartItems.map((item) => (
-            <SessionsChart key={item.itemId} item={item} data={activeData} />
-          ))
-        )}
-
-        {isLoadingRealData ? (
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <ShimmerCard loading height={280} />
-            <ShimmerCard loading height={280} />
-          </div>
-        ) : sectionItems.length > 0 ? (
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {sectionItems.map((item) => (
-              <SectionItem key={item.itemId} item={item} data={activeData} />
+            {chartItems.map((item) => (
+              <SessionsChart key={item.itemId} item={item} data={activeData} />
             ))}
-            <NextStepsCard data={activeData} aiInsights={aiInsights} loading={aiInsightsLoading} />
-          </div>
-        ) : null}
+
+            {sectionItems.length > 0 && (
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                {sectionItems.map((item) => (
+                  <SectionItem key={item.itemId} item={item} data={activeData} />
+                ))}
+                <NextStepsCard data={activeData} aiInsights={aiInsights} loading={aiInsightsLoading} />
+              </div>
+            )}
+          </motion.div>
+        )}
 
         {dashboard.nudge && (
           <motion.div

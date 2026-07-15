@@ -2,7 +2,152 @@
 
 ---
 
-## NOW — Open priorities (2026-06-22)
+## NOW - Open priorities (2026-07-15)
+
+### Done this session (2026-07-15) — dashboard loading state + full-height AI hero
+
+**Header/eyebrow no longer shows mock data while loading**
+- Previously the header eyebrow ("MARS 2026" etc.) read `activeData.meta.period.label`, which falls back to hardcoded mock scenario data ("Mars 2026") whenever `reportData` is still `null` during load — visible above a field of skeleton cards.
+- Fixed by keeping the header `<p>`/`<h1>` always mounted and swapping their *text content* in place for a `TextShimmer` bar (new small helper component) while `isLoadingRealData || aiInsightsLoading` is true. No layout swap — same elements, same position, just text vs. shimmer.
+
+**Hero (AI insight card) sequencing decoupled from GA4/GSC load**
+- Previously the hero was gated by `!isLoadingRealData` only, so it appeared at the same instant as KPI/chart/section cards even though AI insight generation (`aiInsightsLoading`, a separate async lifecycle that can poll for up to ~24s on cache miss) often finishes later — producing a hero showing its own internal shimmer bars next to already-fully-loaded KPI cards.
+- Hero visibility (welcome text + `DashboardHero`) is now driven by `isLoadingRealData || aiInsightsLoading` combined, not just the GA4/GSC fetch state. KPI/chart/section cards are unchanged, still gated purely by `isLoadingRealData` with their own synchronized fade (`motion.div` + shared `EASING`).
+- `DashboardHero` itself is always mounted; its own existing internal `loading` prop (shimmer-bars-in-place-of-text) now drives the dashboard's loading visual directly — this guarantees pixel-identical layout between loading and loaded states since it's the literal same component/JSX, not a separate skeleton.
+- Shimmer bar sizes inside `DashboardHero` increased (3 bars left, 4 bars + button placeholder right) to approximate the real multi-line headline/paragraph footprint — matching content height was necessary for `items-center` to visually center both states at the same point; short shimmer bars centered differently than the taller real text even though the centering math was correct.
+
+**Hero made full-height ("storytelling" scroll) — new `minHeight` prop on `DashboardHero`**
+- `DashboardHero` accepts a new optional `minHeight?: string` prop (backward-compatible, only call site is the dashboard page) and its root is now `flex-1` so it can stretch inside a flex column.
+- Dashboard page wraps the hero block in a container with `min-h-[calc(100dvh-88px-2.5rem)] sm:min-h-[calc(100dvh-88px-4rem)]` (viewport height minus sticky header height minus `main`'s vertical padding), so the hero card fills roughly the remaining viewport on load and pushes KPI/chart/section cards below the fold — deliberate scroll-to-see-more behavior instead of everything cramming above the fold.
+- Inner content grid inside `DashboardHero` got `h-full` so `items-center` centers content within the full stretched height, not just its natural content height.
+- Known imprecision: the height calc doesn't account for the rare banner states (expired sources, no-data-for-period, etc.) that can appear above the hero — in those edge cases the hero may extend slightly past one viewport height.
+
+**Files changed**
+- `src/app/(app)/dashboard/page.tsx` (header shimmer, hero gating/sizing, new `TextShimmer` helper)
+- `src/components/dashboard/DashboardHero.tsx` (new `minHeight` prop, `flex-1` root, `h-full` inner grid, bigger/more shimmer bars)
+
+**Verification**
+- `npx tsc --noEmit` passed after each change.
+- No live browser check was possible in this environment (no `chromium-cli`, no auth credentials for the Supabase-gated `/dashboard` route) — all visual verification was done via screenshots the user provided directly.
+
+---
+
+## Previously — Open priorities (2026-07-12)
+
+### Done this session (2026-07-12) - report viewer proportional scale tuning
+
+**Responsive slide scaling**
+- Report slides now keep the fixed `1280 x 720` canvas model but scale proportionally from the available viewer stage.
+- `useCardScale()` now measures both the slide lane width and the scroll viewport height, then chooses the tighter fit axis.
+- Removed the old effective desktop ceiling (`max-w-[1400px]` + low scale cap) so desktop screens can grow the slide, while laptop screens still downscale cleanly.
+
+**Fullscreen behavior**
+- Fullscreen no longer re-zooms the slide based on the larger viewport.
+- Entering fullscreen captures the current slide scale into `presentationScale`.
+- While fullscreen is active, the viewer renders with the locked presentation scale (`FULLSCREEN_SCALE_BUMP = 1`) so the slide feels stable and the extra fullscreen area becomes breathing room.
+- Exiting fullscreen clears the lock and returns to normal responsive scaling.
+
+**Laptop fill tuning**
+- Initial normal-view scale was too conservative, then `SCALE_HEIGHT_BONUS = 128` and `80` proved too aggressive and pushed the slide under the top chrome.
+- Final current tuning is `SCALE_HEIGHT_BONUS = 60`, intended to sit between the subtle `48` pass and the cropped `80/128` passes.
+
+**Files changed**
+- `src/components/report/layout/useCardScale.ts`
+- `src/app/(report)/report/page.tsx`
+- `src/app/(report)/r/[token]/SharedReportClient.tsx`
+
+**Verification**
+- `npx.cmd tsc --noEmit` passed during the tuning passes.
+- Targeted ESLint passed with warnings only.
+- `npm.cmd run build` passed.
+- `/report` returned HTTP 200 on the local dev server.
+
+---
+
+### Done this session (2026-06-24) — AI insight prompt overhaul
+
+**Slide order changes**
+- Removed `SlideAIVisibility` (slide 9, "AI-synligheten är just nu okänd") from `slide-list.tsx` — archived for later, component file untouched.
+- Moved `SlideConversion` (Konvertering) up two positions — now sits at position 6, right after Trafikkällor, before Bästa sidor.
+
+**Red color deepened**
+- `TREND_NEG` in `tokens.ts` updated from `oklch(0.7 0.18 22)` to `oklch(0.62 0.22 22)` — deeper but punchy.
+- `TREND_NEG_BG` updated to match: `oklch(0.62 0.22 22 / 0.14)`.
+- `highlight-numbers.tsx` light theme neg updated to the same value so both the first (explicit span) and second (AI text highlighted) `-X%` on SlideHero are identical.
+
+**SlideHero layout tightened**
+- Outer flex changed from `justify-between py-12 mt-16` to `justify-center gap-10 py-8` — headline and summary card now sit together in the center with controlled gap, dead space top/bottom eliminated.
+- `space-y-3` → `space-y-2` between headline and period subtext.
+
+**CLARIX_SYSTEM_PROMPT — major rewrite**
+- Philosophy moved to the top: "Data är inte målet. Förståelse är målet." and "Varje insikt ska få läsaren att känna: 'Nu fattar jag vad som händer.'"
+- Four-question framework made explicit and mandatory — every surface must answer: Vad hände? → Är det bra eller dåligt (ta ställning) → Varför kan det ha hänt → Vad bör man hålla koll på?
+- Chris's jargon translation table baked in — explicit `term → plain Swedish` mapping for: Organic Search, Organic Social, Direct Traffic, Referral, Bounce Rate, CTR, Sessioner, Impressioner, Konverteringsfrekvens, Attribution/Kanalmix/Funnel, Cross-network.
+- Priority list rewritten in plain language — removed "konverteringsgrad" from the list itself (it was causing the model to use the term freely).
+- Testregel added: "Skulle en frisör, byggfirma eller skönhetssalong förstå den direkt? Om de måste tänka efter är den för avancerad."
+- Forbidden words list added with mandatory replacements: `konverteringsgraden`, `konverteringar`, `inflödet`, `trafikkvalitet`, `engagemanget`, `avvisningsfrekvensen`, `organisk trafik`, `betald trafik`, `CTR`, `ROAS`, `landningssida`, `sökordsranking`, `impressioner`, `attribution/kanalmix/funnel`, `optimera`, `skala`.
+- Preferred/forbidden sentence examples updated to reflect the new plain-language standard.
+
+**dashboard_hero constraint rewritten**
+- Old: "2 meningar. Mening 1: hur många besök, vad mätningen visar som starkaste kanal, och hur det jämförs med förra perioden."
+- New: "Exakt 3 meningar, max 15 ord vardera. Mening 1: vad hände (ett tal, ingen kanal). Mening 2: bra eller dåligt — ta ställning, förklara affärsmässigt. Mening 3: det enda ägaren bör hålla koll på nu."
+- Role reframed: deliver a verdict that earns the click to the report, not a summary of the measurement.
+
+**slide_hero constraint rewritten**
+- Old: explained the same things as dashboard_hero but slightly longer.
+- New: completely different job — explain the *cause* behind the verdict, not what happened. Must NOT start with "Besöken", "Trafiken", or a figure. Must assume the client already read the dashboard verdict.
+- Sentence structure: Sentence 1 = most likely cause (always hedged — "Det kan bero på"). Sentence 2 = what it means for the business. Sentence 3 = lens for reading the rest of the report.
+
+**docs/insight-investigation.md — new reference doc**
+- Full read-only investigation of all 6 AI insight surfaces: system prompt, constraints, data shapes, sufficiency gates, rendering components, good/bad examples, known issues.
+- Purpose: single reference for prompt tweaking without re-reading the codebase.
+
+**Files changed**
+- `src/lib/ai-insights/generate.ts` (CLARIX_SYSTEM_PROMPT full rewrite)
+- `src/app/api/generate-insights/route.ts` (dashboard_hero + slide_hero constraints)
+- `src/components/report/slide-list.tsx` (SlideAIVisibility removed, SlideConversion moved)
+- `src/components/report/tokens.ts` (TREND_NEG + TREND_NEG_BG deepened)
+- `src/lib/utils/highlight-numbers.tsx` (light theme neg color aligned)
+- `src/components/report/slides/SlideHero.tsx` (layout tightened)
+- `docs/insight-investigation.md` (new)
+
+**Note**: Cache version NOT bumped yet. Bump `AI_INSIGHTS_CACHE_VERSION` in `src/lib/ai-insights/cache.ts` when ready to invalidate all user caches and force regeneration with the new prompt.
+
+---
+
+### Done this session (2026-06-23/24) — report viewer UI + SlideIntro sparkline
+
+**KeyboardHints component — new**
+- `src/components/report/KeyboardHints.tsx` — standalone component rendering keycap-badge style keyboard hints. Three badges: `↑`, `↓`, `space` separated by `,` and `or` connectors. Badges: 1px `var(--rule)` border, off-white backdrop bg, `box-shadow: 0 2px 0 var(--rule)` keycap depth, 16px Satoshi, 7px border-radius.
+
+**Report viewer bottom bar redesign**
+- Removed the frosted-glass rounded-full pill container.
+- Removed the clickable prev/next arrow buttons (ArrowLeft/ArrowRight) from both sides.
+- Removed the `1 / {total}` slide counter.
+- Arrow direction changed to ↑/↓ to match actual keyboard shortcut behavior.
+- Bottom bar now shows only `<KeyboardHints />` centered, no wrapper styling.
+- Applied to both `report/page.tsx` and `SharedReportClient.tsx`.
+
+**SlideRecap — eyebrow + decorative circles removed**
+- Removed "Vill du ha hjälp att gå från insikt till handling?" uppercase eyebrow `<p>`.
+- Removed the three concentric SVG circle strokes (`r=120/180/240`) from the right of the CTA card.
+
+**SlideIntro — decorative sparkline + full-black text**
+- Fixed bezier sparkline, not data-driven (real timeSeries produced a jagged wavy chart; this is always a smooth arc). Anchored to canvas top-left (`top: -48, left: -64` cancels `px-16 py-12` padding), sized 1460×720 to bleed outside the card right/top edges.
+- Curve: `M 0 720 C 800 720 1080 210 1460 -40` — flat along the bottom-left, sweeps steeply up to exit top-right corner.
+- Fill: `#FF6B55` coral at 18% → 0% opacity vertical gradient.
+- Stroke: brand gradient `#FF4D9E → #FF6B55 → #FFB830` horizontal, 2.5px.
+- `z-index: -1` so SVG sits behind text.
+- "Trafikrapport" subtext and domain·period meta changed from muted rgba to full black (`#1a1714`).
+
+**Files changed**
+- `src/components/report/KeyboardHints.tsx` (new)
+- `src/app/(report)/report/page.tsx`
+- `src/app/(report)/r/[token]/SharedReportClient.tsx`
+- `src/components/report/slides/SlideRecap.tsx`
+- `src/components/report/slides/SlideIntro.tsx`
+
+---
 
 ### Done this session (2026-06-22) — polish + login
 
