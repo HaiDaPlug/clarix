@@ -1,6 +1,9 @@
 "use client";
 
+import { useRef } from "react";
+import { motion, useInView, useReducedMotion } from "motion/react";
 import { InfoTooltip } from "@/components/primitives/InfoTooltip";
+import { NumberTicker } from "@/components/ui/number-ticker";
 import { type SlideData } from "../slide-data";
 import { TrendPill, fmtNum, sign } from "../primitives/TrendPill";
 import { SlideHeading } from "../primitives/SlideHeading";
@@ -13,47 +16,67 @@ function fmtDuration(seconds: number | null): string {
   return `${m} min ${s} s`;
 }
 
+const EASE_OUT = [0, 0, 0.2, 1] as const;
+
 export function SlideKpis({ d }: { d: SlideData }) {
+  const reduced = useReducedMotion() === true;
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, amount: 0.75 });
+  const active = inView || reduced;
+
   const kpis = [
     {
       l: "Besök",
-      v: fmtNum(d.visits),
+      value: d.visits as number | null,
+      format: fmtNum,
       d: sign(d.trafficDelta),
       p: (d.trafficDelta ?? null) !== null && d.trafficDelta! > 0,
       tip: { title: "Vad är ett besök?", body: "Varje gång någon laddar sidan räknas det som ett besök — oavsett om de har varit inne förut.", example: "Samma person som besöker tre gånger = 3 besök." },
     },
     {
       l: "Antal personer",
-      v: fmtNum(d.people),
+      value: d.people as number | null,
+      format: fmtNum,
       d: sign(d.peopleDelta),
       p: (d.peopleDelta ?? null) !== null && d.peopleDelta! > 0,
       tip: { title: "Vad betyder antal personer?", body: "En person räknas bara en gång, även om den besöker flera gånger.", example: "1 person som går in 3 gånger = 3 besök, men bara 1 person här." },
     },
     {
       l: "Tid på sidan",
-      v: fmtDuration(d.avgDuration),
+      value: d.avgDuration != null && d.avgDuration > 0 ? d.avgDuration : null,
+      format: fmtDuration,
       d: sign(d.timeDelta),
       p: (d.timeDelta ?? null) !== null && d.timeDelta! > 0,
       tip: { title: "Genomsnittlig besökstid", body: "Hur länge en genomsnittlig besökare stannar. Längre tid betyder att folk hittar det de söker.", example: "2 min 14 s innebär att besökarna läser — inte bara studsar vidare." },
     },
     {
       l: "Leads",
-      v: fmtNum(d.leads),
+      value: d.leads as number | null,
+      format: fmtNum,
       d: sign(d.leadsDelta),
       p: (d.leadsDelta ?? null) !== null && d.leadsDelta! > 0,
       tip: { title: "Vad räknas som ett lead?", body: "Varje registrerad konvertering — t.ex. ifyllt kontaktformulär, telefonklick eller köp.", example: "Kräver att konverteringsspårning är aktiverat i Google Analytics." },
     },
   ];
   return (
-    <div className="space-y-8">
-      <SlideHeading sub="Så ser perioden ut i siffror — jämfört med föregående månad.">
-        Snabb överblick
-      </SlideHeading>
+    <div ref={ref} className="space-y-8">
+      <motion.div
+        initial={reduced ? false : { opacity: 0, y: 14 }}
+        animate={{ opacity: active ? 1 : 0, y: active ? 0 : (reduced ? 0 : 14) }}
+        transition={{ duration: reduced ? 0 : 0.7, ease: EASE_OUT }}
+      >
+        <SlideHeading sub="Så ser perioden ut i siffror — jämfört med föregående månad.">
+          Snabb överblick
+        </SlideHeading>
+      </motion.div>
       <div className="grid grid-cols-2 gap-4 sm:gap-6">
-        {kpis.map((k) => (
-          <div
+        {kpis.map((k, i) => (
+          <motion.div
             key={k.l}
             className="flex h-full min-h-[200px] flex-col rounded-3xl border border-border bg-background/85 p-6 shadow-[0_2px_4px_rgba(15,23,42,0.04),0_18px_40px_-22px_rgba(15,23,42,0.22)]"
+            initial={reduced ? false : { opacity: 0, y: 16 }}
+            animate={{ opacity: active ? 1 : 0, y: active ? 0 : (reduced ? 0 : 16) }}
+            transition={{ duration: reduced ? 0 : 0.7, ease: EASE_OUT, delay: reduced ? 0 : 0.25 + i * 0.13 }}
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-1.5">
@@ -63,9 +86,9 @@ export function SlideKpis({ d }: { d: SlideData }) {
               <TrendPill delta={k.d} positive={k.p} size="md" />
             </div>
             <p className="mt-auto pt-6 font-display text-[4.2rem] font-semibold leading-none tracking-tight tabular-nums">
-              {k.v}
+              {k.value == null ? "–" : <NumberTicker value={k.value} format={k.format} />}
             </p>
-          </div>
+          </motion.div>
         ))}
       </div>
     </div>

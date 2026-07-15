@@ -3,7 +3,7 @@
 import { motion, useReducedMotion } from "motion/react";
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer } from "recharts";
-import { AnimatedCounter } from "@/components/landing/animated-counter";
+import { NumberTicker } from "@/components/ui/number-ticker";
 import { ShimmerOverlay } from "@/components/primitives/ShimmerCard";
 import { formatNumber } from "@/lib/utils/format";
 import { AssembledDashboardItem, DashboardItemId } from "@/types/dashboard";
@@ -188,7 +188,7 @@ export function KpiCard({
                       ···
                     </motion.span>
                   ) : (
-                    <AnimatedCounter value={metric.value} format={(n) => formatNumber(n, metric.unit)} animate={animateNumbers} />
+                    <NumberTicker value={metric.value} format={(n) => formatNumber(n, metric.unit)} animate={animateNumbers} />
                   )}
                 </span>
               </NumberFlash>

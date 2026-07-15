@@ -277,6 +277,11 @@ html[data-magicui-theme-vt="active"]::view-transition-group(root) {
 .recharts-cartesian-grid-horizontal line,
 .recharts-cartesian-grid-vertical line { stroke: var(--rule-light); }
 
+/* Recharts sets its own inline `cursor` style on hover, which wins over the
+   body-level cursor:none set by SmoothCursor. Force it off while active. */
+body.smooth-cursor-active .recharts-wrapper,
+body.smooth-cursor-active .recharts-wrapper * { cursor: none !important; }
+
 /* ─── Scrollbar ───────────────────────────────────────────────────────────── */
 
 ::-webkit-scrollbar { width: 3px; }
