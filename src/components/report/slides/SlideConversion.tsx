@@ -1,30 +1,35 @@
 "use client";
 
+import { motion } from "motion/react";
 import { CheckCircle2, Plug } from "lucide-react";
 import { NoiseTexture } from "@/components/ui/noise-texture";
 import { type SlideData } from "../slide-data";
 import { TREND_POS, ACCENT, AI_GRADIENT, AI_TEXT_PRIMARY, AI_TEXT_SECONDARY, AI_BORDER } from "../tokens";
 import { fmtNum, sign } from "../primitives/TrendPill";
 import { SlideHeading } from "../primitives/SlideHeading";
+import { useSlideReveal, fadeUp } from "../primitives/reveal";
 
 export function SlideConversion({ d }: { d: SlideData }) {
+  const { ref, active, reduced } = useSlideReveal();
+
   if (d.hasConversions) {
     return (
-      <div className="space-y-7">
-        <div>
+      <div ref={ref} className="space-y-7">
+        <motion.div {...fadeUp(active, reduced)}>
           <SlideHeading sub="Senaste perioden — alla mätta konverteringar.">
             Affären bakom trafiken
           </SlideHeading>
-        </div>
+        </motion.div>
         <div className="grid gap-4 sm:grid-cols-3">
           {[
             { l: "Konverteringar", v: fmtNum(d.leads), dd: sign(d.leadsDelta) },
             { l: "Bästa kanal", v: "Google SEO", dd: "42 %" },
             { l: "Värde per lead", v: "—", dd: "" },
-          ].map((m) => (
-            <div
+          ].map((m, i) => (
+            <motion.div
               key={m.l}
               className="rounded-3xl border border-border bg-background/85 p-6"
+              {...fadeUp(active, reduced, { y: 16, delay: 0.15 + i * 0.1 })}
             >
               <p className="text-sm text-foreground">{m.l}</p>
               <p className="mt-2 font-display text-3xl tracking-tight">{m.v}</p>
@@ -33,15 +38,15 @@ export function SlideConversion({ d }: { d: SlideData }) {
                   {m.dd}
                 </p>
               )}
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>
     );
   }
   return (
-    <div className="grid h-full content-center gap-10 lg:grid-cols-[1.1fr_1fr]">
-      <div className="space-y-6">
+    <div ref={ref} className="grid h-full content-center gap-10 lg:grid-cols-[1.1fr_1fr]">
+      <motion.div className="space-y-6" {...fadeUp(active, reduced)}>
         <SlideHeading sub="Just nu mäter vi besök — men inte vad de leder till.">
           Du ser trafiken — men inte affären
         </SlideHeading>
@@ -57,10 +62,11 @@ export function SlideConversion({ d }: { d: SlideData }) {
           <Plug className="h-4 w-4" />
           Koppla på konverteringsspårning
         </button>
-      </div>
-      <div
+      </motion.div>
+      <motion.div
         className="relative overflow-hidden rounded-3xl p-8 flex flex-col justify-center"
         style={{ background: AI_GRADIENT, border: `1px solid ${AI_BORDER}`, boxShadow: "0 24px 60px -26px rgba(139,92,246,0.25)" }}
+        {...fadeUp(active, reduced, { delay: 0.15 })}
       >
         <div className="pointer-events-none absolute -top-24 -left-16 h-72 w-72 rounded-full opacity-60 blur-3xl" style={{ background: "radial-gradient(circle, oklch(0.85 0.16 300 / 0.55), transparent 70%)" }} />
         <div className="pointer-events-none absolute -bottom-24 -right-10 h-72 w-72 rounded-full opacity-60 blur-3xl" style={{ background: "radial-gradient(circle, oklch(0.86 0.14 220 / 0.5), transparent 70%)" }} />
@@ -84,7 +90,7 @@ export function SlideConversion({ d }: { d: SlideData }) {
             ))}
           </ul>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

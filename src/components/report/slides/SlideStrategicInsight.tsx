@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "motion/react";
 import { NoiseTexture } from "@/components/ui/noise-texture";
 import { type AiInsightsPayload } from "@/lib/ai-insights/types";
 import { type Insight } from "@/lib/engine/derive-insights";
@@ -7,6 +8,7 @@ import { deriveSignalCards } from "@/lib/engine/signal-cards";
 import { withPeriod } from "@/lib/utils/text";
 import { highlightNumbers } from "@/lib/utils/highlight-numbers";
 import { TREND_POS, TREND_NEG, ACCENT, AI_GRADIENT, AI_TEXT_PRIMARY, AI_TEXT_SECONDARY, AI_BORDER, AI_SHIMMER } from "../tokens";
+import { useSlideReveal, fadeUp } from "../primitives/reveal";
 
 export function SlideStrategicInsight({
   aiInsights,
@@ -15,27 +17,29 @@ export function SlideStrategicInsight({
   aiInsights: AiInsightsPayload | null;
   insights: Insight[];
 }) {
+  const { ref, active, reduced } = useSlideReveal();
   const aiInsight = aiInsights?.slide_insight;
   const signals = deriveSignalCards(insights);
 
   return (
-    <div className="grid h-full grid-cols-[1fr_1.05fr] gap-6 content-center">
+    <div ref={ref} className="grid h-full grid-cols-[1fr_1.05fr] gap-6 content-center">
       {/* Left: heading + signal list */}
       <div className="flex flex-col justify-center gap-6">
-        <div>
+        <motion.div {...fadeUp(active, reduced)}>
           <h1 className="font-display text-[2.9rem] font-bold leading-[1.05] tracking-tight lg:text-[3.4rem]">
             Synligheten ökar.<br />Affärsvärdet fångas inte fullt ut<span style={{ color: "#FF6B55" }}>.</span>
           </h1>
           <p className="mt-3 text-[20px] text-foreground leading-relaxed">
             Vad siffrorna faktiskt betyder för er, bortom dashboarden.
           </p>
-        </div>
+        </motion.div>
         {signals.length > 0 && (
         <ul className="space-y-3">
-          {signals.map((s) => (
-            <li
+          {signals.map((s, i) => (
+            <motion.li
               key={s.label}
               className="flex items-start gap-4 rounded-2xl border border-border bg-background/80 px-5 py-4"
+              {...fadeUp(active, reduced, { y: 10, delay: 0.15 + i * 0.08 })}
             >
               <span
                 className="mt-0.5 h-2 w-2 shrink-0 rounded-full"
@@ -45,16 +49,17 @@ export function SlideStrategicInsight({
                 <p className="font-semibold text-[19px]">{s.label}</p>
                 <p className="mt-0.5 text-[18px] leading-relaxed text-foreground">{s.body}</p>
               </div>
-            </li>
+            </motion.li>
           ))}
         </ul>
         )}
       </div>
 
       {/* Right: expanded summary card */}
-      <div
+      <motion.div
         className="relative overflow-hidden rounded-3xl p-8 flex flex-col justify-between"
         style={{ background: AI_GRADIENT, border: `1px solid ${AI_BORDER}`, boxShadow: "0 24px 60px -26px rgba(139,92,246,0.25)" }}
+        {...fadeUp(active, reduced, { delay: 0.2 })}
       >
         <div className="pointer-events-none absolute -top-24 -left-16 h-72 w-72 rounded-full opacity-60 blur-3xl" style={{ background: "radial-gradient(circle, oklch(0.85 0.16 300 / 0.55), transparent 70%)" }} />
         <div className="pointer-events-none absolute -bottom-24 -right-10 h-72 w-72 rounded-full opacity-60 blur-3xl" style={{ background: "radial-gradient(circle, oklch(0.86 0.14 220 / 0.5), transparent 70%)" }} />
@@ -93,7 +98,7 @@ export function SlideStrategicInsight({
             </p>
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

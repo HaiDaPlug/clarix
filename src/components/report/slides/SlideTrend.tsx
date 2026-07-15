@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "motion/react";
 import {
   Area,
   AreaChart,
@@ -12,9 +13,11 @@ import {
 import { type SlideData } from "../slide-data";
 import { TrendPill, sign, formatDuration } from "../primitives/TrendPill";
 import { ACCENT } from "../tokens";
+import { useSlideReveal, fadeUp } from "../primitives/reveal";
 
 export function SlideTrend({ d }: { d: SlideData }) {
   const accent = ACCENT;
+  const { ref, active, reduced } = useSlideReveal();
 
   const topThree = d.topChannels.slice(0, 3);
   const rightStats: { label: string; value: string; delta?: number | null }[] = [
@@ -24,20 +27,20 @@ export function SlideTrend({ d }: { d: SlideData }) {
   ];
 
   return (
-    <div className="flex flex-col gap-5 h-full">
+    <div ref={ref} className="flex flex-col gap-5 h-full">
       {/* Header */}
-      <div className="shrink-0">
+      <motion.div className="shrink-0" {...fadeUp(active, reduced)}>
         <h1 className="font-display text-[3.1rem] font-bold leading-[1.05] tracking-tight lg:text-[3.8rem]">
           Så hittar besökarna till er<span style={{ color: "#FF6B55" }}>.</span>
         </h1>
         <p className="mt-1 text-[21px] text-foreground">{d.period}</p>
-      </div>
+      </motion.div>
 
       {/* Main row: chart left, stats right */}
       <div className="grid grid-cols-[1fr_196px] gap-4 flex-1 min-h-0">
 
         {/* Chart card */}
-        <div className="rounded-2xl border border-border/60 bg-background/70 p-5 flex flex-col min-h-0">
+        <motion.div className="rounded-2xl border border-border/60 bg-background/70 p-5 flex flex-col min-h-0" {...fadeUp(active, reduced, { delay: 0.15 })}>
           <div className="flex items-center justify-between gap-4 mb-3 shrink-0">
             <div>
               <p className="text-[18px] font-semibold uppercase tracking-[0.2em] text-foreground">Totala besök</p>
@@ -111,10 +114,10 @@ export function SlideTrend({ d }: { d: SlideData }) {
               </div>
             </div>
           )}
-        </div>
+        </motion.div>
 
         {/* Right stats column */}
-        <div className="rounded-2xl border border-border/60 bg-background/70 px-5 py-5 flex flex-col min-h-0 overflow-hidden">
+        <motion.div className="rounded-2xl border border-border/60 bg-background/70 px-5 py-5 flex flex-col min-h-0 overflow-hidden" {...fadeUp(active, reduced, { delay: 0.22 })}>
           <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-foreground mb-3 shrink-0">
             Per kanal
           </p>
@@ -135,7 +138,7 @@ export function SlideTrend({ d }: { d: SlideData }) {
               </div>
             ))}
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );

@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "motion/react";
 import { type SlideData } from "../slide-data";
+import { useSlideReveal, fadeUp } from "../primitives/reveal";
 
 function Sparkline() {
   // Fixed decorative bezier — not data-driven.
@@ -9,7 +11,7 @@ function Sparkline() {
   // Curve: nearly flat along the bottom-left, sweeps up to exit top-right corner.
   const W = 1460;
   const H = 720;
-  const line = `M 0 ${H} C 620 ${H} 960 190 ${W} -40`;
+  const line = `M 0 ${H} C 800 ${H} 1080 210 ${W} -40`;
   const area = `${line} L ${W} ${H} L 0 ${H} Z`;
 
   return (
@@ -28,29 +30,36 @@ function Sparkline() {
     >
       <defs>
         <linearGradient id="intro-spark-grad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stopColor="rgb(175,182,198)" stopOpacity="0.75" />
-          <stop offset="65%"  stopColor="rgb(200,205,215)" stopOpacity="0.18" />
-          <stop offset="100%" stopColor="rgb(255,255,255)" stopOpacity="0" />
+          <stop offset="0%"   stopColor="#FF6B55" stopOpacity="0.18" />
+          <stop offset="60%"  stopColor="#FF6B55" stopOpacity="0.06" />
+          <stop offset="100%" stopColor="#FF6B55" stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id="intro-spark-stroke" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%"   stopColor="#FF4D9E" />
+          <stop offset="50%"  stopColor="#FF6B55" />
+          <stop offset="100%" stopColor="#FFB830" />
         </linearGradient>
       </defs>
       <path d={area} fill="url(#intro-spark-grad)" />
-      <path d={line} stroke="rgba(26,23,20,0.38)" strokeWidth="1" fill="none" />
+      <path d={line} stroke="url(#intro-spark-stroke)" strokeWidth="2.5" fill="none" />
     </svg>
   );
 }
 
 export function SlideIntro({ d }: { d: SlideData }) {
   const [faviconFailed, setFaviconFailed] = useState(false);
+  const { ref, active, reduced } = useSlideReveal();
 
   const name = d.clientName ?? "Din webbplats";
   const showFavicon = !!d.clientDomain && !faviconFailed;
   const meta = [d.clientDomain, d.period].filter(Boolean).join("  ·  ");
 
   return (
-    <div className="relative h-full flex flex-col">
+    <div ref={ref} className="relative h-full flex flex-col">
       {/* Favicon — top-right, absolute */}
       {showFavicon && (
-        <img
+        <motion.img
+          {...fadeUp(active, reduced, { y: 8 })}
           src={`/api/favicon?domain=${d.clientDomain}`}
           alt=""
           width={72}
@@ -67,8 +76,9 @@ export function SlideIntro({ d }: { d: SlideData }) {
       )}
 
       {/* Property name */}
-      <h1
+      <motion.h1
         className="font-display"
+        {...fadeUp(active, reduced)}
         style={{
           fontSize: 72,
           fontWeight: 800,
@@ -81,10 +91,11 @@ export function SlideIntro({ d }: { d: SlideData }) {
       >
         {name}
         <span style={{ color: "#FF6B55" }}>.</span>
-      </h1>
+      </motion.h1>
 
       {/* Subtext */}
-      <p
+      <motion.p
+        {...fadeUp(active, reduced, { delay: 0.1 })}
         style={{
           fontSize: 20,
           color: "#1a1714",
@@ -94,11 +105,12 @@ export function SlideIntro({ d }: { d: SlideData }) {
         }}
       >
         Trafikrapport från föregående period.
-      </p>
+      </motion.p>
 
       {/* Domain · period */}
       {meta && (
-        <p
+        <motion.p
+          {...fadeUp(active, reduced, { delay: 0.18 })}
           style={{
             fontSize: 14,
             color: "#1a1714",
@@ -108,7 +120,7 @@ export function SlideIntro({ d }: { d: SlideData }) {
           }}
         >
           {meta}
-        </p>
+        </motion.p>
       )}
 
       {/* Sparkline — fixed decorative bezier, bleeds outside slide at bottom-right */}

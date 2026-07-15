@@ -1,12 +1,15 @@
 "use client";
 
+import { motion } from "motion/react";
 import { PenSquare, Target, Zap } from "lucide-react";
 import { type AiInsightsPayload } from "@/lib/ai-insights/types";
 import { withPeriod } from "@/lib/utils/text";
 import { highlightNumbers } from "@/lib/utils/highlight-numbers";
 import { SlideHeading } from "../primitives/SlideHeading";
+import { useSlideReveal, fadeUp } from "../primitives/reveal";
 
 export function SlideRecommendations({ aiInsights }: { aiInsights: AiInsightsPayload | null }) {
+  const { ref, active, reduced } = useSlideReveal();
   const aiRecs = aiInsights?.slide_recs;
   const actions = [
     {
@@ -29,12 +32,12 @@ export function SlideRecommendations({ aiInsights }: { aiInsights: AiInsightsPay
     },
   ];
   return (
-    <div className="space-y-7">
-      <div>
+    <div ref={ref} className="space-y-7">
+      <motion.div {...fadeUp(active, reduced)}>
         <SlideHeading sub="Tre fokusområden att prioritera den närmaste perioden.">
           Rekommenderade fokusområden
         </SlideHeading>
-      </div>
+      </motion.div>
       <div className="grid gap-4 md:grid-cols-3">
         {actions.map((a, index) => {
           const Icon = a.icon;
@@ -42,9 +45,10 @@ export function SlideRecommendations({ aiInsights }: { aiInsights: AiInsightsPay
             ? null
             : aiRecs?.[index]?.body ?? a.b;
           return (
-            <div
+            <motion.div
               key={a.t}
               className="group relative flex flex-col overflow-hidden rounded-3xl border border-border bg-background/95 p-7 shadow-[0_4px_8px_rgba(15,23,42,0.03),0_18px_44px_-22px_rgba(15,23,42,0.18)] transition-all hover:-translate-y-0.5"
+              {...fadeUp(active, reduced, { y: 16, delay: 0.15 + index * 0.1 })}
             >
               <div className="flex items-center justify-between">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl text-white" style={{ background: "linear-gradient(135deg, #FF4D9E 0%, #FF6B55 50%, #FFB830 100%)" }}>
@@ -63,7 +67,7 @@ export function SlideRecommendations({ aiInsights }: { aiInsights: AiInsightsPay
                   : <p>{highlightNumbers(withPeriod(body), "light")}</p>
                 }
               </div>
-            </div>
+            </motion.div>
           );
         })}
       </div>

@@ -4,6 +4,95 @@
 
 ## NOW - Open priorities (2026-07-15)
 
+### Done this session (2026-07-15) — smooth cursor, animated counters, scroll-reveal on all report slides
+
+**SmoothCursor — report-only custom cursor**
+- New `src/components/ui/smooth-cursor.tsx`, adapted from the MagicUI component. Desktop-only (`(any-hover: hover) and (any-pointer: fine)` media query gate), hides the native cursor while mounted.
+- Position tracking is instant (`useMotionValue`, no spring) after user feedback that spring-lagged movement felt unresponsive. Rotation-on-movement was removed entirely (was causing visible spin on rapid direction changes over the wavy trend chart) — cursor now holds a fixed `-18deg` tilt like a normal pointer, with only a small scale squish on movement.
+- Recharts renders its own inline `cursor: default` on `.recharts-wrapper` on hover, which was winning over the body-level `cursor: none` and letting the native arrow show through over charts. Fixed with a `body.smooth-cursor-active` class toggled by the component + a scoped `!important` override in `globals.css`.
+- Mounted in `report/page.tsx` and `SharedReportClient.tsx` only (not global).
+
+**NumberTicker — animated KPI counters**
+- New `src/components/ui/number-ticker.tsx`, adapted from MagicUI. Added a `format?: (n: number) => string` prop (the stock component only supports `Intl.NumberFormat` + `decimalPlaces`, insufficient for this app's `formatNumber` util which handles %, currency, and K/M compact notation) and an `animate?: boolean` prop (instant-render fallback, matching the old `AnimatedCounter`'s API).
+- Replaced `AnimatedCounter` with `NumberTicker` in `KpiCard.tsx` (dashboard) — same call site, same props.
+- Wired into `SlideKpis.tsx` (report slide 3, "Snabb överblick") — Besök, Antal personer, Tid på sidan, Leads all count up from 0 using each metric's existing formatter.
+
+**Scroll-reveal on all report slides**
+- New `src/components/report/primitives/reveal.ts` — `useSlideReveal()` (ref + `useInView` + reduced-motion) and `fadeUp()` (opacity/y/transition helper), extracted after the same boilerplate started drifting out of sync between `SlideKpis` and `SlideChannels`.
+- Trigger tuning went through several iterations (`amount: 0.5` → `0.75` → `0.9` → `0.82`, plain `margin: "-12%"`) before landing on a **symmetric center-band**: `margin: "-32% 0px -32% 0px"`. This only fires once a slide has scrolled into roughly the vertical middle of the screen, not the instant any edge intersects — and because it's a percentage of the real viewport, it self-corrects for fullscreen vs. windowed browsing instead of needing separate tuning per mode.
+- Applied consistently to all 10 slides in the deck: `SlideIntro`, `SlideHero`, `SlideKpis`, `SlideTrend`, `SlideChannels`, `SlideConversion`, `SlidePages`, `SlideStrategicInsight`, `SlideRecommendations`, `SlideRecap`. Each slide fades its heading first, then its main content block(s)/cards/rows with a small index-based stagger. `SlideChannels`' existing bar-fill/label choreography was left untouched — only its heading gained a fade.
+- `SlideAIVisibility.tsx` is not wired into `slide-list.tsx` (archived per the 2026-06-24 entry below) — left untouched.
+- **Note:** `SlideHero.tsx` also received the reveal treatment, but a concurrent session rewrote its entire layout (gradient glass-card redesign) in the same file while this work was in progress. That file's reveal addition is real but currently sits uncommitted, entangled with the unrelated redesign — same situation as `report/page.tsx`/`SharedReportClient.tsx` below.
+
+**Files changed**
+- `src/components/ui/smooth-cursor.tsx` (new)
+- `src/components/ui/number-ticker.tsx` (new)
+- `src/components/report/primitives/reveal.ts` (new)
+- `src/components/dashboard/KpiCard.tsx`
+- `src/components/report/slides/SlideKpis.tsx`
+- `src/components/report/slides/SlideChannels.tsx`
+- `src/components/report/slides/SlideConversion.tsx`
+- `src/components/report/slides/SlideIntro.tsx`
+- `src/components/report/slides/SlidePages.tsx`
+- `src/components/report/slides/SlideRecap.tsx`
+- `src/components/report/slides/SlideRecommendations.tsx`
+- `src/components/report/slides/SlideStrategicInsight.tsx`
+- `src/components/report/slides/SlideTrend.tsx`
+- `src/app/globals.css` (Recharts cursor override)
+
+**Verification**
+- `npx tsc --noEmit` passed after every change.
+- `eslint` on touched files passed (one pre-existing unused-var warning in `SlideRecap.tsx`, unrelated).
+- No live browser check in this environment — timing/feel was tuned entirely from user feedback across several rounds.
+
+---
+
+### Done this session (2026-07-15) — phone-first mobile app + portrait report
+
+**Responsive report experience**
+- Added a dedicated semantic portrait report for phones with nine scrollable sections: overview, KPIs, trend, channels, conversions, pages, interpretation, recommendations, and recap.
+- The portrait report reuses the existing ReportData, SlideData, derived insights, AI payloads, chart data, colors, and design tokens rather than creating a second reporting data flow.
+- Both authenticated reports and public shared reports use the portrait experience at phone widths.
+- Phone landscape and desktop retain the existing fixed-canvas slide deck. Orientation changes now detach and reattach slide observers correctly, and desktop keyboard navigation is disabled while portrait mode is active.
+- AI generation loading is distinct from a missing AI snapshot, so live reports shimmer while generating and shared reports use stable fallback copy instead of loading forever.
+- Added portrait loading, empty/no-source states, safe-area support, section navigation, and mobile-sized controls.
+
+**Authenticated shell + adjacent pages**
+- Removed the duplicate desktop/mobile child render in AppShell; pages now mount once and receive responsive sidebar margin through CSS.
+- Mobile navigation now behaves as an accessible modal drawer with focus trapping, Escape-to-close, body scroll locking, focus restoration, dialog semantics, and safe-area padding.
+- Clients, integrations, and settings received mobile header spacing, compact content gutters, and 44px touch targets.
+- Dashboard sessions/channel cards stack cleanly at narrow widths. The data explorer was intentionally left unchanged.
+
+**Landing + dashboard header**
+- Added the compact landing-page mobile menu with direct links to features, channels, agencies, and pricing.
+- Reduced the mobile logo footprint, protected 320px layouts from overflow, and retained desktop navigation.
+- Refined the dashboard mobile header into two rows: hamburger and Export at the top, with the period/title directly below the hamburger and the calendar directly below Export. Desktop keeps the horizontal toolbar.
+
+**Files changed**
+- src/components/report/MobileReportDeck.tsx
+- src/components/report/usePortraitReport.ts
+- src/app/(report)/report/page.tsx
+- src/app/(report)/r/[token]/SharedReportClient.tsx
+- src/components/layout/AppShell.tsx
+- src/components/layout/Sidebar.tsx
+- src/app/(app)/dashboard/page.tsx
+- src/app/(app)/clients/page.tsx
+- src/app/(app)/integrations/page.tsx
+- src/app/(app)/settings/page.tsx
+- src/components/dashboard/SessionsChart.tsx
+- src/components/dashboard/ChannelBreakdown.tsx
+- src/components/landing/landing-sections.tsx
+
+**Verification**
+- npx.cmd tsc --noEmit passed.
+- Scoped ESLint passed with no errors.
+- Vitest passed: 35/35 tests.
+- npm.cmd run build passed.
+- git diff --check passed.
+- Automated viewport screenshots were not available because the in-app browser runtime failed during initialization; responsive behavior was reviewed statically and against user-provided screenshots.
+
+---
+
 ### Done this session (2026-07-15) — dashboard loading state + full-height AI hero
 
 **Header/eyebrow no longer shows mock data while loading**

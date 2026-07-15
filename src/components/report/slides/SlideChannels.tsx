@@ -1,12 +1,12 @@
 "use client";
 
-import { useRef } from "react";
-import { motion, useInView, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
 import { NoiseTexture } from "@/components/ui/noise-texture";
 import { InfoTooltip } from "@/components/primitives/InfoTooltip";
 import { type SlideData } from "../slide-data";
 import { fmtNum, sign, TrendPill } from "../primitives/TrendPill";
 import { SlideHeading } from "../primitives/SlideHeading";
+import { useSlideReveal, fadeUp } from "../primitives/reveal";
 
 const CHANNEL_COLORS = [
   "#FF6B6B", // rose
@@ -18,16 +18,15 @@ const CHANNEL_COLORS = [
 ];
 
 export function SlideChannels({ d }: { d: SlideData }) {
-  const reduced = useReducedMotion() === true;
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-5%" });
-  const active = inView || reduced;
+  const { ref, active, reduced } = useSlideReveal();
 
   return (
     <div className="space-y-8">
-      <SlideHeading sub="Det här är källorna som driver flest besök till din sida.">
-        Dina bästa trafikkällor
-      </SlideHeading>
+      <motion.div {...fadeUp(active, reduced)}>
+        <SlideHeading sub="Det här är källorna som driver flest besök till din sida.">
+          Dina bästa trafikkällor
+        </SlideHeading>
+      </motion.div>
 
       <div ref={ref} className="space-y-12">
         {d.topChannels.map((c, i) => {

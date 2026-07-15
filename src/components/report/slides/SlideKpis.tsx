@@ -1,12 +1,12 @@
 "use client";
 
-import { useRef } from "react";
-import { motion, useInView, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
 import { InfoTooltip } from "@/components/primitives/InfoTooltip";
 import { NumberTicker } from "@/components/ui/number-ticker";
 import { type SlideData } from "../slide-data";
 import { TrendPill, fmtNum, sign } from "../primitives/TrendPill";
 import { SlideHeading } from "../primitives/SlideHeading";
+import { useSlideReveal, fadeUp } from "../primitives/reveal";
 
 function fmtDuration(seconds: number | null): string {
   if (seconds == null || seconds <= 0) return "–";
@@ -16,13 +16,8 @@ function fmtDuration(seconds: number | null): string {
   return `${m} min ${s} s`;
 }
 
-const EASE_OUT = [0, 0, 0.2, 1] as const;
-
 export function SlideKpis({ d }: { d: SlideData }) {
-  const reduced = useReducedMotion() === true;
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, amount: 0.75 });
-  const active = inView || reduced;
+  const { ref, active, reduced } = useSlideReveal();
 
   const kpis = [
     {
@@ -60,11 +55,7 @@ export function SlideKpis({ d }: { d: SlideData }) {
   ];
   return (
     <div ref={ref} className="space-y-8">
-      <motion.div
-        initial={reduced ? false : { opacity: 0, y: 14 }}
-        animate={{ opacity: active ? 1 : 0, y: active ? 0 : (reduced ? 0 : 14) }}
-        transition={{ duration: reduced ? 0 : 0.7, ease: EASE_OUT }}
-      >
+      <motion.div {...fadeUp(active, reduced)}>
         <SlideHeading sub="Så ser perioden ut i siffror — jämfört med föregående månad.">
           Snabb överblick
         </SlideHeading>
@@ -74,9 +65,7 @@ export function SlideKpis({ d }: { d: SlideData }) {
           <motion.div
             key={k.l}
             className="flex h-full min-h-[200px] flex-col rounded-3xl border border-border bg-background/85 p-6 shadow-[0_2px_4px_rgba(15,23,42,0.04),0_18px_40px_-22px_rgba(15,23,42,0.22)]"
-            initial={reduced ? false : { opacity: 0, y: 16 }}
-            animate={{ opacity: active ? 1 : 0, y: active ? 0 : (reduced ? 0 : 16) }}
-            transition={{ duration: reduced ? 0 : 0.7, ease: EASE_OUT, delay: reduced ? 0 : 0.25 + i * 0.13 }}
+            {...fadeUp(active, reduced, { y: 16, delay: 0.25 + i * 0.13 })}
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-1.5">

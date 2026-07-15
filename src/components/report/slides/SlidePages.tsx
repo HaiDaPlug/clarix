@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "motion/react";
 import { type SlideData } from "../slide-data";
 import { SlideHeading } from "../primitives/SlideHeading";
 import { TREND_POS, TREND_NEG } from "../tokens";
+import { useSlideReveal, fadeUp } from "../primitives/reveal";
 
 function TrendCell({ trend, delta }: { trend: "up" | "down" | "flat" | null; delta: number | null }) {
   if (!trend || trend === "flat") {
@@ -46,14 +48,17 @@ function Favicon({ domain, fallbackLetter }: { domain: string; fallbackLetter: s
 }
 
 export function SlidePages({ d }: { d: SlideData }) {
+  const { ref, active, reduced } = useSlideReveal();
   const domain = d.clientDomain ?? "example.com";
   const fallback = domain.replace("www.", "").slice(0, 1).toUpperCase();
 
   return (
-    <div className="flex flex-col gap-6 h-full">
-      <SlideHeading sub="De mest besökta sidorna under perioden.">
-        Dina mest besökta sidor
-      </SlideHeading>
+    <div ref={ref} className="flex flex-col gap-6 h-full">
+      <motion.div {...fadeUp(active, reduced)}>
+        <SlideHeading sub="De mest besökta sidorna under perioden.">
+          Dina mest besökta sidor
+        </SlideHeading>
+      </motion.div>
 
       <div className="flex flex-col divide-y divide-border/75 rounded-2xl border border-border bg-background/90 overflow-hidden">
         {/* Header — inverted */}
@@ -63,17 +68,18 @@ export function SlidePages({ d }: { d: SlideData }) {
           <span className="text-[13px] font-bold uppercase tracking-[0.18em] text-right" style={{ color: "#ffffff" }}>Trend</span>
         </div>
 
-        {d.topPages.map((row) => {
+        {d.topPages.map((row, i) => {
           const label = row.title ?? row.p;
           const shortUrl = row.p.length > 42 ? row.p.slice(0, 42) + "…" : row.p;
           const href = `https://${domain}${row.p}`;
           return (
-            <a
+            <motion.a
               key={row.p}
               href={href}
               target="_blank"
               rel="noopener noreferrer"
               className="grid items-center hover:bg-muted/30 transition-colors no-underline"
+              {...fadeUp(active, reduced, { y: 8, duration: 0.4, delay: 0.15 + i * 0.06 })}
               style={{
                 gridTemplateColumns: "1fr 110px 120px",
                 color: "inherit",
@@ -103,7 +109,7 @@ export function SlidePages({ d }: { d: SlideData }) {
               <div className="flex items-center justify-end">
                 <TrendCell trend={row.trend} delta={row.d} />
               </div>
-            </a>
+            </motion.a>
           );
         })}
       </div>

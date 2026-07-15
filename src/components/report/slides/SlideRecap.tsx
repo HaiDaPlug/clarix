@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "motion/react";
 import { Compass, Lightbulb, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { NoiseTexture } from "@/components/ui/noise-texture";
@@ -8,12 +9,14 @@ import { withPeriod } from "@/lib/utils/text";
 import { highlightNumbers } from "@/lib/utils/highlight-numbers";
 import { TREND_POS, TREND_POS_BG, ACCENT, AI_GRADIENT, AI_TEXT_PRIMARY, AI_TEXT_SECONDARY, AI_BORDER } from "../tokens";
 import { SlideHeading } from "../primitives/SlideHeading";
+import { useSlideReveal, fadeUp } from "../primitives/reveal";
 
 export function SlideRecap({
   aiInsights,
 }: {
   aiInsights: AiInsightsPayload | null;
 }) {
+  const { ref, active, reduced } = useSlideReveal();
   const aiRecap = aiInsights?.slide_recap;
   const bullets = [
     {
@@ -37,16 +40,19 @@ export function SlideRecap({
   }));
 
   return (
-    <div className="grid h-full content-center gap-10 lg:grid-cols-[1.05fr_1fr]">
+    <div ref={ref} className="grid h-full content-center gap-10 lg:grid-cols-[1.05fr_1fr]">
       <div className="space-y-6">
-        <SlideHeading sub="Tre rader att ta med sig från perioden.">
-          Tre saker att komma ihåg
-        </SlideHeading>
+        <motion.div {...fadeUp(active, reduced)}>
+          <SlideHeading sub="Tre rader att ta med sig från perioden.">
+            Tre saker att komma ihåg
+          </SlideHeading>
+        </motion.div>
         <ul className="space-y-4">
-          {bullets.map((b) => (
-            <li
+          {bullets.map((b, i) => (
+            <motion.li
               key={b.t}
               className="flex items-start gap-4 rounded-2xl border border-border bg-background/80 p-4 sm:p-5"
+              {...fadeUp(active, reduced, { y: 10, delay: 0.15 + i * 0.08 })}
             >
               <span
                 className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
@@ -70,13 +76,14 @@ export function SlideRecap({
                   : <p className="mt-1 text-[20px] text-foreground">{highlightNumbers(withPeriod(b.b), "light")}</p>
                 }
               </div>
-            </li>
+            </motion.li>
           ))}
         </ul>
       </div>
-      <div
+      <motion.div
         className="relative overflow-hidden flex flex-col justify-between gap-6 rounded-3xl p-8"
         style={{ background: AI_GRADIENT, border: `1px solid ${AI_BORDER}`, boxShadow: "0 24px 60px -26px rgba(139,92,246,0.25)" }}
+        {...fadeUp(active, reduced, { delay: 0.2 })}
       >
         <div className="pointer-events-none absolute -top-24 -left-16 h-72 w-72 rounded-full opacity-60 blur-3xl" style={{ background: "radial-gradient(circle, oklch(0.85 0.16 300 / 0.55), transparent 70%)" }} />
         <div className="pointer-events-none absolute -bottom-24 -right-10 h-72 w-72 rounded-full opacity-60 blur-3xl" style={{ background: "radial-gradient(circle, oklch(0.86 0.14 220 / 0.5), transparent 70%)" }} />
@@ -106,7 +113,7 @@ export function SlideRecap({
             </Link>
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
