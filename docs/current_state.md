@@ -2,7 +2,28 @@
 
 ---
 
-## NOW - Open priorities (2026-07-15)
+## NOW - Open priorities (2026-07-16)
+
+### Done this session (2026-07-16) — SlideHero rebuilt to match DashboardHero exactly
+
+**Report slide 2 ("Sammanfattning") now visually replicates the dashboard AI insight card**
+- User asked for the dashboard's AI insight card (`DashboardHero`) to be copied onto report slide 2 (`SlideHero`) — visually identical, not the same generated copy/prompt.
+- `SlideHero.tsx` rewritten from its previous layout (centered plain headline above a single `AISummary` gradient card) to mirror `DashboardHero`'s exact structure: one gradient card (`AI_GRADIENT`/`AI_SHADOW`/`AI_BORDER`) with the same two blurred color blobs and `NoiseTexture`, split into a left column (pulsing-dot eyebrow + large headline) and a right white/glass card (`oklch(1 0 0 / 0.7)` background, same blur/shadow/border), sized up (`p-16`, largest breakpoint font sizes) to fill the fixed 1280×720 slide canvas rather than a responsive viewport.
+- Loading state also mirrors `DashboardHero`: shimmer bars (`AI_SHIMMER`) in place of both the headline and the card text instead of the old single-line `Shimmer` helper.
+- Right card was trimmed to show **only** the `slide_hero` AI insight text (exactly 3 sentences, per the existing `route.ts` constraint) — the previous hardcoded "besök ... jämfört med föregående period" sentence stacked above it was removed so the card matches `DashboardHero`'s single-paragraph content, and the AI copy is never diluted with a 4th, component-authored sentence.
+- No prompt/constraint changes were needed in `src/app/api/generate-insights/route.ts` — `slide_hero`'s `CONSTRAINT` already specified "Exakt 3 meningar"; the extra sentence was coming from the component, not the model.
+- Supersedes the entangled, uncommitted `SlideHero.tsx` reveal-treatment edit noted in the 2026-07-15 entry below — that file has since been fully rewritten.
+
+**Files changed**
+- `src/components/report/slides/SlideHero.tsx`
+
+**Verification**
+- `npx tsc --noEmit` passed.
+- No live screenshot of real report data was available in this environment (no connected GA4/GSC test account; a headless pass hit the unauthenticated "no data" empty state, not the real card) — visual correctness was confirmed by the user directly in their own browser session against `/report` slide 2.
+
+---
+
+## Previously — Open priorities (2026-07-15)
 
 ### Done this session (2026-07-15) — smooth cursor, animated counters, scroll-reveal on all report slides
 

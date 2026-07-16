@@ -1,26 +1,13 @@
 "use client";
 
+import { motion } from "motion/react";
 import { type AiInsightsPayload } from "@/lib/ai-insights/types";
-
-function Shimmer({ lines = 2 }: { lines?: number }) {
-  return (
-    <div className="flex flex-col gap-2 pt-0.5">
-      {Array.from({ length: lines }).map((_, i) => (
-        <div
-          key={i}
-          className="h-[1.15em] rounded-full animate-pulse bg-white/25"
-          style={{ width: i === lines - 1 ? "65%" : "90%" }}
-        />
-      ))}
-    </div>
-  );
-}
 import { type SlideData } from "../slide-data";
-import { TREND_POS, TREND_NEG } from "../tokens";
+import { AI_GRADIENT, AI_SHADOW, AI_BORDER, AI_TEXT_SECONDARY, AI_SHIMMER } from "../tokens";
 import { withPeriod } from "@/lib/utils/text";
 import { highlightNumbers } from "@/lib/utils/highlight-numbers";
-import { AISummary, pos } from "../primitives/AISummary";
-import { fmtNum } from "../primitives/TrendPill";
+import { NoiseTexture } from "@/components/ui/noise-texture";
+import { useSlideReveal, fadeUp } from "../primitives/reveal";
 
 export function SlideHero({
   d,
@@ -31,45 +18,64 @@ export function SlideHero({
   headline: string;
   aiInsights: AiInsightsPayload | null;
 }) {
+  const { ref, active, reduced } = useSlideReveal();
   const hasData = d.trafficDelta !== null;
-  const isPos = (d.trafficDelta ?? 0) > 0;
   const aiHero = aiInsights?.slide_hero;
+  const loading = aiInsights === null;
 
   return (
-    <div className="flex h-full flex-col justify-center gap-10 py-8">
-      {/* Top: headline + period context */}
-      <div className="text-center space-y-2">
-        <h1 className="font-display text-[3.1rem] font-bold leading-[1.05] tracking-tight lg:text-[3.8rem] whitespace-nowrap">
-          {headline}<span style={{ color: "#FF6B55" }}>.</span>
-        </h1>
-        <p className="text-[1.2rem] text-foreground/50 font-medium tracking-tight">
-          {hasData ? "Jämfört med föregående period." : "Ingen föregående period att jämföra med."}
-        </p>
-      </div>
+    <div
+      ref={ref}
+      className="relative flex h-full flex-1 overflow-hidden rounded-[2rem] p-16"
+      style={{ background: AI_GRADIENT, boxShadow: AI_SHADOW.replace(/_/g, " "), border: `1px solid ${AI_BORDER}` }}
+    >
+      <div className="pointer-events-none absolute -top-32 -left-20 h-80 w-80 rounded-full opacity-60 blur-3xl" style={{ background: "radial-gradient(circle, oklch(0.85 0.16 300 / 0.55), transparent 70%)" }} />
+      <div className="pointer-events-none absolute -bottom-32 -right-10 h-96 w-96 rounded-full opacity-60 blur-3xl" style={{ background: "radial-gradient(circle, oklch(0.86 0.14 220 / 0.5), transparent 70%)" }} />
+      <NoiseTexture preset="fine" blendMode="soft-light" opacity={0.45} />
 
-      {/* Bottom: summary card */}
-      <AISummary>
-        {/* Line 1: visit count + delta only when a prior period exists */}
-        <p>
-          Den här perioden fick din hemsida {pos(fmtNum(d.visits))} besök
-          {hasData && d.trafficDelta !== null ? (
-            <> —{" "}
-              <span className="font-bold" style={{ color: isPos ? TREND_POS : TREND_NEG }}>
-                {isPos ? "+" : ""}{d.trafficDelta}%
-              </span>
-              {" "}jämfört med föregående period.</>
+      <div className="relative z-10 grid h-full w-full grid-cols-12 items-center gap-10">
+        {/* Left: eyebrow + headline — mirrors DashboardHero's "Denna vecka" column */}
+        <motion.div className="col-span-5 flex flex-col gap-3" {...fadeUp(active, reduced)}>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex h-1.5 w-1.5 animate-pulse rounded-full" style={{ background: "oklch(0.62 0.22 295)" }} />
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em]" style={{ color: AI_TEXT_SECONDARY }}>
+              {hasData ? "Jämfört med föregående period" : "Ingen jämförelseperiod"}
+            </p>
+          </div>
+          {loading ? (
+            <div className="flex flex-col gap-4">
+              <div className="h-12 w-[95%] rounded-full" style={{ background: AI_SHIMMER }} />
+              <div className="h-12 w-[85%] rounded-full" style={{ background: AI_SHIMMER }} />
+              <div className="h-12 w-[55%] rounded-full" style={{ background: AI_SHIMMER }} />
+            </div>
           ) : (
-            <>.</>
+            <h2 className="font-display2 text-[3rem] leading-[1.05] tracking-tight" style={{ color: "oklch(0.2 0.04 290)" }}>
+              {headline}<span style={{ color: "#FF6B55" }}>.</span>
+            </h2>
           )}
-        </p>
-        {/* Line 2: shimmer → AI → nothing */}
-        {aiInsights === null
-          ? <Shimmer lines={1} />
-          : aiHero
-            ? <p>{highlightNumbers(withPeriod(aiHero), "light")}</p>
-            : null
-        }
-      </AISummary>
+        </motion.div>
+
+        {/* Right: white glass card — mirrors DashboardHero's insight panel */}
+        <motion.div className="col-span-7" {...fadeUp(active, reduced, { delay: 0.15 })}>
+          <div
+            className="rounded-2xl p-9 backdrop-blur-sm shadow-[0_20px_50px_-20px_rgba(139,92,246,0.15)]"
+            style={{ background: "oklch(1 0 0 / 0.7)", border: "1px solid oklch(0.78 0.06 295 / 0.4)" }}
+          >
+            {loading ? (
+              <div className="flex flex-col gap-4">
+                <div className="h-8 w-[92%] rounded-full" style={{ background: AI_SHIMMER }} />
+                <div className="h-8 w-[88%] rounded-full" style={{ background: AI_SHIMMER }} />
+                <div className="h-8 w-[80%] rounded-full" style={{ background: AI_SHIMMER }} />
+                <div className="h-8 w-[45%] rounded-full" style={{ background: AI_SHIMMER }} />
+              </div>
+            ) : (
+              <p className="text-[1.7rem] font-medium leading-[1.45] tracking-normal" style={{ color: "rgba(30,20,60,0.9)" }}>
+                {aiHero ? highlightNumbers(withPeriod(aiHero), "light") : null}
+              </p>
+            )}
+          </div>
+        </motion.div>
+      </div>
     </div>
   );
 }
