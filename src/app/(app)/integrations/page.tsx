@@ -292,11 +292,10 @@ export default function IntegrationsPage() {
     <div className="flex-1 flex flex-col min-h-dvh">
       {/* Header */}
       <header
-        className="flex items-center justify-between px-8 border-b shrink-0 sticky top-0 z-30"
+        className="sticky top-0 z-30 flex min-h-[88px] shrink-0 items-center justify-between gap-3 border-b py-3 pl-16 pr-4 sm:px-6 lg:px-8"
         style={{
           borderColor: "var(--rule)",
           backgroundColor: "var(--parchment)",
-          height: "88px",
         }}
       >
         <div>
@@ -318,21 +317,21 @@ export default function IntegrationsPage() {
         </div>
         <Link
           href="/dashboard"
-          className="inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-semibold transition-all hover:opacity-80"
+          className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-full px-3 py-2.5 text-sm font-semibold transition-all hover:opacity-80 sm:px-5"
           style={{ backgroundColor: "var(--charcoal)", color: "var(--parchment)" }}
         >
-          Gå till dashboard
+          <span className="hidden min-[380px]:inline">Gå till dashboard</span>
           <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </header>
 
-      <main className="flex-1 px-8 py-8 max-w-4xl space-y-8">
+      <main className="flex-1 max-w-4xl space-y-6 px-4 py-5 sm:space-y-8 sm:px-6 sm:py-8 lg:px-8">
         {/* Hero banner */}
         <motion.section
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: EASING }}
-          className="relative overflow-hidden rounded-3xl px-8 py-10 sm:px-12 sm:py-14"
+          className="relative overflow-hidden rounded-3xl px-5 py-8 sm:px-12 sm:py-14"
           style={{
             background: AI_GRADIENT,
             border: `1px solid ${AI_BORDER}`,

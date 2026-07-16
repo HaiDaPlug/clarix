@@ -27,8 +27,11 @@ import { buildSlideData } from "@/components/report/slide-data";
 import { buildSlides } from "@/components/report/slide-list";
 import { useCardScale } from "@/components/report/layout/useCardScale";
 import { SlideCard } from "@/components/report/layout/SlideCard";
+import { SmoothCursor } from "@/components/ui/smooth-cursor";
+import { MobileReportDeck, MobileReportLoading } from "@/components/report/MobileReportDeck";
+import { usePortraitReport } from "@/components/report/usePortraitReport";
 
-const FULLSCREEN_SCALE_BUMP = 1.04;
+const FULLSCREEN_SCALE_BUMP = 1;
 
 /* Page */
 
@@ -60,10 +63,13 @@ function ReportPageInner() {
     ? Math.min(scale, presentationScale * FULLSCREEN_SCALE_BUMP)
     : scale;
   const dateRange = useDateRange();
+  const rangeStart = dateRange.startDate;
+  const rangeEnd = dateRange.endDate;
   const router = useRouter();
+  const isPortrait = usePortraitReport();
 
   const periodLabel = reportData?.meta?.period?.label ?? "Senaste perioden";
-  const { insights: aiInsights } = useAiInsights(
+  const { insights: aiInsights, loading: aiInsightsLoading } = useAiInsights(
     reportData,
     userId,
     dateRange.startDate,
@@ -111,8 +117,8 @@ function ReportPageInner() {
           try {
             const endpoint = source.source === "ga4" ? "/api/ga4" : "/api/gsc";
             const body = source.source === "ga4"
-              ? { propertyId: source.property_id, dateRange, locale: "sv" }
-              : { siteUrl: source.property_id, dateRange, locale: "sv" };
+              ? { propertyId: source.property_id, dateRange: { startDate: rangeStart, endDate: rangeEnd }, locale: "sv" }
+              : { siteUrl: source.property_id, dateRange: { startDate: rangeStart, endDate: rangeEnd }, locale: "sv" };
             const res = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
             if (!res.ok) return undefined;
             const json = await res.json() as Partial<ReportData> & { websiteUri?: string };
@@ -147,12 +153,12 @@ function ReportPageInner() {
       // Fall back to websiteUri from the GA4 Admin API when GSC isn't connected.
       const rawPropertyId = gscSource?.property_id ?? ga4WebsiteUri ?? null;
       const clientDomain = rawPropertyId ? extractDomain(rawPropertyId) : null;
-      const resolvedPeriodLabel = fmtDateRange(dateRange.startDate, dateRange.endDate);
+      const resolvedPeriodLabel = fmtDateRange(rangeStart, rangeEnd);
       merged.meta = {
         ...merged.meta,
         ...(sourceName ? { clientName: sourceName } : {}),
         ...(clientDomain ? { clientDomain } : {}),
-        period: { label: resolvedPeriodLabel, startDate: dateRange.startDate, endDate: dateRange.endDate },
+        period: { label: resolvedPeriodLabel, startDate: rangeStart, endDate: rangeEnd },
       };
 
       const {
@@ -166,7 +172,7 @@ function ReportPageInner() {
 
     load();
     return () => { cancelled = true; };
-  }, [dateRange.startDate, dateRange.endDate]);
+  }, [rangeStart, rangeEnd]);
 
   const slideData = useMemo(() => buildSlideData(reportData), [reportData]);
   const slides = useMemo(
@@ -177,6 +183,7 @@ function ReportPageInner() {
 
   // Track which slide is in view via IntersectionObserver
   useEffect(() => {
+    if (isPortrait) return;
     const els = cardRefs.current.filter(Boolean) as HTMLDivElement[];
     if (els.length === 0) return;
     const observer = new IntersectionObserver(
@@ -200,7 +207,7 @@ function ReportPageInner() {
     );
     els.forEach((el) => observer.observe(el));
     return () => observer.disconnect();
-  }, [slides]);
+  }, [slides, isPortrait]);
 
   // Scroll to a card by index
   const scrollToIndex = useCallback((i: number) => {
@@ -211,6 +218,7 @@ function ReportPageInner() {
 
   // Arrow keys / space scroll one card
   useEffect(() => {
+    if (isPortrait) return;
     const onKey = (e: KeyboardEvent) => {
       if (["ArrowDown", "ArrowRight", " ", "Enter"].includes(e.key)) {
         e.preventDefault();
@@ -225,7 +233,7 @@ function ReportPageInner() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [activeIndex, total, scrollToIndex]);
+  }, [activeIndex, total, scrollToIndex, isPortrait]);
 
   // Fullscreen
   useEffect(() => {
@@ -305,155 +313,72 @@ function ReportPageInner() {
 
   return (
     <div className="relative flex h-dvh flex-col overflow-hidden bg-[oklch(0.965_0.005_270)] text-foreground print:bg-white" style={{ overscrollBehavior: "auto" }}>
+      {!isPortrait && <SmoothCursor />}
 
       {/* Top bar */}
-      <header className="z-20 flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-2 px-4 py-2 print:hidden sm:px-6 lg:h-12 lg:min-h-12 lg:flex-nowrap">
+      <header style={isPortrait ? { paddingTop: "max(0.5rem, env(safe-area-inset-top))" } : undefined} className={isPortrait ? "z-20 flex min-h-16 shrink-0 items-center gap-2 px-4 pb-2 print:hidden" : "z-20 flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-2 px-4 py-2 print:hidden sm:px-6 lg:h-12 lg:min-h-12 lg:flex-nowrap"}>
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-          <Link
-            href="/dashboard"
-            className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-          >
+          <Link href="/dashboard" className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted sm:min-h-9">
             <ArrowLeft className="h-3 w-3" />
             Avsluta
           </Link>
-          <span className="tabular-nums text-xs text-foreground/50">{activeIndex + 1} / {total}</span>
+          {!isPortrait && <span className="tabular-nums text-xs text-foreground/50">{activeIndex + 1} / {total}</span>}
         </div>
-
-        {/* Date picker */}
-        <div className="relative order-3 w-full sm:order-none sm:w-auto">
-          <button
-            onClick={() => setShowDatePicker((v) => !v)}
-            className="inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-full border border-border/60 bg-background/70 px-4 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted sm:w-auto"
-          >
-            {currentLabel}
-            <ArrowRight className="h-3 w-3 rotate-90" />
+        <div className={isPortrait ? "relative min-w-0 flex-1" : "relative order-3 w-full sm:order-none sm:w-auto"}>
+          <button onClick={() => setShowDatePicker((value) => !value)} className="inline-flex min-h-11 w-full min-w-0 items-center justify-center gap-2 truncate rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted sm:min-h-9 sm:w-auto sm:px-4">
+            <span className="truncate">{currentLabel}</span><ArrowRight className="h-3 w-3 shrink-0 rotate-90" />
           </button>
           {showDatePicker && (
-            <div
-              className="absolute right-0 top-full z-50 mt-2 w-full overflow-hidden rounded-2xl border border-border/60 bg-background shadow-xl sm:w-48"
-              onMouseLeave={() => setShowDatePicker(false)}
-            >
-              {DATE_PRESETS.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => applyPreset(p.id)}
-                  className="w-full text-left px-4 py-3 text-sm hover:bg-muted transition-colors font-medium"
-                  style={{ color: p.id === (DATE_PRESETS.find(x => presetToRange(x.id).startDate === dateRange.startDate)?.id) ? "#FF6B55" : undefined }}
-                >
-                  {p.labelSv}
-                </button>
+            <div className="absolute right-0 top-full z-50 mt-2 w-48 overflow-hidden rounded-2xl border border-border/60 bg-background shadow-xl" onMouseLeave={() => setShowDatePicker(false)}>
+              {DATE_PRESETS.map((preset) => (
+                <button key={preset.id} onClick={() => applyPreset(preset.id)} className="w-full px-4 py-3 text-left text-sm font-medium transition-colors hover:bg-muted" style={{ color: preset.id === (DATE_PRESETS.find((item) => presetToRange(item.id).startDate === dateRange.startDate)?.id) ? "#FF6B55" : undefined }}>{preset.labelSv}</button>
               ))}
             </div>
           )}
         </div>
-
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleShare}
-            disabled={shareLoading || !reportData}
-            className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
-          >
-            <Share2 className="h-3 w-3" />
-            {shareLoading ? "Skapar..." : shareCopied ? "Kopierat!" : shareFailed ? "Fel" : "Dela"}
+          <button onClick={handleShare} disabled={shareLoading || !reportData} aria-label={shareLoading ? "Skapar delningslänk" : shareCopied ? "Länk kopierad" : "Dela rapport"} className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50 sm:min-h-9 sm:min-w-0">
+            <Share2 className="h-3 w-3" /><span className={isPortrait ? "sr-only" : ""}>{shareLoading ? "Skapar..." : shareCopied ? "Kopierat!" : shareFailed ? "Fel" : "Dela"}</span>
           </button>
-
-          <button
-            onClick={togglePresent}
-            className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-          >
-            {isFs ? <Minimize2 className="h-3 w-3" /> : <Maximize2 className="h-3 w-3" />}
-            {isFs ? "Avsluta" : "Present"}
-          </button>
+          {!isPortrait && (
+            <button onClick={togglePresent} className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted">
+              {isFs ? <Minimize2 className="h-3 w-3" /> : <Maximize2 className="h-3 w-3" />}{isFs ? "Avsluta" : "Present"}
+            </button>
+          )}
         </div>
       </header>
-
-      {/* Scroll surface */}
-      <div
-        ref={scrollRef}
-        className="relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden"
-        style={{ scrollbarWidth: "none", overscrollBehaviorY: "auto" }}
-      >
-        <div ref={containerRef} className="mx-auto w-full px-2 sm:px-5 lg:px-8 2xl:px-12">
-
-          {/* No sources state */}
+      <div ref={scrollRef} className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden" style={{ scrollbarWidth: "none", overscrollBehaviorY: "auto" }}>
+        <div ref={containerRef} className={isPortrait ? "mx-auto w-full" : "mx-auto w-full px-2 sm:px-5 lg:px-8 2xl:px-12"}>
           {!loading && noSources && (
-            <div className="flex flex-col items-center justify-center h-full min-h-[60vh] gap-4 text-center">
-              <p className="text-2xl font-display font-bold">Ingen data för den här perioden<span style={{ color: "#FF6B55" }}>.</span></p>
-              <p className="text-sm text-foreground/60 max-w-sm">Koppla ihop Google Analytics eller Search Console under Integrationer för att se din rapport.</p>
-              <Link href="/integrations" className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-white" style={{ background: "#FF6B55" }}>
-                Gå till Integrationer
-              </Link>
+            <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-6 text-center">
+              <p className="font-display text-2xl font-bold">Ingen data för den här perioden<span style={{ color: "#FF6B55" }}>.</span></p>
+              <p className="max-w-sm text-sm text-foreground/60">Koppla ihop Google Analytics eller Search Console under Integrationer för att se din rapport.</p>
+              <Link href="/integrations" className="inline-flex min-h-11 items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-white" style={{ background: "#FF6B55" }}>Gå till Integrationer</Link>
             </div>
           )}
-
-          <div
-            className="flex flex-col items-center"
-            style={{ gap: SLIDE_GAP, paddingTop: SLIDE_GAP, paddingBottom: SLIDE_GAP }}
-          >
-            {loading
-              ? Array.from({ length: 4 }).map((_, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      height: CANVAS_H * viewerScale,
-                      width: CANVAS_W * viewerScale,
-                      borderRadius: 6,
-                      overflow: "hidden",
-                      background: "#ffffff",
-                      boxShadow: "0 2px 4px rgba(20,18,16,0.04), 0 12px 40px rgba(20,18,16,0.08)",
-                      border: "1px solid rgba(20,18,16,0.05)",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: CANVAS_W,
-                        height: CANVAS_H,
-                        transform: `scale(${viewerScale})`,
-                        transformOrigin: "top left",
-                        padding: "48px 64px",
-                      }}
-                    >
-                      <SlideShimmer />
-                    </div>
-                  </div>
-                ))
-              : !noSources && slides.map((slide, i) => (
-                  <SlideCard
-                    key={slide.id}
-                    slide={slide}
-                    scale={viewerScale}
-                    innerRef={(el) => { cardRefs.current[i] = el; }}
-                  />
-                ))
-            }
+          {isPortrait && loading && <MobileReportLoading />}
+          {isPortrait && !loading && reportData && !noSources && <MobileReportDeck data={slideData} reportData={reportData} aiInsights={aiInsights} aiLoading={aiInsightsLoading} />}
+          {!isPortrait && (
+            <div className="flex flex-col items-center" style={{ gap: SLIDE_GAP, paddingTop: SLIDE_GAP, paddingBottom: SLIDE_GAP }}>
+              {loading ? Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} style={{ height: CANVAS_H * viewerScale, width: CANVAS_W * viewerScale, borderRadius: 6, overflow: "hidden", background: "#ffffff", boxShadow: "0 2px 4px rgba(20,18,16,0.04), 0 12px 40px rgba(20,18,16,0.08)", border: "1px solid rgba(20,18,16,0.05)", flexShrink: 0 }}>
+                  <div style={{ width: CANVAS_W, height: CANVAS_H, transform: `scale(${viewerScale})`, transformOrigin: "top left", padding: "48px 64px" }}><SlideShimmer /></div>
+                </div>
+              )) : !noSources && slides.map((slide, index) => (
+                <SlideCard key={slide.id} slide={slide} scale={viewerScale} innerRef={(element) => { cardRefs.current[index] = element; }} />
+              ))}
+            </div>
+          )}
+        </div>
+        {!isPortrait && (
+          <div className="fixed right-3 top-1/2 z-20 hidden -translate-y-1/2 flex-col items-center gap-[7px] print:hidden sm:flex lg:right-4">
+            {slides.map((slide, index) => (
+              <button key={slide.id} onClick={() => scrollToIndex(index)} aria-label={slide.title} className="rounded-full transition-all duration-300" style={{ width: 5, height: index === activeIndex ? 22 : 5, background: index === activeIndex ? "oklch(0.35 0.01 270 / 0.7)" : "oklch(0.5 0.01 270 / 0.3)" }} />
+            ))}
           </div>
-        </div>
-
-        {/* Dot nav - fixed right edge */}
-        <div className="fixed right-3 top-1/2 z-20 hidden -translate-y-1/2 flex-col items-center gap-[7px] print:hidden sm:flex lg:right-4">
-          {slides.map((s, i) => (
-            <button
-              key={s.id}
-              onClick={() => scrollToIndex(i)}
-              aria-label={s.title}
-              className="rounded-full transition-all duration-300"
-              style={{
-                width: 5,
-                height: i === activeIndex ? 22 : 5,
-                background: i === activeIndex
-                  ? "oklch(0.35 0.01 270 / 0.7)"
-                  : "oklch(0.5 0.01 270 / 0.3)",
-              }}
-            />
-          ))}
-        </div>
+        )}
       </div>
-
-      {/* Bottom controls */}
-      <div className="fixed bottom-5 left-1/2 z-20 -translate-x-1/2 print:hidden">
-        <KeyboardHints />
-      </div>
+      {!isPortrait && <div className="fixed bottom-5 left-1/2 z-20 -translate-x-1/2 print:hidden"><KeyboardHints /></div>}
     </div>
   );
 }

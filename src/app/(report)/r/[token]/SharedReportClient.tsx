@@ -2,8 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowLeft,
-  ArrowRight,
   Maximize2,
   Minimize2,
 } from "lucide-react";
@@ -15,8 +13,11 @@ import { buildSlideData } from "@/components/report/slide-data";
 import { buildSlides } from "@/components/report/slide-list";
 import { useCardScale } from "@/components/report/layout/useCardScale";
 import { SlideCard } from "@/components/report/layout/SlideCard";
+import { SmoothCursor } from "@/components/ui/smooth-cursor";
+import { MobileReportDeck } from "@/components/report/MobileReportDeck";
+import { usePortraitReport } from "@/components/report/usePortraitReport";
 
-const FULLSCREEN_SCALE_BUMP = 1.04;
+const FULLSCREEN_SCALE_BUMP = 1;
 
 export function SharedReportClient({
   reportData,
@@ -36,6 +37,8 @@ export function SharedReportClient({
     ? Math.min(scale, presentationScale * FULLSCREEN_SCALE_BUMP)
     : scale;
 
+  const isPortrait = usePortraitReport();
+
   const slideData = useMemo(() => buildSlideData(reportData), [reportData]);
   const slides = useMemo(
     () => buildSlides(slideData, reportData, aiInsights),
@@ -44,6 +47,7 @@ export function SharedReportClient({
   const total = slides.length;
 
   useEffect(() => {
+    if (isPortrait) return;
     const els = cardRefs.current.filter(Boolean) as HTMLDivElement[];
     if (els.length === 0) return;
     const observer = new IntersectionObserver(
@@ -69,7 +73,7 @@ export function SharedReportClient({
     );
     els.forEach((el) => observer.observe(el));
     return () => observer.disconnect();
-  }, [slides]);
+  }, [slides, isPortrait]);
 
   const scrollToIndex = useCallback((i: number) => {
     const el = cardRefs.current[i];
@@ -78,6 +82,7 @@ export function SharedReportClient({
   }, []);
 
   useEffect(() => {
+    if (isPortrait) return;
     const onKey = (e: KeyboardEvent) => {
       if (["ArrowDown", "ArrowRight", " ", "Enter"].includes(e.key)) {
         e.preventDefault();
@@ -91,7 +96,7 @@ export function SharedReportClient({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [activeIndex, total, scrollToIndex]);
+  }, [activeIndex, total, scrollToIndex, isPortrait]);
 
   useEffect(() => {
     const onFs = () => {
@@ -120,25 +125,28 @@ export function SharedReportClient({
 
   return (
     <div className="relative flex h-dvh flex-col overflow-hidden bg-[oklch(0.965_0.005_270)] text-foreground print:bg-white" style={{ overscrollBehavior: "auto" }}>
-      <header className="z-20 flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-2 px-4 py-2 print:hidden sm:px-6 lg:h-12 lg:min-h-12 lg:flex-nowrap">
+      {!isPortrait && <SmoothCursor />}
+      <header style={isPortrait ? { paddingTop: "max(0.5rem, env(safe-area-inset-top))" } : undefined} className={isPortrait ? "z-20 flex min-h-16 shrink-0 items-center justify-between gap-3 px-4 pb-2 print:hidden" : "z-20 flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-2 px-4 py-2 print:hidden sm:px-6 lg:h-12 lg:min-h-12 lg:flex-nowrap"}>
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-          <span className="inline-flex min-h-9 items-center rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs font-semibold text-foreground">
+          <span className="inline-flex min-h-11 items-center rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs font-semibold text-foreground sm:min-h-9">
             Clarix
           </span>
-          <span className="tabular-nums text-xs text-foreground/50">{activeIndex + 1} / {total}</span>
+          {!isPortrait && <span className="tabular-nums text-xs text-foreground/50">{activeIndex + 1} / {total}</span>}
         </div>
 
-        <div className="order-3 w-full text-center text-xs font-medium text-foreground/50 sm:order-none sm:w-auto">
+        <div className={isPortrait ? "min-w-0 truncate text-right text-xs font-medium text-foreground/50" : "order-3 w-full text-center text-xs font-medium text-foreground/50 sm:order-none sm:w-auto"}>
           {reportData.meta.period.label}
         </div>
 
-        <button
-          onClick={togglePresent}
-          className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-        >
-          {isFs ? <Minimize2 className="h-3 w-3" /> : <Maximize2 className="h-3 w-3" />}
-          {isFs ? "Avsluta" : "Present"}
-        </button>
+        {!isPortrait && (
+          <button
+            onClick={togglePresent}
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+          >
+            {isFs ? <Minimize2 className="h-3 w-3" /> : <Maximize2 className="h-3 w-3" />}
+            {isFs ? "Avsluta" : "Present"}
+          </button>
+        )}
       </header>
 
       <div
@@ -146,44 +154,52 @@ export function SharedReportClient({
         className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
         style={{ scrollbarWidth: "none", overscrollBehaviorY: "auto" }}
       >
-        <div ref={containerRef} className="mx-auto w-full px-2 sm:px-5 lg:px-8 2xl:px-12">
-          <div
-            className="flex flex-col items-center"
-            style={{ gap: SLIDE_GAP, paddingTop: SLIDE_GAP, paddingBottom: SLIDE_GAP }}
-          >
-            {slides.map((slide, i) => (
-              <SlideCard
-                key={slide.id}
-                slide={slide}
-                scale={viewerScale}
-                innerRef={(el) => { cardRefs.current[i] = el; }}
+        <div ref={containerRef} className={isPortrait ? "mx-auto w-full" : "mx-auto w-full px-2 sm:px-5 lg:px-8 2xl:px-12"}>
+          {isPortrait ? (
+            <MobileReportDeck data={slideData} reportData={reportData} aiInsights={aiInsights} />
+          ) : (
+            <div
+              className="flex flex-col items-center"
+              style={{ gap: SLIDE_GAP, paddingTop: SLIDE_GAP, paddingBottom: SLIDE_GAP }}
+            >
+              {slides.map((slide, i) => (
+                <SlideCard
+                  key={slide.id}
+                  slide={slide}
+                  scale={viewerScale}
+                  innerRef={(el) => { cardRefs.current[i] = el; }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {!isPortrait && (
+          <div className="fixed right-3 top-1/2 z-20 hidden -translate-y-1/2 flex-col items-center gap-[7px] print:hidden sm:flex lg:right-4">
+            {slides.map((s, i) => (
+              <button
+                key={s.id}
+                onClick={() => scrollToIndex(i)}
+                aria-label={s.title}
+                className="rounded-full transition-all duration-300"
+                style={{
+                  width: 5,
+                  height: i === activeIndex ? 22 : 5,
+                  background: i === activeIndex
+                    ? "oklch(0.35 0.01 270 / 0.7)"
+                    : "oklch(0.5 0.01 270 / 0.3)",
+                }}
               />
             ))}
           </div>
-        </div>
-
-        <div className="fixed right-3 top-1/2 z-20 hidden -translate-y-1/2 flex-col items-center gap-[7px] print:hidden sm:flex lg:right-4">
-          {slides.map((s, i) => (
-            <button
-              key={s.id}
-              onClick={() => scrollToIndex(i)}
-              aria-label={s.title}
-              className="rounded-full transition-all duration-300"
-              style={{
-                width: 5,
-                height: i === activeIndex ? 22 : 5,
-                background: i === activeIndex
-                  ? "oklch(0.35 0.01 270 / 0.7)"
-                  : "oklch(0.5 0.01 270 / 0.3)",
-              }}
-            />
-          ))}
-        </div>
+        )}
       </div>
 
-      <div className="fixed bottom-5 left-1/2 z-20 -translate-x-1/2 print:hidden">
-        <KeyboardHints />
-      </div>
+      {!isPortrait && (
+        <div className="fixed bottom-5 left-1/2 z-20 -translate-x-1/2 print:hidden">
+          <KeyboardHints />
+        </div>
+      )}
     </div>
   );
 }
