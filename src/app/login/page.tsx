@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState, useRef, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, useSpring, useMotionValueEvent } from "motion/react";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
@@ -13,11 +13,19 @@ import { NoiseTexture } from "@/components/ui/noise-texture";
 function LoginContent() {
   const { t } = useLocale();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // TEMPORARY: loud diagnostic banner for the /auth/callback?error=... redirect.
+  // Remove once the Google OAuth test-user / verification issue is resolved.
+  const oauthError = searchParams.get("error");
+  const oauthReason = searchParams.get("reason");
+  const oauthDetail = searchParams.get("detail");
+  const oauthStatus = searchParams.get("status");
 
   async function signInWithGoogle() {
     const supabase = createClient();
@@ -88,6 +96,18 @@ function LoginContent() {
               </span>
             ))}
           </h1>
+
+          {oauthError && (
+            <div
+              className="rounded-lg px-4 py-3 text-xs leading-relaxed"
+              style={{ backgroundColor: "#FDECEC", color: "#B00020", border: "1px solid #B00020" }}
+            >
+              <p className="font-semibold mb-1">Login failed: {oauthError}</p>
+              {oauthReason && <p>reason: {oauthReason}</p>}
+              {oauthDetail && <p>detail: {oauthDetail}</p>}
+              {oauthStatus && <p>status: {oauthStatus}</p>}
+            </div>
+          )}
 
           <div className="flex flex-col gap-6">
             {/* Google */}
@@ -289,7 +309,9 @@ function RightPanel() {
 export default function LoginPage() {
   return (
     <LocaleProvider>
-      <LoginContent />
+      <Suspense fallback={null}>
+        <LoginContent />
+      </Suspense>
     </LocaleProvider>
   );
 }

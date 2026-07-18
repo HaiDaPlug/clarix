@@ -2,7 +2,34 @@
 
 ---
 
-## NOW - Open priorities (2026-07-16)
+## NOW - Open priorities (2026-07-18)
+
+### Done this session (2026-07-18) — loud diagnostics for Google OAuth login failures
+
+**Context**
+- A coworker with a previously-working Google-login account started landing on `clarix.se/login?error=auth_failed` on every attempt, while login kept working for other accounts. Investigation (`/investigate`) traced the redirect to a single fallthrough in `src/app/auth/callback/route.ts` that swallows every failure reason — no `code`, a provider-side denial, or a failed `exchangeCodeForSession` — into the same generic `auth_failed`, which `src/app/login/page.tsx` didn't even read, so the user saw a blank form with zero indication of what went wrong.
+- Leading suspect: the Google Cloud OAuth consent screen is still in **Testing** mode with only **2 Test Users** allowed (see open priority #19 below, still unresolved) — an account that previously worked can silently lose access if it falls off that list or the app is unverified. A cross-provider identity conflict (same email registered under a different auth method) is the secondary suspect.
+
+**Change — temporary loud error surfacing (diagnostic only)**
+- `src/app/auth/callback/route.ts` now tags the `auth_failed` redirect with *why*: `reason=provider_denied&detail=...` (Google rejected the request before issuing a code — e.g. not on the Test Users list), `reason=exchange_failed&detail=...&status=...` (Supabase's `exchangeCodeForSession` returned an error), or `reason=no_code` (no code and no provider error at all).
+- `src/app/login/page.tsx` reads `error`/`reason`/`detail`/`status` via `useSearchParams` (page now wrapped in `Suspense`, required for that hook) and renders a plainly-visible red banner with the raw values — marked `TEMPORARY` in a code comment, with a removal note.
+- **This is intentionally loud for internal debugging and must not ship to the general public as-is** — before any public/production launch, strip the on-page banner (and ideally the raw `detail` text in the redirect URL) back down to a translated, generic message. Leaking raw Supabase/Google error strings to end users is not acceptable for launch.
+
+**Files changed**
+- `src/app/auth/callback/route.ts`
+- `src/app/login/page.tsx`
+
+**Verification**
+- `npx tsc --noEmit` passed.
+- Not yet reproduced live against the coworker's actual account — next step is to have them retry and read the banner/URL for the real `reason`/`detail`.
+
+**Follow-up still needed**
+- Confirm root cause via the banner, then apply the real fix (add coworker to Google Cloud Console Test Users, or submit for OAuth verification, or resolve an identity conflict in Supabase's `auth.identities`).
+- **Before public launch: remove the loud diagnostic banner and raw error detail in the redirect URL, replacing them with a generic translated error message.**
+
+---
+
+## Previously — Open priorities (2026-07-16)
 
 ### Done this session (2026-07-16) — SlideHero rebuilt to match DashboardHero exactly
 
