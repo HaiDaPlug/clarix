@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
-import { NoiseTexture } from "@/components/ui/noise-texture";
+import { NoiseTile } from "@/components/ui/noise-tile";
 import { type AiInsightsPayload } from "@/lib/ai-insights/types";
 import { type Insight } from "@/lib/engine/derive-insights";
 import { deriveSignalCards } from "@/lib/engine/signal-cards";
@@ -61,9 +61,9 @@ export function SlideStrategicInsight({
         style={{ background: AI_GRADIENT, border: `1px solid ${AI_BORDER}`, boxShadow: "0 24px 60px -26px rgba(139,92,246,0.25)" }}
         {...fadeUp(active, reduced, { delay: 0.2 })}
       >
-        <div className="pointer-events-none absolute -top-24 -left-16 h-72 w-72 rounded-full opacity-60 blur-3xl" style={{ background: "radial-gradient(circle, oklch(0.85 0.16 300 / 0.55), transparent 70%)" }} />
-        <div className="pointer-events-none absolute -bottom-24 -right-10 h-72 w-72 rounded-full opacity-60 blur-3xl" style={{ background: "radial-gradient(circle, oklch(0.86 0.14 220 / 0.5), transparent 70%)" }} />
-        <NoiseTexture preset="fine" blendMode="soft-light" opacity={0.45} />
+        <div className="pointer-events-none absolute -top-42 -left-34 h-[27rem] w-[27rem] rounded-full opacity-60" style={{ background: "radial-gradient(circle, oklch(0.85 0.16 300 / 0.55) 0%, oklch(0.85 0.16 300 / 0.28) 34%, transparent 72%)" }} />
+        <div className="pointer-events-none absolute -bottom-42 -right-28 h-[27rem] w-[27rem] rounded-full opacity-60" style={{ background: "radial-gradient(circle, oklch(0.86 0.14 220 / 0.5) 0%, oklch(0.86 0.14 220 / 0.25) 34%, transparent 72%)" }} />
+        <NoiseTile blendMode="soft-light" opacity={0.45} />
         <div className="relative z-10 flex flex-col h-full gap-5">
           <p className="text-[11px] font-semibold uppercase tracking-[0.24em]" style={{ color: AI_TEXT_SECONDARY }}>
             Det vi ser just nu

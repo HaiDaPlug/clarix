@@ -118,7 +118,7 @@ function InsightCard({ children, label }: { children: React.ReactNode; label?: s
       className="relative overflow-hidden rounded-3xl border p-5 shadow-[0_20px_50px_-28px_rgba(139,92,246,0.35)]"
       style={{ background: AI_GRADIENT, borderColor: AI_BORDER }}
     >
-      <div className="pointer-events-none absolute -right-20 -top-24 h-56 w-56 rounded-full bg-purple-300/20 blur-3xl" />
+      <div className="pointer-events-none absolute -right-34 -top-38 h-84 w-84 rounded-full" style={{ background: "radial-gradient(circle, oklch(0.827 0.119 306 / 0.2) 0%, oklch(0.827 0.119 306 / 0.12) 40%, transparent 72%)" }} />
       <div className="relative">
         {label && <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.22em]" style={{ color: AI_TEXT_SECONDARY }}>{label}</p>}
         <div className="space-y-3 text-[16px] font-medium leading-[1.65]" style={{ color: AI_TEXT_PRIMARY }}>{children}</div>
@@ -185,7 +185,7 @@ export function MobileReportDeck({
       </nav>
 
       <header className="relative overflow-hidden rounded-b-[2rem] px-5 pb-10 pt-9" style={{ background: "linear-gradient(145deg, #ffffff 0%, #fbf6f8 55%, #f1edff 100%)" }}>
-        <div className="pointer-events-none absolute -bottom-24 -right-24 h-64 w-64 rounded-full bg-purple-300/25 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-40 -right-40 h-96 w-96 rounded-full" style={{ background: "radial-gradient(circle, oklch(0.827 0.119 306 / 0.25) 0%, oklch(0.827 0.119 306 / 0.15) 40%, transparent 72%)" }} />
         <div className="relative">
           <p className="text-[10px] font-bold uppercase tracking-[0.24em]" style={{ color: ACCENT }}>Clarix mobilrapport</p>
           <h1 className="font-display mt-5 text-[2.8rem] font-extrabold leading-[0.98] tracking-[-0.035em] text-[#1a1714]">

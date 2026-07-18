@@ -6,7 +6,7 @@ import { type SlideData } from "../slide-data";
 import { AI_GRADIENT, AI_SHADOW, AI_BORDER, AI_TEXT_SECONDARY, AI_SHIMMER } from "../tokens";
 import { withPeriod } from "@/lib/utils/text";
 import { highlightNumbers } from "@/lib/utils/highlight-numbers";
-import { NoiseTexture } from "@/components/ui/noise-texture";
+import { NoiseTile } from "@/components/ui/noise-tile";
 import { useSlideReveal, fadeUp } from "../primitives/reveal";
 
 export function SlideHero({
@@ -29,9 +29,9 @@ export function SlideHero({
       className="relative flex h-full flex-1 overflow-hidden rounded-[2rem] p-16"
       style={{ background: AI_GRADIENT, boxShadow: AI_SHADOW.replace(/_/g, " "), border: `1px solid ${AI_BORDER}` }}
     >
-      <div className="pointer-events-none absolute -top-32 -left-20 h-80 w-80 rounded-full opacity-60 blur-3xl" style={{ background: "radial-gradient(circle, oklch(0.85 0.16 300 / 0.55), transparent 70%)" }} />
-      <div className="pointer-events-none absolute -bottom-32 -right-10 h-96 w-96 rounded-full opacity-60 blur-3xl" style={{ background: "radial-gradient(circle, oklch(0.86 0.14 220 / 0.5), transparent 70%)" }} />
-      <NoiseTexture preset="fine" blendMode="soft-light" opacity={0.45} />
+      <div className="pointer-events-none absolute -top-52 -left-40 h-[30rem] w-[30rem] rounded-full opacity-60" style={{ background: "radial-gradient(circle, oklch(0.85 0.16 300 / 0.55) 0%, oklch(0.85 0.16 300 / 0.28) 34%, transparent 72%)" }} />
+      <div className="pointer-events-none absolute -bottom-56 -right-34 h-[36rem] w-[36rem] rounded-full opacity-60" style={{ background: "radial-gradient(circle, oklch(0.86 0.14 220 / 0.5) 0%, oklch(0.86 0.14 220 / 0.25) 34%, transparent 72%)" }} />
+      <NoiseTile blendMode="soft-light" opacity={0.45} />
 
       <div className="relative z-10 grid h-full w-full grid-cols-12 items-center gap-10">
         {/* Left: eyebrow + headline — mirrors DashboardHero's "Denna vecka" column */}

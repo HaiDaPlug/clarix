@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
-import { NoiseTexture } from "@/components/ui/noise-texture";
+import { NoiseTile } from "@/components/ui/noise-tile";
 import { InfoTooltip } from "@/components/primitives/InfoTooltip";
 import { type SlideData } from "../slide-data";
 import { fmtNum, sign, TrendPill } from "../primitives/TrendPill";
@@ -89,9 +89,9 @@ export function SlideChannels({ d }: { d: SlideData }) {
                       delay: stagger,
                       ease: [0.22, 1, 0.36, 1],
                     }}
-                  >
-                    <NoiseTexture preset="fine" blendMode="soft-light" opacity={0.3} />
-                  </motion.div>
+                  />
+                  {/* Grain on the static track (not the animating fill) so the tile isn't re-rasterized every frame */}
+                  <NoiseTile blendMode="soft-light" opacity={0.3} />
                 </div>
 
                 {/* Label slides in from just behind the bar tip */}

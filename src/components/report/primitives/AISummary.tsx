@@ -1,4 +1,4 @@
-import { NoiseTexture } from "@/components/ui/noise-texture";
+import { NoiseTile } from "@/components/ui/noise-tile";
 import { TREND_POS, TREND_NEG, AI_GRADIENT, AI_SHADOW, AI_TEXT_PRIMARY, AI_TEXT_SECONDARY, AI_BORDER } from "../tokens";
 
 export const pos = (s: string) => (
@@ -36,9 +36,9 @@ export function AISummary({
         border: `1px solid ${AI_BORDER}`,
       }}
     >
-      <div className="pointer-events-none absolute -top-32 -left-20 h-80 w-80 rounded-full opacity-60 blur-3xl" style={{ background: "radial-gradient(circle, oklch(0.85 0.16 300 / 0.55), transparent 70%)" }} />
-      <div className="pointer-events-none absolute -bottom-32 -right-10 h-96 w-96 rounded-full opacity-60 blur-3xl" style={{ background: "radial-gradient(circle, oklch(0.86 0.14 220 / 0.5), transparent 70%)" }} />
-      <NoiseTexture preset="fine" blendMode="soft-light" opacity={0.45} />
+      <div className="pointer-events-none absolute -top-52 -left-40 h-[30rem] w-[30rem] rounded-full opacity-60" style={{ background: "radial-gradient(circle, oklch(0.85 0.16 300 / 0.55) 0%, oklch(0.85 0.16 300 / 0.28) 34%, transparent 72%)" }} />
+      <div className="pointer-events-none absolute -bottom-56 -right-34 h-[36rem] w-[36rem] rounded-full opacity-60" style={{ background: "radial-gradient(circle, oklch(0.86 0.14 220 / 0.5) 0%, oklch(0.86 0.14 220 / 0.25) 34%, transparent 72%)" }} />
+      <NoiseTile blendMode="soft-light" opacity={0.45} />
       <div className="relative z-10">
         <p className="text-[10px] font-semibold uppercase tracking-[0.24em]" style={{ color: AI_TEXT_SECONDARY }}>
           {label}

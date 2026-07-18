@@ -2,7 +2,7 @@
 
 import { motion } from "motion/react";
 import { CheckCircle2, Plug } from "lucide-react";
-import { NoiseTexture } from "@/components/ui/noise-texture";
+import { NoiseTile } from "@/components/ui/noise-tile";
 import { type SlideData } from "../slide-data";
 import { TREND_POS, ACCENT, AI_GRADIENT, AI_TEXT_PRIMARY, AI_TEXT_SECONDARY, AI_BORDER } from "../tokens";
 import { fmtNum, sign } from "../primitives/TrendPill";
@@ -68,10 +68,10 @@ export function SlideConversion({ d }: { d: SlideData }) {
         style={{ background: AI_GRADIENT, border: `1px solid ${AI_BORDER}`, boxShadow: "0 24px 60px -26px rgba(139,92,246,0.25)" }}
         {...fadeUp(active, reduced, { delay: 0.15 })}
       >
-        <div className="pointer-events-none absolute -top-24 -left-16 h-72 w-72 rounded-full opacity-60 blur-3xl" style={{ background: "radial-gradient(circle, oklch(0.85 0.16 300 / 0.55), transparent 70%)" }} />
-        <div className="pointer-events-none absolute -bottom-24 -right-10 h-72 w-72 rounded-full opacity-60 blur-3xl" style={{ background: "radial-gradient(circle, oklch(0.86 0.14 220 / 0.5), transparent 70%)" }} />
+        <div className="pointer-events-none absolute -top-42 -left-34 h-[27rem] w-[27rem] rounded-full opacity-60" style={{ background: "radial-gradient(circle, oklch(0.85 0.16 300 / 0.55) 0%, oklch(0.85 0.16 300 / 0.28) 34%, transparent 72%)" }} />
+        <div className="pointer-events-none absolute -bottom-42 -right-28 h-[27rem] w-[27rem] rounded-full opacity-60" style={{ background: "radial-gradient(circle, oklch(0.86 0.14 220 / 0.5) 0%, oklch(0.86 0.14 220 / 0.25) 34%, transparent 72%)" }} />
         <svg aria-hidden className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-0" width="500" height="500" viewBox="0 0 500 500" fill="none"><circle cx="250" cy="250" r="120" stroke="oklch(0.62 0.22 295)" strokeWidth="1.5" opacity="0.25" /><circle cx="250" cy="250" r="180" stroke="oklch(0.62 0.22 295)" strokeWidth="1" opacity="0.15" /><circle cx="250" cy="250" r="240" stroke="oklch(0.62 0.22 295)" strokeWidth="0.75" opacity="0.08" /></svg>
-        <NoiseTexture preset="fine" blendMode="soft-light" opacity={0.45} />
+        <NoiseTile blendMode="soft-light" opacity={0.45} />
         <div className="relative z-10">
           <p className="text-[13px] font-semibold uppercase tracking-[0.24em] mb-5" style={{ color: AI_TEXT_SECONDARY }}>
             Vad du får
