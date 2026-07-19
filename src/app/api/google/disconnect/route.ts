@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { clearReportCache } from "@/lib/google/report-cache";
 import { createClient } from "@/utils/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -48,6 +49,8 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
+
+  await clearReportCache(supabase, user.id, parsed.data.source);
 
   return NextResponse.json({ success: true });
 }

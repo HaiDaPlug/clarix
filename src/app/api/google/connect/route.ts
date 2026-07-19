@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { clearReportCache } from "@/lib/google/report-cache";
 import { getValidAccessToken } from "@/lib/google/token-refresh";
 import { createClient } from "@/utils/supabase/server";
 
@@ -114,6 +115,10 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
+
+  // A newly connected (or replaced) property makes cached report data for this
+  // source untrustworthy — drop it.
+  await clearReportCache(supabase, user.id, parsed.data.source);
 
   // Clean up the _pending sentinel row for this source now that a real property is connected.
   await supabase

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { GoogleApiError, fetchGscReportSet } from "@/lib/google/api-client";
 import { assertDateRange, getPriorDateRange } from "@/lib/google/date-range";
 import { mapGscReport } from "@/lib/google/report-mappers";
+import { readReportCache, writeReportCache } from "@/lib/google/report-cache";
 import type { DateRange } from "@/lib/google/report-types";
 import { getValidAccessToken } from "@/lib/google/token-refresh";
 import { createClient } from "@/utils/supabase/server";
@@ -48,10 +49,18 @@ export async function POST(request: Request) {
       accessToken = await getValidAccessToken(supabase, user.id, "gsc", siteUrl);
     }
 
-    if (!siteUrl || !accessToken) {
+    if (!user || !siteUrl || !accessToken) {
       return NextResponse.json({
         sourceConfidence: { gsc: { connected: false } },
       });
+    }
+
+    // Cached payloads are locale-dependent but keyed without locale, so only
+    // the default "sv" locale goes through the cache.
+    const cacheKey = { userId: user.id, source: "gsc" as const, propertyId: siteUrl, dateRange };
+    if (locale === "sv") {
+      const cached = await readReportCache(supabase, cacheKey);
+      if (cached) return NextResponse.json(cached);
     }
 
     const priorDateRange = getPriorDateRange(dateRange);
@@ -74,6 +83,9 @@ export async function POST(request: Request) {
         { error: { type: "data", message: "Search Console response could not be parsed." } },
         { status: 502 },
       );
+    }
+    if (locale === "sv") {
+      await writeReportCache(supabase, cacheKey, { ...mapped });
     }
     return NextResponse.json(mapped);
   } catch (error) {

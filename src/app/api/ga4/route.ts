@@ -4,6 +4,7 @@ import { z } from "zod";
 import { GoogleApiError, fetchGa4ReportSet } from "@/lib/google/api-client";
 import { assertDateRange, getPriorDateRange } from "@/lib/google/date-range";
 import { mapGa4Report } from "@/lib/google/report-mappers";
+import { readReportCache, writeReportCache } from "@/lib/google/report-cache";
 import type { DateRange } from "@/lib/google/report-types";
 import { getValidAccessToken } from "@/lib/google/token-refresh";
 import { createClient } from "@/utils/supabase/server";
@@ -48,10 +49,18 @@ export async function POST(request: Request) {
       accessToken = await getValidAccessToken(supabase, user.id, "ga4", propertyId);
     }
 
-    if (!propertyId || !accessToken) {
+    if (!user || !propertyId || !accessToken) {
       return NextResponse.json({
         sourceConfidence: { ga4: { connected: false } },
       });
+    }
+
+    // Cached payloads are locale-dependent but keyed without locale, so only
+    // the default "sv" locale goes through the cache.
+    const cacheKey = { userId: user.id, source: "ga4" as const, propertyId, dateRange };
+    if (locale === "sv") {
+      const cached = await readReportCache(supabase, cacheKey);
+      if (cached) return NextResponse.json(cached);
     }
 
     const priorDateRange = getPriorDateRange(dateRange);
@@ -88,7 +97,11 @@ export async function POST(request: Request) {
         { status: 502 },
       );
     }
-    return NextResponse.json({ ...mapped, websiteUri });
+    const body = { ...mapped, websiteUri };
+    if (locale === "sv") {
+      await writeReportCache(supabase, cacheKey, body);
+    }
+    return NextResponse.json(body);
   } catch (error) {
     return googleRouteError(error, "ga4");
   }
