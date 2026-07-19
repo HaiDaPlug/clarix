@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   ArrowLeft,
   ArrowRight,
+  Loader2,
   Maximize2,
   Minimize2,
   Share2,
@@ -21,6 +22,7 @@ import { useDateRange, DATE_PRESETS, presetToRange, type DatePresetId } from "@/
 import { deriveExecutiveSummary } from "@/lib/engine/derive-executive-summary";
 import { useAiInsights } from "@/lib/hooks/useAiInsights";
 import type { ReportData } from "@/types/schema";
+import { readReportSnapshot, writeReportSnapshot } from "@/lib/report-snapshot";
 import { CANVAS_W, CANVAS_H, SLIDE_GAP } from "@/components/report/tokens";
 import { SlideShimmer } from "@/components/report/primitives/Shimmer";
 import { buildSlideData } from "@/components/report/slide-data";
@@ -47,6 +49,7 @@ function ReportPageInner() {
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [noSources, setNoSources] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isFs, setIsFs] = useState(false);
@@ -56,6 +59,7 @@ function ReportPageInner() {
   const [shareCopied, setShareCopied] = useState(false);
   const [shareFailed, setShareFailed] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const reportDataRef = useRef<ReportData | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const { scale } = useCardScale(containerRef, scrollRef);
@@ -70,10 +74,14 @@ function ReportPageInner() {
 
   const periodLabel = reportData?.meta?.period?.label ?? "Senaste perioden";
   const { insights: aiInsights, loading: aiInsightsLoading } = useAiInsights(
+  // Insights follow the period baked into the rendered data, not the URL range:
+  // while stale slides stay visible during a range change, the hook's dedup key
+  // stays unchanged instead of firing an extra generation for (new period +
+  // stale data). It still fires exactly once per period + data fingerprint.
     reportData,
     userId,
-    dateRange.startDate,
-    dateRange.endDate,
+    reportData?.meta?.period?.startDate ?? dateRange.startDate,
+    reportData?.meta?.period?.endDate ?? dateRange.endDate,
     periodLabel,
   );
 
@@ -81,12 +89,37 @@ function ReportPageInner() {
     let cancelled = false;
 
     async function load() {
-      setLoading(true);
       setNoSources(false);
-      setReportData(null);
+
+      // Stale-while-revalidate: a session snapshot for this range paints
+      // immediately; otherwise slides from the previous range stay up while
+      // the new range fetches. Shimmer only on a true cold load.
+      const snapshot = readReportSnapshot(rangeStart, rangeEnd);
+      if (snapshot) {
+        reportDataRef.current = snapshot;
+        setReportData(snapshot);
+        setLoading(false);
+        setRefreshing(true);
+      } else if (reportDataRef.current) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+
+      const failNoSources = () => {
+        reportDataRef.current = null;
+        setReportData(null);
+        setNoSources(true);
+        setLoading(false);
+        setRefreshing(false);
+      };
 
       const supabase = createClient();
       const { data, error } = await supabase
+      // Kicked off here so auth resolves alongside the data fetches instead of
+      // adding a serial round trip before first paint; awaited where needed.
+      const userPromise = supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+
         .from("connected_sources")
         .select("id, source, property_id, display_name, token_expires_at")
         .in("source", ["ga4", "gsc"])
@@ -95,8 +128,7 @@ function ReportPageInner() {
       if (cancelled) return;
 
       if (error || !data || data.length === 0) {
-        setNoSources(true);
-        setLoading(false);
+        failNoSources();
         return;
       }
 
@@ -105,8 +137,7 @@ function ReportPageInner() {
       );
 
       if (sources.length === 0) {
-        setNoSources(true);
-        setLoading(false);
+        failNoSources();
         return;
       }
 
@@ -132,8 +163,7 @@ function ReportPageInner() {
 
       const realParts = parts.filter((p): p is Partial<ReportData> => p !== undefined);
       if (realParts.length === 0) {
-        setNoSources(true);
-        setLoading(false);
+        failNoSources();
         return;
       }
 
@@ -162,12 +192,15 @@ function ReportPageInner() {
       };
 
       const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!cancelled && user) setUserId(user.id);
-
+      reportDataRef.current = merged;
       setReportData(merged);
       setLoading(false);
+      setRefreshing(false);
+      writeReportSnapshot(sources.map((s) => s.id), rangeStart, rangeEnd, merged);
+
+        data: { user },
+      } = await userPromise;
+      if (!cancelled && user) setUserId(user.id);
     }
 
     load();
@@ -325,8 +358,8 @@ function ReportPageInner() {
           {!isPortrait && <span className="tabular-nums text-xs text-foreground/50">{activeIndex + 1} / {total}</span>}
         </div>
         <div className={isPortrait ? "relative min-w-0 flex-1" : "relative order-3 w-full sm:order-none sm:w-auto"}>
-          <button onClick={() => setShowDatePicker((value) => !value)} className="inline-flex min-h-11 w-full min-w-0 items-center justify-center gap-2 truncate rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted sm:min-h-9 sm:w-auto sm:px-4">
-            <span className="truncate">{currentLabel}</span><ArrowRight className="h-3 w-3 shrink-0 rotate-90" />
+          <button onClick={() => setShowDatePicker((value) => !value)} aria-busy={refreshing} aria-label={refreshing ? "Uppdaterar rapporten" : undefined} className="inline-flex min-h-11 w-full min-w-0 items-center justify-center gap-2 truncate rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted sm:min-h-9 sm:w-auto sm:px-4">
+            <span className="truncate">{currentLabel}</span>{refreshing ? <Loader2 className="h-3 w-3 shrink-0 animate-spin" /> : <ArrowRight className="h-3 w-3 shrink-0 rotate-90" />}
           </button>
           {showDatePicker && (
             <div className="absolute right-0 top-full z-50 mt-2 w-48 overflow-hidden rounded-2xl border border-border/60 bg-background shadow-xl" onMouseLeave={() => setShowDatePicker(false)}>
