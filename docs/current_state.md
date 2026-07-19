@@ -42,10 +42,13 @@
 
 **Verification**
 - `npm run build`, lint (no new findings), and vitest (42 tests incl. 8 new TTL cases) passed per phase; every diff reviewed against its phase prompt (scope, drift, correctness) before acceptance.
-- **Owner visual pass still pending** — see worries below.
+- Owner visual pass done (2026-07-19): scroll confirmed smoother, no visual regressions spotted.
+- Shipped as 5 phase commits (`1668c1a`, `f8af473`, `1cbe7b0`, `f8ef91d`, `b3df7a3`) + docs, on `codex/mobile-responsive-report` — hunk-split so SlideHero (phases 1/5) and report/page.tsx (phases 3a/2) each land with their own phase.
+- **Both migrations applied to the live database (2026-07-19)** and verified: `ai_report_cache` shows a single FK ending in `on delete cascade`. Server cache confirmed working (fresh-tab reload paints from `google_report_cache` without hitting Google).
 
 **Future worries / open items**
-- **Both migrations are unapplied.** Run `npx supabase db push` before/with deploy. Until then the cache routes silently fall back to live fetching (safe, just uncached). The `ai_report_cache` cascade migration drops the FK by its Postgres auto-generated name (`ai_report_cache_user_id_fkey`) — near-certain correct, but verify only one FK exists on the column after applying.
+- ~~Both migrations are unapplied~~ — **resolved 2026-07-19**: applied via `supabase db push` and verified (single cascade FK on `ai_report_cache`).
+- **Supabase CLI account hygiene**: the machine previously had a `supabase login` from another account — now logged out. Convention going forward: never `supabase login`; the CLI authenticates via `SUPABASE_ACCESS_TOKEN` in `.env.local`, loaded per shell with the loader one-liner commented in that file. Repo stays linked to `xhxcxzpjdnzkknnwmwxe` via `supabase/.temp/project-ref` (re-link with `npx supabase link --project-ref xhxcxzpjdnzkknnwmwxe` after a fresh clone).
 - **Visual parity needs one browser pass**: hero-card tint (0.85 flat vs old 0.7+blur — nudge toward 0.82 if the gradient should bleed through more), orb centers possibly reading slightly more saturated than the blurred originals, channel-bar grain now covering the empty track (approved, but eyeball it), and hard flick-scroll to check for a late-painted card frame from `content-visibility: auto` (fallback if seen: `contain: layout paint` on the shell).
 - **Transient refresh failure clears good on-screen data** (lands on the noSources state — same terminal state as before, but more noticeable now that stale data stays visible). Deliberate scope hold; a "keep stale data on refresh failure" policy is a queued polish item.
 - **`setUserId` waits for full revalidation** on snapshot hits, so AI insights start later than they could. One-line-ish follow-up.
