@@ -27,6 +27,7 @@ export function SharedReportClient({
   aiInsights: AiInsightsPayload | null;
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
+  const activeIndexRef = useRef(0);
   const [isFs, setIsFs] = useState(false);
   const [presentationScale, setPresentationScale] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -45,6 +46,13 @@ export function SharedReportClient({
     [slideData, reportData, aiInsights],
   );
   const total = slides.length;
+
+  // Stable per-index ref callbacks so the memoized SlideCard isn't handed a
+  // fresh innerRef identity (which would defeat React.memo) on every render.
+  const setCardRefs = useMemo(
+    () => slides.map((_, i) => (el: HTMLDivElement | null) => { cardRefs.current[i] = el; }),
+    [slides],
+  );
 
   useEffect(() => {
     if (isPortrait) return;
@@ -67,7 +75,10 @@ export function SharedReportClient({
           }
         }
         const idx = els.indexOf(best.target as HTMLDivElement);
-        if (idx !== -1) setActiveIndex(idx);
+        if (idx !== -1) {
+          activeIndexRef.current = idx;
+          setActiveIndex(idx);
+        }
       },
       { threshold: 0.5 },
     );
@@ -81,22 +92,24 @@ export function SharedReportClient({
     el.scrollIntoView({ behavior: "smooth", block: "center" });
   }, []);
 
+  // Reads the current index from a ref so the listener isn't torn down and
+  // re-added on every scroll transition.
   useEffect(() => {
     if (isPortrait) return;
     const onKey = (e: KeyboardEvent) => {
       if (["ArrowDown", "ArrowRight", " ", "Enter"].includes(e.key)) {
         e.preventDefault();
-        scrollToIndex(Math.min(activeIndex + 1, total - 1));
+        scrollToIndex(Math.min(activeIndexRef.current + 1, total - 1));
       } else if (["ArrowUp", "ArrowLeft"].includes(e.key)) {
         e.preventDefault();
-        scrollToIndex(Math.max(activeIndex - 1, 0));
+        scrollToIndex(Math.max(activeIndexRef.current - 1, 0));
       } else if (e.key === "Escape" && document.fullscreenElement) {
         document.exitFullscreen?.();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [activeIndex, total, scrollToIndex, isPortrait]);
+  }, [total, scrollToIndex, isPortrait]);
 
   useEffect(() => {
     const onFs = () => {
@@ -167,7 +180,7 @@ export function SharedReportClient({
                   key={slide.id}
                   slide={slide}
                   scale={viewerScale}
-                  innerRef={(el) => { cardRefs.current[i] = el; }}
+                  innerRef={setCardRefs[i]}
                 />
               ))}
             </div>

@@ -52,14 +52,15 @@ function ReportPageInner() {
   const [refreshing, setRefreshing] = useState(false);
   const [noSources, setNoSources] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const activeIndexRef = useRef(0);
   const [isFs, setIsFs] = useState(false);
   const [presentationScale, setPresentationScale] = useState<number | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
   const [shareFailed, setShareFailed] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
   const reportDataRef = useRef<ReportData | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const { scale } = useCardScale(containerRef, scrollRef);
@@ -73,11 +74,11 @@ function ReportPageInner() {
   const isPortrait = usePortraitReport();
 
   const periodLabel = reportData?.meta?.period?.label ?? "Senaste perioden";
-  const { insights: aiInsights, loading: aiInsightsLoading } = useAiInsights(
   // Insights follow the period baked into the rendered data, not the URL range:
   // while stale slides stay visible during a range change, the hook's dedup key
   // stays unchanged instead of firing an extra generation for (new period +
   // stale data). It still fires exactly once per period + data fingerprint.
+  const { insights: aiInsights, loading: aiInsightsLoading } = useAiInsights(
     reportData,
     userId,
     reportData?.meta?.period?.startDate ?? dateRange.startDate,
@@ -115,11 +116,11 @@ function ReportPageInner() {
       };
 
       const supabase = createClient();
-      const { data, error } = await supabase
       // Kicked off here so auth resolves alongside the data fetches instead of
       // adding a serial round trip before first paint; awaited where needed.
       const userPromise = supabase.auth.getUser().catch(() => ({ data: { user: null } }));
 
+      const { data, error } = await supabase
         .from("connected_sources")
         .select("id, source, property_id, display_name, token_expires_at")
         .in("source", ["ga4", "gsc"])
@@ -191,13 +192,13 @@ function ReportPageInner() {
         period: { label: resolvedPeriodLabel, startDate: rangeStart, endDate: rangeEnd },
       };
 
-      const {
       reportDataRef.current = merged;
       setReportData(merged);
       setLoading(false);
       setRefreshing(false);
       writeReportSnapshot(sources.map((s) => s.id), rangeStart, rangeEnd, merged);
 
+      const {
         data: { user },
       } = await userPromise;
       if (!cancelled && user) setUserId(user.id);
@@ -213,6 +214,13 @@ function ReportPageInner() {
     [slideData, reportData, aiInsights],
   );
   const total = slides.length;
+
+  // Stable per-index ref callbacks so the memoized SlideCard isn't handed a
+  // fresh innerRef identity (which would defeat React.memo) on every render.
+  const setCardRefs = useMemo(
+    () => slides.map((_, index) => (element: HTMLDivElement | null) => { cardRefs.current[index] = element; }),
+    [slides],
+  );
 
   // Track which slide is in view via IntersectionObserver
   useEffect(() => {
@@ -234,7 +242,10 @@ function ReportPageInner() {
           if (dist < bestDist) { bestDist = dist; best = e; }
         }
         const idx = els.indexOf(best.target as HTMLDivElement);
-        if (idx !== -1) setActiveIndex(idx);
+        if (idx !== -1) {
+          activeIndexRef.current = idx;
+          setActiveIndex(idx);
+        }
       },
       { threshold: 0.5 },
     );
@@ -249,16 +260,17 @@ function ReportPageInner() {
     el.scrollIntoView({ behavior: "smooth", block: "center" });
   }, []);
 
-  // Arrow keys / space scroll one card
+  // Arrow keys / space scroll one card. Reads the current index from a ref so
+  // the listener isn't torn down and re-added on every scroll transition.
   useEffect(() => {
     if (isPortrait) return;
     const onKey = (e: KeyboardEvent) => {
       if (["ArrowDown", "ArrowRight", " ", "Enter"].includes(e.key)) {
         e.preventDefault();
-        scrollToIndex(Math.min(activeIndex + 1, total - 1));
+        scrollToIndex(Math.min(activeIndexRef.current + 1, total - 1));
       } else if (["ArrowUp", "ArrowLeft"].includes(e.key)) {
         e.preventDefault();
-        scrollToIndex(Math.max(activeIndex - 1, 0));
+        scrollToIndex(Math.max(activeIndexRef.current - 1, 0));
       } else if (e.key === "Escape") {
         if (document.fullscreenElement) document.exitFullscreen?.();
         else window.history.back();
@@ -266,7 +278,7 @@ function ReportPageInner() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [activeIndex, total, scrollToIndex, isPortrait]);
+  }, [total, scrollToIndex, isPortrait]);
 
   // Fullscreen
   useEffect(() => {
@@ -398,7 +410,7 @@ function ReportPageInner() {
                   <div style={{ width: CANVAS_W, height: CANVAS_H, transform: `scale(${viewerScale})`, transformOrigin: "top left", padding: "48px 64px" }}><SlideShimmer /></div>
                 </div>
               )) : !noSources && slides.map((slide, index) => (
-                <SlideCard key={slide.id} slide={slide} scale={viewerScale} innerRef={(element) => { cardRefs.current[index] = element; }} />
+                <SlideCard key={slide.id} slide={slide} scale={viewerScale} innerRef={setCardRefs[index]} />
               ))}
             </div>
           )}

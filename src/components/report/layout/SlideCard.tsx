@@ -1,9 +1,12 @@
 "use client";
 
+import { memo } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { CANVAS_W, CANVAS_H } from "../tokens";
 
-export function SlideCard({ slide, scale, innerRef }: {
+// Memoized: the viewers pass stable slide/innerRef identities, so activeIndex
+// churn during scroll no longer reconciles the slide subtrees.
+export const SlideCard = memo(function SlideCard({ slide, scale, innerRef }: {
   slide: { id: string; render: () => React.ReactNode };
   scale: number;
   innerRef?: React.RefCallback<HTMLDivElement>;
@@ -32,6 +35,12 @@ export function SlideCard({ slide, scale, innerRef }: {
           background: "#ffffff",
           boxShadow: "0 2px 4px rgba(20,18,16,0.04), 0 12px 40px rgba(20,18,16,0.08)",
           border: "1px solid rgba(20,18,16,0.05)",
+          // Skip paint/raster of off-screen slide content. Lives on this shell
+          // rather than the outer wrapper: paint containment on the outer would
+          // clip this shell's drop shadow, and the outer must stay plainly
+          // rendered for the whileInView entrance + page IntersectionObserver.
+          contentVisibility: "auto",
+          containIntrinsicSize: `${cardW}px ${cardH}px`,
         }}
       >
         {/* Canvas — full 1280×720, scaled down to fit */}
@@ -50,4 +59,4 @@ export function SlideCard({ slide, scale, innerRef }: {
       </div>
     </motion.div>
   );
-}
+});
