@@ -4,6 +4,57 @@
 
 ## NOW - Open priorities (2026-07-18)
 
+### Done this session (2026-07-18) — report performance overhaul (scroll lag fix + data-layer speed)
+
+**Context**
+- `/investigate` traced the report's scroll lag to a stack of per-frame paint costs: live `feTurbulence` SVG noise filters on ~7 slides (worst: inside SlideChannels' width-animating bar fills), 64px `blur-3xl` gradient orbs on every AI-gradient slide, all 10 slide canvases repaint-eligible during scroll, full-page re-renders (including the Recharts chart) on every IntersectionObserver active-slide change, and `backdrop-filter` blurs. Behind the scenes: a serial `auth.getUser()` round trip before first paint, full unmount-to-shimmer on every date change, and zero caching — every visit re-hit Google's APIs live.
+- Executed as 5 delegated coding-agent phases (prompt pack via `/delegate`), each diff-reviewed before acceptance: `1 ∥ 3a → 2 → 3b ∥ 4`.
+
+**Phase 1 — static noise + gradient orbs (paint bombs)**
+- New `src/components/ui/noise-tile.tsx`: same grain as `NoiseTexture`'s `fine` preset but baked into a 160×160 SVG data-URI background tile — rasterized once and cached by the browser instead of re-running the filter per repaint. Swapped into all 7 report noise sites; `noise-texture.tsx` itself and landing/dashboard usages untouched.
+- SlideChannels: noise removed from the width-animating fill (was re-rasterizing every frame × 6 staggered bars for 1.5s) and moved to the static track. Bar animation timing/easing unchanged.
+- All `blur-3xl` orbs (5 slides + AISummary + MobileReportDeck) replaced with pure radial-gradients — enlarged ~50% with centers held fixed (arithmetic verified per-orb), softened mid stops, no filter.
+
+**Phase 2 — render isolation**
+- `SlideCard` wrapped in `React.memo`; `contentVisibility: "auto"` + `containIntrinsicSize` on the inner clipping shell (not the outer wrapper — paint containment there would clip the card shadow and interfere with the whileInView/page IntersectionObservers).
+- Both viewers (`report/page.tsx`, `SharedReportClient.tsx`, mirrored): stable per-index `innerRef` callbacks via `useMemo` so the memo holds; keyboard handler reads `activeIndexRef` so the keydown listener isn't re-subscribed per scroll transition. An activeIndex change now re-renders only the page shell — no slide subtree, no Recharts reconcile.
+
+**Phase 3a — client data layer (`report/page.tsx` + new `src/lib/report-snapshot.ts`)**
+- `auth.getUser()` fires in parallel with the sources/GA4/GSC fetches instead of serially after them.
+- Stale-while-revalidate: date changes keep old slides on screen with a spinner in the date-picker button (`Loader2`, `aria-busy`); shimmer is cold-load-only.
+- sessionStorage snapshot keyed by sorted source ids + range (versioned prefix): revisits paint instantly, then silently revalidate. Only successful loads are written.
+- `useAiInsights` now receives the period from `reportData.meta.period` (URL fallback) — keeps the dedup key honest while stale data is on screen, preventing a spurious generation for (new period + stale fingerprint). Hook file itself untouched.
+
+**Phase 3b — server-side Google response cache**
+- Migration `20260718000000_google_report_cache.sql`: `google_report_cache` table, composite PK (user_id, source, property_id, period_start, period_end), RLS per-user, `on delete cascade` on the auth.users FK.
+- `src/lib/google/report-cache.ts`: pure `isCacheFresh` (period ended 2+ days ago → 24h TTL; live period → 30 min) + read/write/clear helpers that degrade silently — any cache failure is a miss, never a 500. Vitest suite covers the TTL boundaries (`report-cache.test.ts`).
+- `/api/ga4` + `/api/gsc` consult the cache after auth/property resolution and upsert only successful mapped bodies (never errors or `connected: false`). Cache is gated to `locale === "sv"` (the only locale the report sends) since the key has no locale column.
+- Invalidation: `google/disconnect` and `google/connect` clear the user's rows for that source.
+- Follow-up migration `20260718001000_ai_report_cache_cascade.sql`: retrofits `on delete cascade` onto the older `ai_report_cache` FK (same latent user-deletion blocker).
+
+**Phase 4 — last per-frame filter costs**
+- SmoothCursor: 40-line SVG `<filter>` drop-shadow chain replaced with CSS `drop-shadow(0 2.25825px 4.5165px rgba(0,0,0,0.08))` on the static inner SVG (blur radius = 2× the old Gaussian stdDeviation — exact match). Spring now transforms a pre-rasterized texture.
+- Hero glass card: `backdrop-blur-sm` + 0.7 white → flat 0.85 white (halves grain transmission, same read). KeyboardHints: `blur(8px)` dropped, 0.95 → 0.97 opacity. MobileReportDeck's sticky-nav blur deliberately kept (content genuinely scrolls behind it).
+
+**Files changed**
+- New: `src/components/ui/noise-tile.tsx`, `src/lib/report-snapshot.ts`, `src/lib/google/report-cache.ts` (+ test), `supabase/migrations/20260718000000_google_report_cache.sql`, `supabase/migrations/20260718001000_ai_report_cache_cascade.sql`
+- Modified: `SlideHero`, `SlideChannels`, `SlideConversion`, `SlideStrategicInsight`, `SlideRecap`, `SlideAIVisibility`, `AISummary`, `MobileReportDeck`, `SlideCard`, `report/page.tsx`, `SharedReportClient.tsx`, `KeyboardHints`, `smooth-cursor.tsx`, `api/ga4/route.ts`, `api/gsc/route.ts`, `google/connect/route.ts`, `google/disconnect/route.ts`
+
+**Verification**
+- `npm run build`, lint (no new findings), and vitest (42 tests incl. 8 new TTL cases) passed per phase; every diff reviewed against its phase prompt (scope, drift, correctness) before acceptance.
+- **Owner visual pass still pending** — see worries below.
+
+**Future worries / open items**
+- **Both migrations are unapplied.** Run `npx supabase db push` before/with deploy. Until then the cache routes silently fall back to live fetching (safe, just uncached). The `ai_report_cache` cascade migration drops the FK by its Postgres auto-generated name (`ai_report_cache_user_id_fkey`) — near-certain correct, but verify only one FK exists on the column after applying.
+- **Visual parity needs one browser pass**: hero-card tint (0.85 flat vs old 0.7+blur — nudge toward 0.82 if the gradient should bleed through more), orb centers possibly reading slightly more saturated than the blurred originals, channel-bar grain now covering the empty track (approved, but eyeball it), and hard flick-scroll to check for a late-painted card frame from `content-visibility: auto` (fallback if seen: `contain: layout paint` on the shell).
+- **Transient refresh failure clears good on-screen data** (lands on the noSources state — same terminal state as before, but more noticeable now that stale data stays visible). Deliberate scope hold; a "keep stale data on refresh failure" policy is a queued polish item.
+- **`setUserId` waits for full revalidation** on snapshot hits, so AI insights start later than they could. One-line-ish follow-up.
+- **Google cache has no stampede guard** (unlike the AI cache's RPC lease) — concurrent misses each hit Google, last write wins. Strictly no worse than before; add a lease only if quota pressure appears.
+- **Only `locale === "sv"` is cached**; if English reports ever ship, the cache key needs a locale column.
+- **Cosmetic**: two "was X, now Y" changelog-style comments left in KeyboardHints/SlideHero by the phase-5 agent — strip at will.
+
+---
+
 ### Done this session (2026-07-18) — loud diagnostics for Google OAuth login failures
 
 **Context**
