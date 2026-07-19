@@ -3,7 +3,7 @@
 import { motion } from "motion/react";
 import { type AiInsightsPayload } from "@/lib/ai-insights/types";
 import { type SlideData } from "../slide-data";
-import { AI_GRADIENT, AI_SHADOW, AI_BORDER, AI_TEXT_SECONDARY, AI_SHIMMER } from "../tokens";
+import { AI_GRADIENT, AI_SHADOW, AI_BORDER, AI_TEXT_PRIMARY, AI_TEXT_SECONDARY, AI_SHIMMER } from "../tokens";
 import { withPeriod } from "@/lib/utils/text";
 import { highlightNumbers } from "@/lib/utils/highlight-numbers";
 import { NoiseTile } from "@/components/ui/noise-tile";
@@ -73,7 +73,7 @@ export function SlideHero({
                 <div className="h-8 w-[45%] rounded-full" style={{ background: AI_SHIMMER }} />
               </div>
             ) : (
-              <p className="text-[1.7rem] font-medium leading-[1.45] tracking-normal" style={{ color: "rgba(30,20,60,0.9)" }}>
+              <p className="text-[1.7rem] font-normal leading-[1.45] tracking-normal" style={{ color: AI_TEXT_PRIMARY }}>
                 {aiHero ? highlightNumbers(withPeriod(aiHero), "light") : null}
               </p>
             )}

@@ -43,7 +43,7 @@ export function AISummary({
         <p className="text-[10px] font-semibold uppercase tracking-[0.24em]" style={{ color: AI_TEXT_SECONDARY }}>
           {label}
         </p>
-        <div className="mt-2 space-y-3 text-[1.15rem] font-medium leading-[1.6] tracking-[-0.01em] sm:text-[1.25rem]" style={{ color: AI_TEXT_PRIMARY }}>
+        <div className="mt-2 space-y-3 text-[1.15rem] font-normal leading-[1.6] tracking-[-0.01em] sm:text-[1.25rem]" style={{ color: AI_TEXT_PRIMARY }}>
           {children}
         </div>
       </div>

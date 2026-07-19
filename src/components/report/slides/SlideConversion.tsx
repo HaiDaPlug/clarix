@@ -32,7 +32,7 @@ export function SlideConversion({ d }: { d: SlideData }) {
               {...fadeUp(active, reduced, { y: 16, delay: 0.15 + i * 0.1 })}
             >
               <p className="text-sm text-foreground">{m.l}</p>
-              <p className="mt-2 font-display text-3xl tracking-tight">{m.v}</p>
+              <p className="mt-2 font-stat text-3xl font-semibold tracking-tight tabular-nums">{m.v}</p>
               {m.dd && (
                 <p className="mt-1 text-xs font-medium" style={{ color: TREND_POS }}>
                   {m.dd}

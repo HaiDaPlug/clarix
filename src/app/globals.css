@@ -1,4 +1,5 @@
-/* Fonts loaded via layout.tsx <head> — Barlow + Satoshi */
+/* Fonts loaded via layout.tsx <head> — Plus Jakarta Sans (display), Satoshi (body),
+   Bricolage Grotesque (stats), Fraunces (accent). */
 
 @import "tailwindcss";
 @import "tw-animate-css";
@@ -86,8 +87,9 @@
   --info-color: #1E4A8C;
 
   /* Fonts */
-  --font-display: 'Barlow', system-ui, sans-serif;
+  --font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
   --font-body: 'Satoshi', system-ui, sans-serif;
+  --font-numeric: 'Bricolage Grotesque', system-ui, sans-serif;
 
   /* shadcn tokens */
   --background: #ffffff;
@@ -242,6 +244,14 @@ html[data-magicui-theme-vt="active"]::view-transition-group(root) {
   font-family: var(--font-display);
 }
 
+/* Stat numbers — Bricolage Grotesque with tabular figures. Weight is set by
+   the caller (font-semibold/font-bold) so stats can scale from list rows to
+   hero KPIs. */
+.font-stat {
+  font-family: var(--font-numeric);
+  font-feature-settings: "tnum" 1;
+}
+
 .eyebrow {
   font-family: var(--font-body);
   font-size: 10.5px;
@@ -338,7 +348,7 @@ body.smooth-cursor-active .recharts-wrapper * { cursor: none !important; }
   }
 
   .font-numeric {
-    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    font-family: var(--font-numeric);
     font-weight: 800;
     font-feature-settings: "tnum" 1;
     letter-spacing: -0.04em;

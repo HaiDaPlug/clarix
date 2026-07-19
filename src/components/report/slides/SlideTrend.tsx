@@ -44,7 +44,7 @@ export function SlideTrend({ d }: { d: SlideData }) {
           <div className="flex items-center justify-between gap-4 mb-3 shrink-0">
             <div>
               <p className="text-[18px] font-semibold uppercase tracking-[0.2em] text-foreground">Totala besök</p>
-              <p className="font-display text-[3.3rem] font-bold leading-none tracking-tight tabular-nums mt-0.5">
+              <p className="font-stat text-[3.3rem] font-bold leading-none tracking-tight tabular-nums mt-0.5">
                 {d.visits.toLocaleString("sv-SE")}
               </p>
             </div>
@@ -128,7 +128,7 @@ export function SlideTrend({ d }: { d: SlideData }) {
                   {s.label}
                 </p>
                 <div className="flex items-baseline gap-2">
-                  <p className="font-display text-[1.7rem] font-bold leading-none tracking-tight tabular-nums">
+                  <p className="font-stat text-[1.7rem] font-bold leading-none tracking-tight tabular-nums">
                     {s.value}
                   </p>
                   {s.delta !== undefined && (

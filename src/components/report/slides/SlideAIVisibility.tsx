@@ -61,7 +61,7 @@ export function SlideAIVisibility() {
                 style={{ border: `1px solid ${AI_BORDER}`, background: AI_SHIMMER }}
               >
                 <p className="text-sm font-semibold" style={{ color: AI_TEXT_PRIMARY }}>{s.n}</p>
-                <p className="mt-2 font-display text-2xl font-semibold tracking-tight" style={{ color: AI_TEXT_SECONDARY }}>
+                <p className="mt-2 font-stat text-2xl font-semibold tracking-tight" style={{ color: AI_TEXT_SECONDARY }}>
                   —
                 </p>
                 <p className="mt-1 text-[10px] uppercase tracking-[0.2em]" style={{ color: AI_TEXT_SECONDARY }}>

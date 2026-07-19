@@ -106,7 +106,7 @@ export function SlideChannels({ d }: { d: SlideData }) {
                     ease: "easeOut",
                   }}
                 >
-                  <p className="font-display text-[26px] font-bold tabular-nums leading-none">
+                  <p className="font-stat text-[26px] font-bold tabular-nums leading-none">
                     {c.pct}%
                   </p>
                   {isPositive && (

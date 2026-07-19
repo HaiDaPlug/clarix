@@ -100,7 +100,7 @@ export function SlidePages({ d }: { d: SlideData }) {
 
               {/* Visit count */}
               <div className="text-right">
-                <span className="font-display text-[21px] font-bold tabular-nums tracking-tight text-foreground">
+                <span className="font-stat text-[21px] font-bold tabular-nums tracking-tight text-foreground">
                   {row.v.toLocaleString("sv-SE")}
                 </span>
               </div>

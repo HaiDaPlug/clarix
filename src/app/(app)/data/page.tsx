@@ -90,7 +90,7 @@ function MetricsContent({ metrics }: { metrics: Ga4ExplorerMetric[] }) {
               textTransform: "uppercase",
               color: "#1A1916",
               marginBottom: "5px",
-              fontFamily: "'Barlow', sans-serif",
+              fontFamily: "var(--font-body)",
               fontWeight: 600,
             }}>
               {m.label}
@@ -99,7 +99,7 @@ function MetricsContent({ metrics }: { metrics: Ga4ExplorerMetric[] }) {
               <span style={{
                 fontSize: "26px",
                 fontWeight: 700,
-                fontFamily: "'Barlow', sans-serif",
+                fontFamily: "var(--font-numeric)",
                 color: m.value === null ? "rgba(26,25,22,0.25)" : "#1A1916",
                 letterSpacing: "-0.03em",
                 lineHeight: 1,
@@ -110,7 +110,7 @@ function MetricsContent({ metrics }: { metrics: Ga4ExplorerMetric[] }) {
                 <span style={{
                   fontSize: "10px",
                   fontWeight: 700,
-                  fontFamily: "'Barlow', sans-serif",
+                  fontFamily: "var(--font-numeric)",
                   letterSpacing: "0.03em",
                   color: deltaPositive ? "#2D6A4F" : "#9B2335",
                   background: deltaPositive ? "#EAF4EE" : "#F9EAEC",
@@ -147,10 +147,10 @@ function RowsContent({ rows, valueLabel }: { rows: Ga4ExplorerRow[]; valueLabel?
           marginBottom: "4px",
           borderBottom: "1px solid rgba(26,25,22,0.07)",
         }}>
-          <span style={{ fontSize: "11px", letterSpacing: "0.06em", textTransform: "uppercase", color: "#1A1916", fontFamily: "'Barlow', sans-serif", fontWeight: 600 }}>
+          <span style={{ fontSize: "11px", letterSpacing: "0.06em", textTransform: "uppercase", color: "#1A1916", fontFamily: "var(--font-body)", fontWeight: 600 }}>
             Dimension
           </span>
-          <span style={{ fontSize: "11px", letterSpacing: "0.06em", textTransform: "uppercase", color: "#1A1916", fontFamily: "'Barlow', sans-serif", fontWeight: 600 }}>
+          <span style={{ fontSize: "11px", letterSpacing: "0.06em", textTransform: "uppercase", color: "#1A1916", fontFamily: "var(--font-body)", fontWeight: 600 }}>
             {valueLabel}
           </span>
         </div>
@@ -172,7 +172,7 @@ function RowsContent({ rows, valueLabel }: { rows: Ga4ExplorerRow[]; valueLabel?
             <span style={{
               fontSize: "14px",
               color: "#1A1916",
-              fontFamily: "'Barlow', sans-serif",
+              fontFamily: "var(--font-body)",
               fontWeight: 500,
               overflow: "hidden",
               textOverflow: "ellipsis",
@@ -186,7 +186,7 @@ function RowsContent({ rows, valueLabel }: { rows: Ga4ExplorerRow[]; valueLabel?
               <span style={{
                 fontSize: "15px",
                 fontWeight: 700,
-                fontFamily: "'Barlow', sans-serif",
+                fontFamily: "var(--font-numeric)",
                 color: r.value === null ? "rgba(26,25,22,0.25)" : "#1A1916",
                 letterSpacing: "-0.02em",
               }}>
@@ -196,7 +196,7 @@ function RowsContent({ rows, valueLabel }: { rows: Ga4ExplorerRow[]; valueLabel?
                 <span style={{
                   fontSize: "12px",
                   fontWeight: 700,
-                  fontFamily: "'Barlow', sans-serif",
+                  fontFamily: "var(--font-numeric)",
                   color: delta.pct >= 0 ? "#2D6A4F" : "#9B2335",
                   minWidth: "32px",
                   textAlign: "right",
@@ -297,7 +297,7 @@ function DraggableCard({
         <span style={{
           fontSize: "11px",
           fontWeight: 700,
-          fontFamily: "'Barlow', sans-serif",
+          fontFamily: "var(--font-body)",
           letterSpacing: "0.1em",
           textTransform: "uppercase",
           color: "rgba(26,25,22,0.75)",
@@ -306,7 +306,7 @@ function DraggableCard({
           {def.label}
         </span>
         {isEmpty && (
-          <span style={{ fontSize: "10px", color: "rgba(26,25,22,0.25)", fontFamily: "'Barlow', sans-serif" }}>
+          <span style={{ fontSize: "10px", color: "rgba(26,25,22,0.25)", fontFamily: "var(--font-body)" }}>
             Laddar...
           </span>
         )}
@@ -366,7 +366,7 @@ function Toolbar({
             cursor: "pointer",
             fontSize: "10px",
             fontWeight: 700,
-            fontFamily: "'Barlow', sans-serif",
+            fontFamily: "var(--font-body)",
             letterSpacing: "0.06em",
             textTransform: "uppercase",
             transition: "all 0.15s ease",
@@ -388,7 +388,7 @@ function Toolbar({
           cursor: "pointer",
           fontSize: "10px",
           fontWeight: 700,
-          fontFamily: "'Barlow', sans-serif",
+          fontFamily: "var(--font-body)",
           letterSpacing: "0.06em",
           textTransform: "uppercase",
           background: "transparent",
@@ -533,7 +533,7 @@ function DataPageInner() {
           <span style={{
             fontSize: "11px",
             fontWeight: 700,
-            fontFamily: "'Barlow', sans-serif",
+            fontFamily: "var(--font-body)",
             letterSpacing: "0.12em",
             textTransform: "uppercase",
             color: "rgba(26,25,22,0.4)",
@@ -555,7 +555,7 @@ function DataPageInner() {
                     cursor: "pointer",
                     fontSize: "12px",
                     fontWeight: 600,
-                    fontFamily: "'Barlow', sans-serif",
+                    fontFamily: "var(--font-body)",
                     letterSpacing: "0.02em",
                     transition: "all 0.15s ease",
                     background: activePropertyId === p.property_id ? "#1A1916" : "transparent",
@@ -577,7 +577,7 @@ function DataPageInner() {
             }} />
           )}
           {noSource && (
-            <span style={{ fontSize: "12px", color: "rgba(26,25,22,0.4)", fontFamily: "'Barlow', sans-serif" }}>
+            <span style={{ fontSize: "12px", color: "rgba(26,25,22,0.4)", fontFamily: "var(--font-body)" }}>
               {locale === "sv" ? "Ingen GA4-källa ansluten" : "No GA4 source connected"}
             </span>
           )}

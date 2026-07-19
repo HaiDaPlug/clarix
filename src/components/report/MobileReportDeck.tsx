@@ -121,7 +121,7 @@ function InsightCard({ children, label }: { children: React.ReactNode; label?: s
       <div className="pointer-events-none absolute -right-34 -top-38 h-84 w-84 rounded-full" style={{ background: "radial-gradient(circle, oklch(0.827 0.119 306 / 0.2) 0%, oklch(0.827 0.119 306 / 0.12) 40%, transparent 72%)" }} />
       <div className="relative">
         {label && <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.22em]" style={{ color: AI_TEXT_SECONDARY }}>{label}</p>}
-        <div className="space-y-3 text-[16px] font-medium leading-[1.65]" style={{ color: AI_TEXT_PRIMARY }}>{children}</div>
+        <div className="space-y-3 text-[16px] font-normal leading-[1.65]" style={{ color: AI_TEXT_PRIMARY }}>{children}</div>
       </div>
     </div>
   );
@@ -200,12 +200,12 @@ export function MobileReportDeck({
         <div className="grid grid-cols-2 gap-3">
           <div className="rounded-2xl border border-border bg-background/90 p-4">
             <p className="text-xs font-semibold text-foreground/50">Besök</p>
-            <p className="font-display mt-2 text-3xl font-bold tabular-nums">{fmt(data.visits)}</p>
+            <p className="font-stat mt-2 text-3xl font-bold tabular-nums">{fmt(data.visits)}</p>
             <div className="mt-2"><Delta value={data.trafficDelta} /></div>
           </div>
           <div className="rounded-2xl border border-border bg-background/90 p-4">
             <p className="text-xs font-semibold text-foreground/50">Personer</p>
-            <p className="font-display mt-2 text-3xl font-bold tabular-nums">{fmt(data.people)}</p>
+            <p className="font-stat mt-2 text-3xl font-bold tabular-nums">{fmt(data.people)}</p>
             <div className="mt-2"><Delta value={data.peopleDelta} /></div>
           </div>
         </div>
@@ -226,7 +226,7 @@ export function MobileReportDeck({
           ].map(([label, value, delta]) => (
             <div key={String(label)} className="flex min-h-36 flex-col rounded-2xl border border-border bg-background/90 p-4 shadow-sm">
               <p className="text-sm font-semibold text-foreground/60">{label}</p>
-              <p className="font-display mt-auto pt-4 text-[1.7rem] font-bold leading-none tracking-tight">{value}</p>
+              <p className="font-stat mt-auto pt-4 text-[1.7rem] font-bold leading-none tracking-tight tabular-nums">{value}</p>
               <div className="mt-2"><Delta value={delta as number | null} /></div>
             </div>
           ))}
@@ -236,7 +236,7 @@ export function MobileReportDeck({
       <Section id="mobile-trend" number="03 — Utveckling" title="Så hittar besökarna till er" sub={data.period}>
         <div className="rounded-3xl border border-border bg-background/90 p-4">
           <div className="mb-4 flex items-end justify-between gap-3">
-            <div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground/50">Totala besök</p><p className="font-display mt-1 text-4xl font-bold">{fmt(data.visits)}</p></div>
+            <div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground/50">Totala besök</p><p className="font-stat mt-1 text-4xl font-bold tabular-nums">{fmt(data.visits)}</p></div>
             <Delta value={data.trafficDelta} />
           </div>
           <div className="h-60 w-full">
@@ -266,7 +266,7 @@ export function MobileReportDeck({
                 <div className="flex items-start gap-3">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: `${color}1f` }}><Icon className="h-4 w-4" style={{ color }} /></span>
                   <div className="min-w-0 flex-1"><p className="font-semibold leading-tight">{channel.name}</p><p className="mt-1 text-xs leading-relaxed text-foreground/50">{channel.sub}</p></div>
-                  <p className="font-display text-2xl font-bold">{channel.pct}%</p>
+                  <p className="font-stat text-2xl font-bold tabular-nums">{channel.pct}%</p>
                 </div>
                 <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full" style={{ width: `${channel.pct}%`, background: color }} /></div>
                 <div className="mt-2 flex items-center justify-between text-xs"><span className="text-foreground/50">{fmt(channel.visits)} besök</span><Delta value={channel.delta} /></div>
@@ -278,7 +278,7 @@ export function MobileReportDeck({
 
       <Section id="mobile-conversion" number="05 — Affär" title={data.hasConversions ? "Affären bakom trafiken" : "Du ser trafiken — men inte affären"} sub={data.hasConversions ? "Alla mätta konverteringar under perioden." : "Konverteringsspårning är inte aktiverad ännu."}>
         {data.hasConversions ? (
-          <div className="rounded-3xl border border-border bg-background/90 p-5"><p className="text-sm text-foreground/55">Konverteringar</p><p className="font-display mt-2 text-4xl font-bold">{fmt(data.leads)}</p><div className="mt-2"><Delta value={data.leadsDelta} /></div></div>
+          <div className="rounded-3xl border border-border bg-background/90 p-5"><p className="text-sm text-foreground/55">Konverteringar</p><p className="font-stat mt-2 text-4xl font-bold tabular-nums">{fmt(data.leads)}</p><div className="mt-2"><Delta value={data.leadsDelta} /></div></div>
         ) : (
           <InsightCard label="Vad du får med spårning">
             <ul className="space-y-3">{["Antal leads per kanal", "Vilka sidor som skapar affärer", "Bästa kampanj baserat på riktig data"].map((item) => <li key={item} className="flex items-start gap-3"><CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" style={{ color: ACCENT }} /><span>{item}</span></li>)}</ul>
@@ -291,7 +291,7 @@ export function MobileReportDeck({
         <div className="divide-y divide-border overflow-hidden rounded-3xl border border-border bg-background/90">
           {data.topPages.map((page) => {
             const href = `https://${domain}${page.p}`;
-            return <a key={page.p} href={href} target="_blank" rel="noopener noreferrer" className="flex min-h-20 items-center gap-3 px-4 py-3 text-foreground transition-colors hover:bg-muted/50"><div className="min-w-0 flex-1"><p className="truncate font-semibold">{page.title ?? page.p}</p><p className="mt-1 truncate text-xs text-foreground/45">{page.p}</p></div><div className="text-right"><p className="font-display text-xl font-bold">{fmt(page.v)}</p><Delta value={page.d} /></div></a>;
+            return <a key={page.p} href={href} target="_blank" rel="noopener noreferrer" className="flex min-h-20 items-center gap-3 px-4 py-3 text-foreground transition-colors hover:bg-muted/50"><div className="min-w-0 flex-1"><p className="truncate font-semibold">{page.title ?? page.p}</p><p className="mt-1 truncate text-xs text-foreground/45">{page.p}</p></div><div className="text-right"><p className="font-stat text-xl font-bold tabular-nums">{fmt(page.v)}</p><Delta value={page.d} /></div></a>;
           })}
         </div>
       </Section>

@@ -68,7 +68,7 @@ export function SlideStrategicInsight({
           <p className="text-[11px] font-semibold uppercase tracking-[0.24em]" style={{ color: AI_TEXT_SECONDARY }}>
             Det vi ser just nu
           </p>
-          <div className="flex-1 space-y-4 text-[1.15rem] font-medium leading-[1.65] tracking-[-0.01em]" style={{ color: AI_TEXT_PRIMARY }}>
+          <div className="flex-1 space-y-4 text-[1.15rem] font-normal leading-[1.65] tracking-[-0.01em]" style={{ color: AI_TEXT_PRIMARY }}>
             {aiInsights === null ? (
               <div className="flex flex-col gap-3">
                 {[90, 80, 65].map((w, i) => <div key={i} className="h-4 rounded-full animate-pulse" style={{ width: `${w}%`, background: AI_SHIMMER }} />)}

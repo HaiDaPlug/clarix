@@ -74,7 +74,7 @@ export function SlideKpis({ d }: { d: SlideData }) {
               </div>
               <TrendPill delta={k.d} positive={k.p} size="md" />
             </div>
-            <p className="mt-auto pt-6 font-display text-[4.2rem] font-semibold leading-none tracking-tight tabular-nums">
+            <p className="mt-auto pt-6 font-stat text-[4.2rem] font-semibold leading-none tracking-tight tabular-nums">
               {k.value == null ? "–" : <NumberTicker value={k.value} format={k.format} />}
             </p>
           </motion.div>
