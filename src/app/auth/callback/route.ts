@@ -6,6 +6,18 @@ export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
 
+  // The OAuth provider (Google) redirects here directly with its own
+  // error/error_description params when it denies the request before
+  // ever issuing a code (e.g. access_denied, admin_policy_enforced,
+  // account not on the Test Users allowlist while app is unverified).
+  const providerError = searchParams.get("error");
+  if (providerError) {
+    const detail = searchParams.get("error_description") || providerError;
+    return NextResponse.redirect(
+      `${origin}/login?error=auth_failed&reason=provider_denied&detail=${encodeURIComponent(detail)}`,
+    );
+  }
+
   if (code) {
     const cookieStore = await cookies();
     const supabase = createClient(cookieStore);
@@ -47,7 +59,14 @@ export async function GET(request: Request) {
       );
       return NextResponse.redirect(`${origin}${hasRealConnections ? "/dashboard" : "/integrations"}`);
     }
+
+    // exchangeCodeForSession failed or returned no session — surface why.
+    const detail = error?.message ?? "no session returned";
+    const status = error?.status ? `&status=${error.status}` : "";
+    return NextResponse.redirect(
+      `${origin}/login?error=auth_failed&reason=exchange_failed&detail=${encodeURIComponent(detail)}${status}`,
+    );
   }
 
-  return NextResponse.redirect(`${origin}/login?error=auth_failed`);
+  return NextResponse.redirect(`${origin}/login?error=auth_failed&reason=no_code`);
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion } from "motion/react";
@@ -13,6 +14,8 @@ import {
   TrendingUp,
   ShieldCheck,
   Palette,
+  Menu,
+  X,
 } from "lucide-react";
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
 import { NoiseTexture } from "@/components/ui/noise-texture";
@@ -32,22 +35,23 @@ export function ThemeToggle() {
   return (
     <AnimatedThemeToggler
       variant="circle"
-      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border/60 bg-background/80 text-muted-foreground transition-colors hover:border-border hover:text-foreground [&>svg]:h-4 [&>svg]:w-4"
+      className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-border/60 bg-background/80 text-muted-foreground transition-colors hover:border-border hover:text-foreground [&>svg]:h-4 [&>svg]:w-4"
     />
   );
 }
 
 export function LandingHeader() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   return (
-    <header className="sticky top-0 z-40 border-b border-border/40 bg-background/60 backdrop-blur-xl">
-      <div className="mx-auto grid h-16 max-w-7xl grid-cols-[auto_1fr] items-center gap-3 px-4 sm:h-20 sm:px-6 md:grid-cols-[1fr_auto_1fr] lg:h-24 lg:px-8">
+    <header className="sticky top-0 z-40 border-b border-border/40 bg-background/80 backdrop-blur-xl">
+      <div className="mx-auto grid min-h-16 max-w-7xl grid-cols-[auto_1fr] items-center gap-3 px-4 sm:h-20 sm:px-6 md:grid-cols-[1fr_auto_1fr] lg:h-24 lg:px-8" style={{ paddingTop: "env(safe-area-inset-top)" }}>
         <Link href="/" className="shrink-0 justify-self-start">
           <Image
             src="/clarix-logga-transparent.png"
             alt="Clarix"
             width={200}
             height={64}
-            className="h-12 w-auto dark:invert sm:h-14 lg:h-20"
+            className="h-8 w-auto dark:invert sm:h-14 lg:h-20"
             priority
           />
         </Link>
@@ -58,7 +62,17 @@ export function LandingHeader() {
           <a href="#pricing" className="transition-colors hover:text-foreground">Priser</a>
         </nav>
         <div className="flex min-w-0 items-center justify-self-end gap-2 sm:gap-3">
-          <ThemeToggle />
+          <div className="hidden min-[360px]:block"><ThemeToggle /></div>
+          <button
+            type="button"
+            aria-label={mobileMenuOpen ? "Stäng meny" : "Öppna meny"}
+            aria-expanded={mobileMenuOpen}
+            aria-controls="landing-mobile-menu"
+            onClick={() => setMobileMenuOpen((open) => !open)}
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-border/60 bg-background/80 text-foreground md:hidden"
+          >
+            {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+          </button>
           <Link
             href="/login"
             className="hidden rounded-full px-5 py-2.5 text-base font-medium text-muted-foreground transition-colors hover:text-foreground sm:inline-flex"
@@ -74,6 +88,31 @@ export function LandingHeader() {
           </Link>
         </div>
       </div>
+      {mobileMenuOpen && (
+        <nav
+          id="landing-mobile-menu"
+          aria-label="Mobilmeny"
+          className="absolute inset-x-0 top-full border-b border-border/60 bg-background/95 px-4 py-3 shadow-[0_18px_40px_-24px_rgba(15,23,42,0.45)] backdrop-blur-xl md:hidden"
+        >
+          <div className="mx-auto grid max-w-7xl grid-cols-2 gap-2">
+            {[
+              ["Funktioner", "#features"],
+              ["Kanaler", "#channels"],
+              ["För byråer", "#agencies"],
+              ["Priser", "#pricing"],
+            ].map(([label, href]) => (
+              <a
+                key={href}
+                href={href}
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex min-h-11 items-center rounded-xl px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+              >
+                {label}
+              </a>
+            ))}
+          </div>
+        </nav>
+      )}
     </header>
   );
 }

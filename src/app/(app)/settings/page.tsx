@@ -31,8 +31,8 @@ export default function SettingsPage() {
   return (
     <div className="flex-1 flex flex-col min-h-dvh">
       <header
-        className="flex items-center px-8 border-b shrink-0 sticky top-0 z-30"
-        style={{ borderColor: "var(--rule)", backgroundColor: "var(--parchment)", height: "88px" }}
+        className="sticky top-0 z-30 flex min-h-[88px] shrink-0 items-center border-b py-3 pl-16 pr-4 sm:px-6 lg:px-8"
+        style={{ borderColor: "var(--rule)", backgroundColor: "var(--parchment)" }}
       >
         <div>
           <p className="eyebrow" style={{ color: "var(--slate)" }}>Konto</p>
@@ -51,7 +51,7 @@ export default function SettingsPage() {
         </div>
       </header>
 
-      <main className="flex-1 px-8 py-8 max-w-4xl">
+      <main className="flex-1 max-w-4xl px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[200px_1fr]">
           {/* Sidebar nav */}
           <nav className="flex flex-col gap-0.5">
@@ -62,7 +62,7 @@ export default function SettingsPage() {
                 <button
                   key={s.id}
                   onClick={() => setActive(s.id)}
-                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors text-left"
+                  className="flex min-h-11 w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors"
                   style={{
                     backgroundColor: isActive ? "var(--bone-dark)" : "transparent",
                     color: isActive ? "var(--charcoal)" : "var(--slate)",
@@ -81,7 +81,7 @@ export default function SettingsPage() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: EASING }}
-            className="rounded-2xl p-6 lg:p-8"
+            className="rounded-2xl p-5 sm:p-6 lg:p-8"
             style={{ backgroundColor: "var(--bone)", border: "1px solid var(--rule)" }}
           >
             {active === "profile" && (

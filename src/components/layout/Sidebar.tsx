@@ -120,12 +120,18 @@ export function Sidebar({ collapsed, mobileOpen, onCollapseToggle, onMobileClose
               onClick={onMobileClose}
             />
             <motion.aside
+              id="clarix-mobile-navigation"
               key="mobile-sidebar"
               className="fixed inset-y-0 left-0 z-50 flex flex-col border-r lg:hidden"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Navigation"
               style={{
                 width: "min(280px, calc(100vw - 48px))",
                 borderColor: "var(--rule)",
                 backgroundColor: "var(--bone)",
+                paddingTop: "env(safe-area-inset-top)",
+                paddingBottom: "env(safe-area-inset-bottom)",
               }}
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}

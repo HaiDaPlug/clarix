@@ -16,8 +16,8 @@ export default function ClientsPage() {
   return (
     <div className="flex-1 flex flex-col min-h-dvh">
       <header
-        className="flex items-center justify-between px-8 border-b shrink-0 sticky top-0 z-30"
-        style={{ borderColor: "var(--rule)", backgroundColor: "var(--parchment)", height: "88px" }}
+        className="sticky top-0 z-30 flex min-h-[88px] shrink-0 items-center justify-between gap-3 border-b py-3 pl-16 pr-4 sm:px-6 lg:px-8"
+        style={{ borderColor: "var(--rule)", backgroundColor: "var(--parchment)" }}
       >
         <div>
           <p className="eyebrow" style={{ color: "var(--slate)" }}>Arbetsytor</p>
@@ -35,7 +35,7 @@ export default function ClientsPage() {
           </h1>
         </div>
         <button
-          className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-opacity hover:opacity-80"
+          className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-opacity hover:opacity-80"
           style={{ backgroundColor: "var(--charcoal)", color: "var(--parchment)" }}
         >
           <Plus className="h-4 w-4" />
@@ -43,7 +43,7 @@ export default function ClientsPage() {
         </button>
       </header>
 
-      <main className="flex-1 px-8 py-8">
+      <main className="flex-1 px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
         <motion.p
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
@@ -72,7 +72,7 @@ export default function ClientsPage() {
                     {c.name.charAt(0)}
                   </div>
                   <button
-                    className="rounded-full p-1.5 transition-colors hover:bg-[var(--bone-dark)]"
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-[var(--bone-dark)]"
                     style={{ color: "var(--slate)" }}
                   >
                     <MoreHorizontal className="h-4 w-4" />

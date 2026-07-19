@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { CANVAS_H, CANVAS_W } from "../tokens";
 
-const SCALE_PADDING_Y = 64;
+const SCALE_HEIGHT_BONUS = 60;
 const SCALE_MAX = 1.65;
 const SCALE_MIN = 0.35;
 
@@ -19,7 +19,7 @@ export function useCardScale(
       const availableWidth = container.clientWidth;
       const viewportHeight =
         viewportRef?.current?.clientHeight ?? window.innerHeight;
-      const availableHeight = Math.max(0, viewportHeight - SCALE_PADDING_Y);
+      const availableHeight = Math.max(0, viewportHeight + SCALE_HEIGHT_BONUS);
       const widthScale = availableWidth / CANVAS_W;
       const heightScale = availableHeight / CANVAS_H;
       const nextScale = Math.min(widthScale, heightScale, SCALE_MAX);

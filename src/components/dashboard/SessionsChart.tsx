@@ -92,10 +92,10 @@ export function SessionsChart({ item, data }: { item: AssembledDashboardItem; da
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: EASE_OUT, delay: 0.2 }}
-      className="rounded-2xl p-6"
+      className="rounded-2xl p-4 sm:p-6"
       style={{ backgroundColor: "var(--bone)", border: "1px solid var(--rule)" }}
     >
-      <div className="flex items-start justify-between mb-6">
+      <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row">
         <div>
           <div className="flex items-center gap-1.5 mb-2">
             <p className="eyebrow" style={{ color: "var(--slate)" }}>{t.dashboard.sessions.eyebrow}</p>
@@ -112,7 +112,7 @@ export function SessionsChart({ item, data }: { item: AssembledDashboardItem; da
             </>
           )}
         </div>
-        <div className="flex items-center gap-5 shrink-0 ml-6">
+        <div className="flex shrink-0 flex-wrap items-center gap-4 sm:ml-6 sm:gap-5">
           <span className="flex items-center gap-2" style={{ fontSize: "12px", fontWeight: 600, color: "var(--charcoal)" }}>
             <span className="w-4 h-0.5 inline-block rounded-full" style={{ background: "linear-gradient(90deg, #FF4D9E, #FF6B55, #FFB830)" }} />
             Besök

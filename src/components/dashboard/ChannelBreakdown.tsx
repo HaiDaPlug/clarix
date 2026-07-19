@@ -208,15 +208,15 @@ export function ChannelBreakdown({ item, data }: { item: AssembledDashboardItem;
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: EASE_OUT, delay: 0.2 }}
-      className="rounded-2xl p-6"
+      className="rounded-2xl p-4 sm:p-6"
       style={{ backgroundColor: "var(--bone)", border: "1px solid var(--rule)" }}
     >
       <p className="eyebrow mb-4" style={{ color: "var(--slate)" }}>{t.dashboard.channels.eyebrow}</p>
-      <div className="flex items-center gap-5">
+      <div className="flex flex-col items-center gap-5 sm:flex-row">
         <div className="shrink-0">
           <DonutChart segments={segments} totalSessions={total} hoveredIndex={hoveredIndex} onHover={setHoveredIndex} />
         </div>
-        <div className="flex flex-col gap-2 flex-1 min-w-0">
+        <div className="flex min-w-0 w-full flex-1 flex-col gap-2">
           {rows.map((row, i) => {
             const color = CHANNEL_COLORS[i % CHANNEL_COLORS.length];
             const pct = Math.round(row.share);

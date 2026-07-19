@@ -2,7 +2,55 @@
 
 ---
 
-## NOW - Open priorities (2026-07-15)
+## NOW - Open priorities (2026-07-18)
+
+### Done this session (2026-07-18) — loud diagnostics for Google OAuth login failures
+
+**Context**
+- A coworker with a previously-working Google-login account started landing on `clarix.se/login?error=auth_failed` on every attempt, while login kept working for other accounts. Investigation (`/investigate`) traced the redirect to a single fallthrough in `src/app/auth/callback/route.ts` that swallows every failure reason — no `code`, a provider-side denial, or a failed `exchangeCodeForSession` — into the same generic `auth_failed`, which `src/app/login/page.tsx` didn't even read, so the user saw a blank form with zero indication of what went wrong.
+- Leading suspect: the Google Cloud OAuth consent screen is still in **Testing** mode with only **2 Test Users** allowed (see open priority #19 below, still unresolved) — an account that previously worked can silently lose access if it falls off that list or the app is unverified. A cross-provider identity conflict (same email registered under a different auth method) is the secondary suspect.
+
+**Change — temporary loud error surfacing (diagnostic only)**
+- `src/app/auth/callback/route.ts` now tags the `auth_failed` redirect with *why*: `reason=provider_denied&detail=...` (Google rejected the request before issuing a code — e.g. not on the Test Users list), `reason=exchange_failed&detail=...&status=...` (Supabase's `exchangeCodeForSession` returned an error), or `reason=no_code` (no code and no provider error at all).
+- `src/app/login/page.tsx` reads `error`/`reason`/`detail`/`status` via `useSearchParams` (page now wrapped in `Suspense`, required for that hook) and renders a plainly-visible red banner with the raw values — marked `TEMPORARY` in a code comment, with a removal note.
+- **This is intentionally loud for internal debugging and must not ship to the general public as-is** — before any public/production launch, strip the on-page banner (and ideally the raw `detail` text in the redirect URL) back down to a translated, generic message. Leaking raw Supabase/Google error strings to end users is not acceptable for launch.
+
+**Files changed**
+- `src/app/auth/callback/route.ts`
+- `src/app/login/page.tsx`
+
+**Verification**
+- `npx tsc --noEmit` passed.
+- Not yet reproduced live against the coworker's actual account — next step is to have them retry and read the banner/URL for the real `reason`/`detail`.
+
+**Follow-up still needed**
+- Confirm root cause via the banner, then apply the real fix (add coworker to Google Cloud Console Test Users, or submit for OAuth verification, or resolve an identity conflict in Supabase's `auth.identities`).
+- **Before public launch: remove the loud diagnostic banner and raw error detail in the redirect URL, replacing them with a generic translated error message.**
+
+---
+
+## Previously — Open priorities (2026-07-16)
+
+### Done this session (2026-07-16) — SlideHero rebuilt to match DashboardHero exactly
+
+**Report slide 2 ("Sammanfattning") now visually replicates the dashboard AI insight card**
+- User asked for the dashboard's AI insight card (`DashboardHero`) to be copied onto report slide 2 (`SlideHero`) — visually identical, not the same generated copy/prompt.
+- `SlideHero.tsx` rewritten from its previous layout (centered plain headline above a single `AISummary` gradient card) to mirror `DashboardHero`'s exact structure: one gradient card (`AI_GRADIENT`/`AI_SHADOW`/`AI_BORDER`) with the same two blurred color blobs and `NoiseTexture`, split into a left column (pulsing-dot eyebrow + large headline) and a right white/glass card (`oklch(1 0 0 / 0.7)` background, same blur/shadow/border), sized up (`p-16`, largest breakpoint font sizes) to fill the fixed 1280×720 slide canvas rather than a responsive viewport.
+- Loading state also mirrors `DashboardHero`: shimmer bars (`AI_SHIMMER`) in place of both the headline and the card text instead of the old single-line `Shimmer` helper.
+- Right card was trimmed to show **only** the `slide_hero` AI insight text (exactly 3 sentences, per the existing `route.ts` constraint) — the previous hardcoded "besök ... jämfört med föregående period" sentence stacked above it was removed so the card matches `DashboardHero`'s single-paragraph content, and the AI copy is never diluted with a 4th, component-authored sentence.
+- No prompt/constraint changes were needed in `src/app/api/generate-insights/route.ts` — `slide_hero`'s `CONSTRAINT` already specified "Exakt 3 meningar"; the extra sentence was coming from the component, not the model.
+- Supersedes the entangled, uncommitted `SlideHero.tsx` reveal-treatment edit noted in the 2026-07-15 entry below — that file has since been fully rewritten.
+
+**Files changed**
+- `src/components/report/slides/SlideHero.tsx`
+
+**Verification**
+- `npx tsc --noEmit` passed.
+- No live screenshot of real report data was available in this environment (no connected GA4/GSC test account; a headless pass hit the unauthenticated "no data" empty state, not the real card) — visual correctness was confirmed by the user directly in their own browser session against `/report` slide 2.
+
+---
+
+## Previously — Open priorities (2026-07-15)
 
 ### Done this session (2026-07-15) — smooth cursor, animated counters, scroll-reveal on all report slides
 
