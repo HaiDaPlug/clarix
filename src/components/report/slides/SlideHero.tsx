@@ -57,9 +57,13 @@ export function SlideHero({
 
         {/* Right: white glass card — mirrors DashboardHero's insight panel */}
         <motion.div className="col-span-7" {...fadeUp(active, reduced, { delay: 0.15 })}>
+          {/* 0.7 + backdrop-blur-sm → 0.85 flat: the blur only smoothed the
+              static gradient + noise grain behind the card; higher opacity
+              halves the grain transmission for the same glass read, minus the
+              per-scroll backdrop-filter cost. */}
           <div
-            className="rounded-2xl p-9 backdrop-blur-sm shadow-[0_20px_50px_-20px_rgba(139,92,246,0.15)]"
-            style={{ background: "oklch(1 0 0 / 0.7)", border: "1px solid oklch(0.78 0.06 295 / 0.4)" }}
+            className="rounded-2xl p-9 shadow-[0_20px_50px_-20px_rgba(139,92,246,0.15)]"
+            style={{ background: "oklch(1 0 0 / 0.85)", border: "1px solid oklch(0.78 0.06 295 / 0.4)" }}
           >
             {loading ? (
               <div className="flex flex-col gap-4">
