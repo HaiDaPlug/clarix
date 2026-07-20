@@ -178,7 +178,7 @@ export function KpiCard({
             </p>
             <div className="flex items-baseline gap-3">
               <NumberFlash delay={0.1 + index * 0.05}>
-                <span style={{ fontFamily: "var(--font-display)", fontSize: "2.4rem", fontWeight: 700, lineHeight: 1, letterSpacing: "-0.04em", color: "var(--charcoal)" }}>
+                <span style={{ fontFamily: "var(--font-numeric)", fontVariantNumeric: "tabular-nums", fontSize: "2.4rem", fontWeight: 700, lineHeight: 1, letterSpacing: "-0.04em", color: "var(--charcoal)" }}>
                   {loading ? (
                     <motion.span
                       animate={{ opacity: [0.3, 0.7, 0.3] }}

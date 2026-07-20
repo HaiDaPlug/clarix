@@ -99,7 +99,8 @@ export function MetricTile({ metric, itemId }: { metric: Metric; itemId?: Dashbo
       </p>
       <p
         style={{
-          fontFamily: "var(--font-display)",
+          fontFamily: "var(--font-numeric)",
+          fontVariantNumeric: "tabular-nums",
           fontSize: "1.6rem",
           fontWeight: 600,
           lineHeight: 1,

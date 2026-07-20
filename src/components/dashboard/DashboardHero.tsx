@@ -11,7 +11,7 @@ import { FALLBACK_TEXT } from "@/lib/hooks/useAiInsights";
 import { ShimmerOverlay } from "@/components/primitives/ShimmerCard";
 import { highlightNumbers } from "@/lib/utils/highlight-numbers";
 import { withPeriod } from "@/lib/utils/text";
-import { AI_GRADIENT, AI_SHADOW, AI_TEXT_SECONDARY, AI_BORDER, AI_SHIMMER } from "@/components/report/tokens";
+import { AI_GRADIENT, AI_SHADOW, AI_TEXT_PRIMARY, AI_TEXT_SECONDARY, AI_BORDER, AI_SHIMMER } from "@/components/report/tokens";
 
 const HERO_ENTER = { duration: 0.5, ease: [0.0, 0.0, 0.2, 1] as const, delay: 0 };
 
@@ -66,8 +66,8 @@ export function DashboardHero({
             </div>
           ) : (
             <h2
-              className="font-display2 text-[2.15rem] leading-[1.08] tracking-tight sm:text-5xl md:text-[3rem] md:leading-[1.05]"
-              style={{ color: "oklch(0.2 0.04 290)" }}
+              className="font-display text-[2.15rem] font-extrabold leading-[1.08] tracking-tight sm:text-5xl md:text-[3rem] md:leading-[1.05]"
+              style={{ color: AI_TEXT_PRIMARY }}
             >
               {highlightNumbers(withPeriod(headline), "light")}
             </h2>

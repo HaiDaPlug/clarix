@@ -49,7 +49,7 @@ export function SlideHero({
               <div className="h-12 w-[55%] rounded-full" style={{ background: AI_SHIMMER }} />
             </div>
           ) : (
-            <h2 className="font-display2 text-[3rem] leading-[1.05] tracking-tight" style={{ color: "oklch(0.2 0.04 290)" }}>
+            <h2 className="font-display text-[3rem] font-extrabold leading-[1.05] tracking-tight" style={{ color: AI_TEXT_PRIMARY }}>
               {headline}<span style={{ color: "#FF6B55" }}>.</span>
             </h2>
           )}

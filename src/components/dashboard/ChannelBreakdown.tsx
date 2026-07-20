@@ -181,11 +181,11 @@ function DonutChart({
       <text x={CX} y={CY - 12} textAnchor="middle" style={{ fontFamily: "var(--font-display)", fontSize: "9px", fontWeight: 500, fill: "var(--slate)", letterSpacing: "0.1em", textTransform: "uppercase", pointerEvents: "none" }}>
         {active ? active.label.toUpperCase().slice(0, 10) : "TOTALT"}
       </text>
-      <text x={CX} y={CY + 18} textAnchor="middle" style={{ fontFamily: "var(--font-display)", fontSize: active ? "26px" : "30px", fontWeight: 700, fill: "var(--charcoal)", letterSpacing: "-0.03em", pointerEvents: "none" }}>
+      <text x={CX} y={CY + 18} textAnchor="middle" style={{ fontFamily: "var(--font-numeric)", fontVariantNumeric: "tabular-nums", fontSize: active ? "26px" : "30px", fontWeight: 700, fill: "var(--charcoal)", letterSpacing: "-0.03em", pointerEvents: "none" }}>
         {active ? formatNumber(active.value, "number") : totalSessions >= 1000 ? `${(totalSessions / 1000).toFixed(1)}k` : String(totalSessions)}
       </text>
       {active && (
-        <text x={CX} y={CY + 34} textAnchor="middle" style={{ fontFamily: "var(--font-display)", fontSize: "12px", fontWeight: 600, fill: CHANNEL_COLORS.find((_, ci) => segments[ci]?.label === active.label)?.stroke ?? "var(--slate)", pointerEvents: "none" }}>
+        <text x={CX} y={CY + 34} textAnchor="middle" style={{ fontFamily: "var(--font-numeric)", fontSize: "12px", fontWeight: 600, fill: CHANNEL_COLORS.find((_, ci) => segments[ci]?.label === active.label)?.stroke ?? "var(--slate)", pointerEvents: "none" }}>
           {Math.round(active.share)}%
         </text>
       )}
@@ -250,7 +250,7 @@ export function ChannelBreakdown({ item, data }: { item: AssembledDashboardItem;
                     </p>
                   )}
                   <div className="flex items-baseline gap-1.5 mt-1">
-                    <span style={{ fontFamily: "var(--font-display)", fontSize: "1.5rem", fontWeight: 700, letterSpacing: "-0.03em", color: isActive ? color.label : "var(--charcoal)", lineHeight: 1, fontVariantNumeric: "tabular-nums", transition: "color 0.18s ease" }}>
+                    <span style={{ fontFamily: "var(--font-numeric)", fontSize: "1.5rem", fontWeight: 700, letterSpacing: "-0.03em", color: isActive ? color.label : "var(--charcoal)", lineHeight: 1, fontVariantNumeric: "tabular-nums", transition: "color 0.18s ease" }}>
                       {formatNumber(row.value, "number")}
                     </span>
                     {isFull && row.metric && <DeltaText metric={row.metric} />}
