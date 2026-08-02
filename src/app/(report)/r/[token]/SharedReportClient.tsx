@@ -13,7 +13,6 @@ import { buildSlideData } from "@/components/report/slide-data";
 import { buildSlides } from "@/components/report/slide-list";
 import { useCardScale } from "@/components/report/layout/useCardScale";
 import { SlideCard } from "@/components/report/layout/SlideCard";
-import { SmoothCursor } from "@/components/ui/smooth-cursor";
 import { MobileReportDeck } from "@/components/report/MobileReportDeck";
 import { usePortraitReport } from "@/components/report/usePortraitReport";
 
@@ -138,7 +137,6 @@ export function SharedReportClient({
 
   return (
     <div className="relative flex h-dvh flex-col overflow-hidden bg-[oklch(0.965_0.005_270)] text-foreground print:bg-white" style={{ overscrollBehavior: "auto" }}>
-      {!isPortrait && <SmoothCursor />}
       <header style={isPortrait ? { paddingTop: "max(0.5rem, env(safe-area-inset-top))" } : undefined} className={isPortrait ? "z-20 flex min-h-16 shrink-0 items-center justify-between gap-3 px-4 pb-2 print:hidden" : "z-20 flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-2 px-4 py-2 print:hidden sm:px-6 lg:h-12 lg:min-h-12 lg:flex-nowrap"}>
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           <span className="inline-flex min-h-11 items-center rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs font-semibold text-foreground sm:min-h-9">

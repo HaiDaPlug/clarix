@@ -4,21 +4,19 @@ import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "rea
 import Link from "next/link";
 import {
   ArrowLeft,
-  ArrowRight,
-  Loader2,
   Maximize2,
   Minimize2,
   Share2,
 } from "lucide-react";
 import { KeyboardHints } from "@/components/report/KeyboardHints";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import {
   ConnectableSource,
   ConnectedSource,
   mergeReportData,
 } from "@/lib/google/connected-sources";
-import { useDateRange, DATE_PRESETS, presetToRange, type DatePresetId } from "@/lib/google/date-presets";
+import { useDateRange } from "@/lib/google/date-presets";
+import { DateRangePicker } from "@/components/primitives/DateRangePicker";
 import { deriveExecutiveSummary } from "@/lib/engine/derive-executive-summary";
 import { useAiInsights } from "@/lib/hooks/useAiInsights";
 import type { ReportData } from "@/types/schema";
@@ -29,7 +27,6 @@ import { buildSlideData } from "@/components/report/slide-data";
 import { buildSlides } from "@/components/report/slide-list";
 import { useCardScale } from "@/components/report/layout/useCardScale";
 import { SlideCard } from "@/components/report/layout/SlideCard";
-import { SmoothCursor } from "@/components/ui/smooth-cursor";
 import { MobileReportDeck, MobileReportLoading } from "@/components/report/MobileReportDeck";
 import { usePortraitReport } from "@/components/report/usePortraitReport";
 
@@ -55,7 +52,6 @@ function ReportPageInner() {
   const activeIndexRef = useRef(0);
   const [isFs, setIsFs] = useState(false);
   const [presentationScale, setPresentationScale] = useState<number | null>(null);
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
   const [shareFailed, setShareFailed] = useState(false);
@@ -70,7 +66,6 @@ function ReportPageInner() {
   const dateRange = useDateRange();
   const rangeStart = dateRange.startDate;
   const rangeEnd = dateRange.endDate;
-  const router = useRouter();
   const isPortrait = usePortraitReport();
 
   const periodLabel = reportData?.meta?.period?.label ?? "Senaste perioden";
@@ -306,18 +301,6 @@ function ReportPageInner() {
     }
   };
 
-  // Date preset picker - sets ?from=&to= on URL
-  const applyPreset = (id: DatePresetId) => {
-    const r = presetToRange(id);
-    router.push(`?from=${r.startDate}&to=${r.endDate}`);
-    setShowDatePicker(false);
-  };
-
-  const currentLabel = DATE_PRESETS.find((p) => {
-    const r = presetToRange(p.id);
-    return r.startDate === dateRange.startDate && r.endDate === dateRange.endDate;
-  })?.labelSv ?? `${dateRange.startDate} – ${dateRange.endDate}`;
-
   const handleShare = useCallback(async () => {
     if (!reportData) return;
 
@@ -358,8 +341,6 @@ function ReportPageInner() {
 
   return (
     <div className="relative flex h-dvh flex-col overflow-hidden bg-[oklch(0.965_0.005_270)] text-foreground print:bg-white" style={{ overscrollBehavior: "auto" }}>
-      {!isPortrait && <SmoothCursor />}
-
       {/* Top bar */}
       <header style={isPortrait ? { paddingTop: "max(0.5rem, env(safe-area-inset-top))" } : undefined} className={isPortrait ? "z-20 flex min-h-16 shrink-0 items-center gap-2 px-4 pb-2 print:hidden" : "z-20 flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-2 px-4 py-2 print:hidden sm:px-6 lg:h-12 lg:min-h-12 lg:flex-nowrap"}>
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
@@ -369,17 +350,8 @@ function ReportPageInner() {
           </Link>
           {!isPortrait && <span className="tabular-nums text-xs text-foreground/50">{activeIndex + 1} / {total}</span>}
         </div>
-        <div className={isPortrait ? "relative min-w-0 flex-1" : "relative order-3 w-full sm:order-none sm:w-auto"}>
-          <button onClick={() => setShowDatePicker((value) => !value)} aria-busy={refreshing} aria-label={refreshing ? "Uppdaterar rapporten" : undefined} className="inline-flex min-h-11 w-full min-w-0 items-center justify-center gap-2 truncate rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted sm:min-h-9 sm:w-auto sm:px-4">
-            <span className="truncate">{currentLabel}</span>{refreshing ? <Loader2 className="h-3 w-3 shrink-0 animate-spin" /> : <ArrowRight className="h-3 w-3 shrink-0 rotate-90" />}
-          </button>
-          {showDatePicker && (
-            <div className="absolute right-0 top-full z-50 mt-2 w-48 overflow-hidden rounded-2xl border border-border/60 bg-background shadow-xl" onMouseLeave={() => setShowDatePicker(false)}>
-              {DATE_PRESETS.map((preset) => (
-                <button key={preset.id} onClick={() => applyPreset(preset.id)} className="w-full px-4 py-3 text-left text-sm font-medium transition-colors hover:bg-muted" style={{ color: preset.id === (DATE_PRESETS.find((item) => presetToRange(item.id).startDate === dateRange.startDate)?.id) ? "#FF6B55" : undefined }}>{preset.labelSv}</button>
-              ))}
-            </div>
-          )}
+        <div className={isPortrait ? "min-w-0 flex-1" : "order-3 w-full sm:order-none sm:w-auto"}>
+          <DateRangePicker locale="sv" loading={refreshing} />
         </div>
         <div className="flex items-center gap-2">
           <button onClick={handleShare} disabled={shareLoading || !reportData} aria-label={shareLoading ? "Skapar delningslänk" : shareCopied ? "Länk kopierad" : "Dela rapport"} className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50 sm:min-h-9 sm:min-w-0">

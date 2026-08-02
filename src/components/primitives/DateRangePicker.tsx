@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Calendar, Check, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { Calendar, Check, ChevronDown, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import {
   DATE_PRESETS,
   DatePresetId,
@@ -12,7 +13,13 @@ import {
 
 interface DateRangePickerProps {
   locale?: string;
+  loading?: boolean;
 }
+
+const CORAL = "#FF6B55";
+const CORAL_GRADIENT = "linear-gradient(135deg, #FF4D9E 0%, #FF6B55 50%, #FFB830 100%)";
+const CORAL_SOFT_BG = "#FF6B551A";
+const POPOVER_EASE = [0.16, 1, 0.3, 1] as const;
 
 const MONTH_SV = ["Januari","Februari","Mars","April","Maj","Juni","Juli","Augusti","September","Oktober","November","December"];
 const DAY_SV   = ["Mån","Tis","Ons","Tor","Fre","Lör","Sön"];
@@ -41,6 +48,14 @@ function firstWeekdayOfMonth(year: number, month: number): number {
   return day === 0 ? 6 : day - 1;
 }
 
+// Full calendar month, clamped to `today` when the month is still in progress.
+function monthRange(year: number, month: number, today: string): { startDate: string; endDate: string } {
+  const startDate = `${year}-${String(month + 1).padStart(2, "0")}-01`;
+  const lastDay = daysInMonth(year, month);
+  const endDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+  return { startDate, endDate: endDate > today ? today : endDate };
+}
+
 interface CalendarGridProps {
   year: number;
   month: number;
@@ -51,11 +66,12 @@ interface CalendarGridProps {
   today: string;
   onDay: (iso: string) => void;
   onHover: (iso: string | null) => void;
+  onSelectMonth: () => void;
 }
 
 function CalendarGrid({
   year, month, selecting, hovered,
-  rangeFrom, rangeTo, today, onDay, onHover,
+  rangeFrom, rangeTo, today, onDay, onHover, onSelectMonth,
 }: CalendarGridProps) {
   const totalDays = daysInMonth(year, month);
   const startOffset = firstWeekdayOfMonth(year, month);
@@ -79,10 +95,15 @@ function CalendarGrid({
 
   return (
     <div>
-      <div style={{ textAlign: "center", fontWeight: 600, fontSize: 13, marginBottom: 8, color: "var(--charcoal)" }}>
+      <button
+        onClick={onSelectMonth}
+        title="Välj hela månaden"
+        className="w-full rounded-lg transition-colors hover:bg-[var(--bone)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B55] focus-visible:ring-offset-1"
+        style={{ textAlign: "center", fontWeight: 600, fontSize: 13, marginBottom: 8, color: "var(--charcoal)", padding: "3px 0", border: "none", background: "none", cursor: "pointer" }}
+      >
         {MONTH_SV[month]} {year}
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 32px)", gap: "2px 0" }}>
+      </button>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 34px)", gap: "3px 2px" }}>
         {DAY_SV.map((d) => (
           <div key={d} style={{ textAlign: "center", fontSize: 11, fontWeight: 500, color: "var(--slate)", paddingBottom: 4 }}>
             {d}
@@ -92,8 +113,6 @@ function CalendarGrid({
           if (!iso) return <div key={`empty-${i}`} />;
 
           const isToday = iso === today;
-          const isStart = iso === (selecting ?? rangeFrom);
-          const isEnd   = !selecting && iso === rangeTo;
           const inRange = lo && hi && iso > lo && iso < hi;
           const isEdge  = iso === lo || iso === hi;
           const isFuture = iso > today;
@@ -105,30 +124,31 @@ function CalendarGrid({
               onClick={() => onDay(iso)}
               onMouseEnter={() => onHover(iso)}
               onMouseLeave={() => onHover(null)}
+              className="calendar-daycell focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B55] focus-visible:ring-offset-1"
               style={{
-                height: 32,
-                width: 32,
-                borderRadius: isEdge ? 8 : inRange ? 0 : 8,
+                height: 34,
+                width: 34,
+                borderRadius: isEdge ? 10 : inRange ? 0 : 10,
                 border: "none",
                 cursor: isFuture ? "not-allowed" : "pointer",
-                fontSize: 12,
+                fontSize: 12.5,
                 fontWeight: isEdge ? 700 : isToday ? 600 : 400,
                 color: isEdge
                   ? "#fff"
                   : isFuture
                   ? "var(--rule)"
                   : inRange
-                  ? "oklch(0.45 0.18 290)"
+                  ? CORAL
                   : isToday
-                  ? "oklch(0.5 0.18 290)"
+                  ? CORAL
                   : "var(--charcoal)",
-                backgroundColor: isEdge
-                  ? "oklch(0.5 0.18 290)"
+                background: isEdge
+                  ? CORAL_GRADIENT
                   : inRange
-                  ? "oklch(0.94 0.06 290)"
+                  ? CORAL_SOFT_BG
                   : "transparent",
-                outline: isToday && !isEdge ? "1px solid oklch(0.7 0.12 290)" : "none",
-                transition: "background-color 0.1s",
+                outline: isToday && !isEdge ? `1px solid ${CORAL}` : "none",
+                transition: "background-color 0.12s ease, transform 0.12s ease, color 0.12s ease",
               }}
             >
               {parseInt(iso.slice(8), 10)}
@@ -140,7 +160,7 @@ function CalendarGrid({
   );
 }
 
-export function DateRangePicker({ locale = "sv" }: DateRangePickerProps) {
+export function DateRangePicker({ locale = "sv", loading = false }: DateRangePickerProps) {
   const router = useRouter();
   const params = useSearchParams();
   const [open, setOpen] = useState(false);
@@ -196,9 +216,27 @@ export function DateRangePicker({ locale = "sv" }: DateRangePickerProps) {
     }
   }
 
+  // Browsing to a month auto-selects that whole month — unless the user is
+  // mid-way through picking a custom range by hand, in which case navigation
+  // should only move the view and leave their in-progress pick alone.
+  function goToMonth(y: number, m: number) {
+    setCalYear(y);
+    setCalMonth(m);
+    if (!selecting) {
+      const r = monthRange(y, m, today);
+      applyRange(r.startDate, r.endDate);
+    }
+  }
+
+  function selectMonth(y: number, m: number) {
+    if (selecting) return;
+    const r = monthRange(y, m, today);
+    applyRange(r.startDate, r.endDate);
+  }
+
   function prevMonth() {
-    if (calMonth === 0) { setCalYear(y => y - 1); setCalMonth(11); }
-    else setCalMonth(m => m - 1);
+    if (calMonth === 0) goToMonth(calYear - 1, 11);
+    else goToMonth(calYear, calMonth - 1);
   }
 
   function nextMonth() {
@@ -206,8 +244,7 @@ export function DateRangePicker({ locale = "sv" }: DateRangePickerProps) {
     const nextY = calMonth === 11 ? calYear + 1 : calYear;
     // Don't navigate past current month
     if (nextY > now.getFullYear() || (nextY === now.getFullYear() && nextM > now.getMonth())) return;
-    setCalYear(nextY);
-    setCalMonth(nextM);
+    goToMonth(nextY, nextM);
   }
 
   // Second month shown alongside
@@ -231,38 +268,61 @@ export function DateRangePicker({ locale = "sv" }: DateRangePickerProps) {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  const isCustomRange = !activePresetId;
+  const reduced = useReducedMotion();
+
   return (
     <div ref={ref} style={{ position: "relative" }}>
       <button
         onClick={() => setOpen((o) => !o)}
-        className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-colors hover:bg-[var(--bone-dark)]"
+        aria-busy={loading}
+        aria-expanded={open}
+        className="relative inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-colors hover:bg-[var(--bone-dark)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B55] focus-visible:ring-offset-1"
         style={{
-          border: "1px solid var(--rule)",
+          border: open ? `1px solid ${CORAL}` : "1px solid var(--rule)",
           color: "var(--charcoal)",
           backgroundColor: open ? "var(--bone-dark)" : "var(--bone)",
+          boxShadow: open ? "0 4px 16px -8px rgba(255,107,85,0.35)" : "none",
+          transition: "border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease",
         }}
       >
-        <Calendar className="h-4 w-4" style={{ color: "var(--slate)" }} />
+        <Calendar className="h-4 w-4" style={{ color: open ? CORAL : "var(--slate)" }} />
         {currentLabel}
-        <ChevronDown
-          className="h-3.5 w-3.5"
-          style={{
-            color: "var(--slate)",
-            transform: open ? "rotate(180deg)" : "rotate(0deg)",
-            transition: "transform 0.15s ease",
-          }}
-        />
+        {isCustomRange && (
+          <span
+            title="Anpassad period"
+            style={{ width: 6, height: 6, borderRadius: "50%", background: CORAL_GRADIENT, flexShrink: 0 }}
+          />
+        )}
+        {loading ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" style={{ color: "var(--slate)" }} />
+        ) : (
+          <ChevronDown
+            className="h-3.5 w-3.5"
+            style={{
+              color: "var(--slate)",
+              transform: open ? "rotate(180deg)" : "rotate(0deg)",
+              transition: "transform 0.15s ease",
+            }}
+          />
+        )}
       </button>
 
-      {open && (
-        <div
-          className="fixed inset-x-4 top-24 z-50 flex max-h-[calc(100dvh-7rem)] flex-col gap-0 overflow-auto rounded-2xl p-3 sm:absolute sm:inset-x-auto sm:right-0 sm:top-[calc(100%+6px)] sm:max-h-none sm:flex-row sm:overflow-visible"
-          style={{
-            background: "#fff",
-            border: "1px solid var(--rule)",
-            boxShadow: "0 4px 6px rgba(0,0,0,0.04), 0 12px 32px rgba(0,0,0,0.12)",
-          }}
-        >
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={reduced ? false : { opacity: 0, scale: 0.97, y: 6 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={reduced ? undefined : { opacity: 0, scale: 0.97, y: 6 }}
+            transition={{ duration: 0.18, ease: POPOVER_EASE }}
+            className="fixed inset-x-4 top-24 z-50 flex max-h-[calc(100dvh-7rem)] flex-col gap-0 overflow-auto rounded-2xl p-3 sm:absolute sm:inset-x-auto sm:right-0 sm:top-[calc(100%+6px)] sm:max-h-none sm:flex-row sm:overflow-visible"
+            style={{
+              background: "#fff",
+              border: "1px solid var(--rule)",
+              boxShadow: "0 4px 6px rgba(0,0,0,0.04), 0 20px 48px -12px rgba(0,0,0,0.14)",
+              transformOrigin: "top right",
+            }}
+          >
           {/* Preset list */}
           <div className="flex flex-col gap-0.5 border-b pb-3 sm:border-b-0 sm:border-r sm:pb-0 sm:pr-3" style={{ borderColor: "var(--rule)", justifyContent: "center" }}>
             {DATE_PRESETS.map((preset) => {
@@ -272,11 +332,11 @@ export function DateRangePicker({ locale = "sv" }: DateRangePickerProps) {
                 <button
                   key={preset.id}
                   onClick={() => selectPreset(preset.id)}
-                  className="w-full flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm text-left transition-colors"
+                  className="w-full flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B55] focus-visible:ring-offset-1"
                   style={{
                     fontWeight: isActive ? 600 : 400,
-                    color: isActive ? "var(--charcoal)" : "var(--slate)",
-                    backgroundColor: isActive ? "var(--bone)" : "transparent",
+                    color: isActive ? CORAL : "var(--slate)",
+                    backgroundColor: isActive ? CORAL_SOFT_BG : "transparent",
                   }}
                   onMouseEnter={(e) => {
                     if (!isActive) (e.currentTarget as HTMLElement).style.backgroundColor = "var(--bone)";
@@ -287,7 +347,7 @@ export function DateRangePicker({ locale = "sv" }: DateRangePickerProps) {
                 >
                   {label}
                   {isActive && (
-                    <Check className="h-3.5 w-3.5 shrink-0" style={{ color: "oklch(0.5 0.18 290)" }} />
+                    <Check className="h-3.5 w-3.5 shrink-0" style={{ color: CORAL }} />
                   )}
                 </button>
               );
@@ -300,14 +360,15 @@ export function DateRangePicker({ locale = "sv" }: DateRangePickerProps) {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
               <button
                 onClick={prevMonth}
+                aria-label="Föregående månad"
                 style={{ border: "none", background: "none", cursor: "pointer", padding: 4, borderRadius: 6, color: "var(--slate)" }}
-                className="hover:bg-[var(--bone)]"
+                className="transition-colors hover:bg-[var(--bone)] hover:text-[#FF6B55] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B55] focus-visible:ring-offset-1"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
               <div style={{ fontSize: 12, color: "var(--slate)" }}>
                 {selecting ? (
-                  <span style={{ fontWeight: 600, color: "oklch(0.5 0.18 290)" }}>
+                  <span style={{ fontWeight: 600, color: CORAL }}>
                     Välj slutdatum
                   </span>
                 ) : (
@@ -318,6 +379,7 @@ export function DateRangePicker({ locale = "sv" }: DateRangePickerProps) {
               </div>
               <button
                 onClick={nextMonth}
+                aria-label="Nästa månad"
                 disabled={atCurrentMonth && !canShowSecond}
                 style={{
                   border: "none", background: "none",
@@ -326,14 +388,22 @@ export function DateRangePicker({ locale = "sv" }: DateRangePickerProps) {
                   color: atCurrentMonth ? "var(--rule)" : "var(--slate)",
                   opacity: atCurrentMonth ? 0.4 : 1,
                 }}
-                className={atCurrentMonth ? "" : "hover:bg-[var(--bone)]"}
+                className={atCurrentMonth ? "" : "transition-colors hover:bg-[var(--bone)] hover:text-[#FF6B55] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B55] focus-visible:ring-offset-1"}
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
             </div>
 
             {/* Two-month grid */}
-            <div className="flex flex-col gap-5 sm:flex-row sm:gap-6">
+            <AnimatePresence mode="popLayout" initial={false}>
+              <motion.div
+                key={`${calYear}-${calMonth}`}
+                className="flex flex-col gap-5 sm:flex-row sm:gap-6"
+                initial={reduced ? false : { opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={reduced ? undefined : { opacity: 0 }}
+                transition={{ duration: 0.14 }}
+              >
               <CalendarGrid
                 year={calYear}
                 month={calMonth}
@@ -341,6 +411,7 @@ export function DateRangePicker({ locale = "sv" }: DateRangePickerProps) {
                 hovered={hovered}
                 rangeFrom={displayFrom}
                 rangeTo={displayTo}
+                onSelectMonth={() => selectMonth(calYear, calMonth)}
                 today={today}
                 onDay={handleDay}
                 onHover={setHovered}
@@ -353,15 +424,18 @@ export function DateRangePicker({ locale = "sv" }: DateRangePickerProps) {
                   hovered={hovered}
                   rangeFrom={displayFrom}
                   rangeTo={displayTo}
+                  onSelectMonth={() => selectMonth(year2, month2)}
                   today={today}
                   onDay={handleDay}
                   onHover={setHovered}
                 />
               )}
-            </div>
+              </motion.div>
+            </AnimatePresence>
           </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
