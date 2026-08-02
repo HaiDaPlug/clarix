@@ -2,7 +2,73 @@
 
 ---
 
-## NOW - Open priorities (2026-07-18)
+## NOW - Open priorities (2026-08-01)
+
+### Done this session (2026-08-01) — report polish: faster counters, custom date range, info tooltips, smooth-cursor removal
+
+**Counting animation speed tuned (report + dashboard + landing)**
+- `NumberTicker` (`src/components/ui/number-ticker.tsx`) spring retuned across three feedback rounds: `damping:60/stiffness:100` (too slow) → `30/200` (too fast) → `28/180` (10% slower, still too fast) → final `damping:40/stiffness:130`. Shared by `SlideKpis` (report) and `KpiCard` (dashboard).
+- `AnimatedCounter` (`src/components/landing/animated-counter.tsx`, used by `layout2/kpi-card2.tsx`) default duration bumped `1000ms → 1500ms` to match.
+
+**Smooth cursor removed entirely**
+- Deleted `src/components/ui/smooth-cursor.tsx` and its usages in `report/page.tsx` + `SharedReportClient.tsx`, plus the `body.smooth-cursor-active` Recharts override in `globals.css`.
+
+**Info tooltips added to the conversion slide**
+- `SlideConversion.tsx` ("Affären bakom trafiken") now has the same `InfoTooltip` hover-bubble used on `SlideKpis`/`SlideChannels`, next to each of the three stat labels (Konverteringar, Bästa kanal, Värde per lead) explaining what each metric means.
+- **Not yet visually QA'd — needs colleague sign-off.** The colleague has the live GA4 stats and was going to check tooltip placement/copy in the browser; hadn't happened as of this session.
+
+**Exact custom date range on the report**
+- The report previously only offered two presets ("Denna månad" / "Sen start"). Swapped its inline preset dropdown for the existing `DateRangePicker` component (`src/components/primitives/DateRangePicker.tsx`) — the same two-month click-to-pick calendar already used on the dashboard and data-explorer pages. No data-layer changes needed: `useDateRange`/`rangeFromSearchParams` already accepted arbitrary `?from=&to=`.
+- Added an optional `loading` prop to `DateRangePicker` (spinner replaces the chevron) so the report keeps its "updating…" affordance during a range change — dashboard/data pages don't pass it, so their behavior is unchanged.
+
+**Date picker UX + visual polish (`/polish` pass)**
+- Browsing months with the ◀/▶ arrows (or clicking a visible month's label) now auto-selects that whole month as the active range (clamped to yesterday for the current month) — no more clicking two days just to get a full month. Manual day-to-day range picking is untouched and takes priority: navigation never overwrites an in-progress manual pick.
+- Replaced the picker's off-brand purple (`oklch(0.5 0.18 290)`) with the established coral/gradient palette (`#FF4D9E → #FF6B55 → #FFB830`) for selected days, in-range tint, today ring, active preset, and a new small gradient dot on the trigger button flagging "custom (non-preset) range active."
+- Added popover open/close and month-switch cross-fade animation (matching the easing already used in `connect-modal.tsx`), bigger day cells (32→34px) with hover/focus-visible states, and `aria-label`s on the prev/next month buttons.
+
+**Files changed**
+- `src/components/ui/number-ticker.tsx`
+- `src/components/landing/animated-counter.tsx`
+- `src/components/ui/smooth-cursor.tsx` (deleted)
+- `src/app/(report)/report/page.tsx`
+- `src/app/(report)/r/[token]/SharedReportClient.tsx`
+- `src/app/globals.css`
+- `src/components/report/slides/SlideConversion.tsx`
+- `src/components/primitives/DateRangePicker.tsx`
+
+**Verification**
+- `npx tsc --noEmit` and scoped `eslint` passed after each change.
+- No live browser pass in this environment — counting-animation speed was tuned entirely from user feedback; the date-picker polish and info tooltips are unverified in a real browser.
+
+**Open follow-up**
+- **Colleague needs to QA the `SlideConversion` info tooltips** (copy, placement, hover behavior) against real GA4 data before this is considered done.
+- The date picker's "browsing months live-updates the report" behavior should get a real gut-check once seen in-browser — worth confirming it doesn't feel surprising, versus a "preview vs. commit" mode if it does.
+
+---
+
+### Done this session (2026-08-01) — Paid Social drill-down + per-count channel layouts
+
+**What shipped**
+- **Paid Social expands into its networks.** The "Paid Social" row in the report deck (desktop + mobile) is now clickable and breaks out into Facebook / Instagram / LinkedIn / TikTok / etc., with each network's share of paid social, sessions and trend.
+- **Data layer**: new `buildGa4PaidSocialRequest` — a *separate* GA4 request (dimension `sessionSource`, filtered to `sessionDefaultChannelGroup = "Paid Social"`, ordered by sessions, `limit: 25`), fetched as a fifth `fetchGa4Optional` alongside the existing four. `channelBreakdown[].subChannels` is a new optional schema field.
+- **Source normalization lives in the mapper** (`normalizeSource` in `ga4-mapper.ts`): GA4 reports whatever `utm_source` the advertiser set, so `facebook` / `Facebook` / `m.facebook.com` / `fb` all arrive separately. They are collapsed to one canonical key *where sessions are summed*, not where they are labelled. The long tail past 4 networks rolls into one `other` row so sub-shares still sum to 100%.
+
+> **⚠️ Do not add `sessionSource` to `buildGa4ChannelRequest`.** It looks like the cheaper option and it silently corrupts the report. That query is the basis for every channel total, every `share` percentage, and the organic/paid/direct/referral KPI tiles. Adding a source dimension turns ~8 rows into one row per (channel × source) pair; `sessionSource` is high-cardinality (Referral alone routinely exceeds 100 sources), so any row cap truncates the response and understates the totals — and because GA4 orders by dimension when `orderBys` is absent, "Paid Social" is among the first rows dropped. This was tried, shipped, and reverted. Keep the split in its own filtered query.
+
+**⚠️ Channel ceiling: 6**
+- `SlideChannels` draws **at most 6 channels**, set by `MAX_CHANNELS` in `slide-data.tsx`. Beyond that the long tail rolls into a single "Övriga kanaler" row (so 5 real + 1 rollup). The cap is a hard layout constraint, not a preference: the slide canvas is a fixed 1280×720 with `overflow: hidden`, leaving exactly **1152×484** for the channel area — anything taller is clipped, not scrolled. Raising the cap means designing a 7th layout that still fits 484px *with a channel expanded*.
+- Each count gets its own layout rather than one list that overflows at the top end: **1** hero (no bar — a lone channel is always 100%; breakdown sits open), **2** two tall side-by-side cards, **3** full-width bar rows, **4** even 2×2, **5** feature column + 2×2, **6** even 3×2.
+- Row layouts (1, 3) have spare height, so expanding grows in place. Grid layouts (2, 4, 5, 6) do not, so the card body **swaps** to the breakdown at fixed height — this is what keeps expansion from clipping.
+- **Channels carrying `subChannels` are pinned into the visible set** regardless of volume. Paid social is often a small share; without the pin it lands in the "Övriga kanaler" rollup (which drops `subChannels`) and the drill-down silently disappears on exactly the sites that bought the ads.
+
+**Still open**
+- **Brand logos**: `subChannelIcons` in `slide-data.tsx` uses placeholder lucide icons keyed on the canonical source. Swapping in real Facebook/Instagram/LinkedIn/TikTok marks means editing only that map.
+- **Visual verification**: no browser pass yet. `scenario-2-full` exercises the 6-card grid, the rollup and the pin; layouts **1, 2 and 5 have no mock scenario** and are unseen. `scenario-1-ga4-gsc` covers 3 (rows) but has no paid social, so row-mode expansion is also unverified.
+- Dashboard donut (`ChannelBreakdown.tsx`) deliberately untouched — no sub-channel drill-down there.
+
+---
+
+## Previously — Open priorities (2026-07-18)
 
 ### Done this session (2026-07-18) — report performance overhaul (scroll lag fix + data-layer speed)
 
@@ -58,28 +124,36 @@
 
 ---
 
-### Done this session (2026-07-18) — loud diagnostics for Google OAuth login failures
+### Done this session (2026-07-18/19/20) — Google OAuth `auth_failed` root-caused: stale cookies, not Google/Supabase config
 
 **Context**
-- A coworker with a previously-working Google-login account started landing on `clarix.se/login?error=auth_failed` on every attempt, while login kept working for other accounts. Investigation (`/investigate`) traced the redirect to a single fallthrough in `src/app/auth/callback/route.ts` that swallows every failure reason — no `code`, a provider-side denial, or a failed `exchangeCodeForSession` — into the same generic `auth_failed`, which `src/app/login/page.tsx` didn't even read, so the user saw a blank form with zero indication of what went wrong.
-- Leading suspect: the Google Cloud OAuth consent screen is still in **Testing** mode with only **2 Test Users** allowed (see open priority #19 below, still unresolved) — an account that previously worked can silently lose access if it falls off that list or the app is unverified. A cross-provider identity conflict (same email registered under a different auth method) is the secondary suspect.
+- A coworker with a previously-working Google-login account started landing on `clarix.se/login?error=auth_failed` on every attempt. `/investigate` first traced the redirect to a single fallthrough in `src/app/auth/callback/route.ts` that swallowed every failure reason into the same generic `auth_failed`, with `src/app/login/page.tsx` not even reading the query param — so the user saw a blank form with zero indication of what went wrong. A **temporary loud diagnostic banner** was added to `src/app/login/page.tsx` (reading `error`/`reason`/`detail`/`status` via `useSearchParams`) to capture the real failure on the next attempt.
+- Systematically ruled out, in order: Google Cloud Console Test Users allowlist (still only 2 test users, but not the cause here), Supabase Dashboard identity/duplicate-account conflict (the coworker's account showed 2 rows in the Users table — but so did the reporting user's own working account, so this is normal, not a differentiator), apex-vs-www domain split (Vercel forces `clarix.se` → `www.clarix.se`; Supabase's Site URL and Redirect URLs both correctly list only `https://www.clarix.se/**`), and a Next.js 16 route-handler caching bug (`cacheComponents` is off in `next.config.ts`, and this Next version defaults `GET` route handlers to dynamic since v15 — confirmed via the bundled `node_modules/next/dist/docs`, per this repo's `AGENTS.md` convention of consulting those docs before assuming standard Next.js behavior).
+- **Root cause, confirmed live via the diagnostic banner + Vercel function logs**: `reason=exchange_failed`, Supabase error *"PKCE code verifier not found in storage"* (status 400) — a stale/broken cookie jar for `clarix.se` on the affected browser profile, most likely accumulated from repeated prior login attempts (each attempt writes a new `code_verifier`/session cookie fragment; old ones aren't always cleaned up). Confirmed conclusively when the **reporting user hit the same failure on their own regular browser** (not just the coworker), it worked immediately in a fresh incognito window, and shortly after started working in the normal window too — classic cookie-jar-cruft signature, not a provider or code config issue.
 
-**Change — temporary loud error surfacing (diagnostic only)**
-- `src/app/auth/callback/route.ts` now tags the `auth_failed` redirect with *why*: `reason=provider_denied&detail=...` (Google rejected the request before issuing a code — e.g. not on the Test Users list), `reason=exchange_failed&detail=...&status=...` (Supabase's `exchangeCodeForSession` returned an error), or `reason=no_code` (no code and no provider error at all).
-- `src/app/login/page.tsx` reads `error`/`reason`/`detail`/`status` via `useSearchParams` (page now wrapped in `Suspense`, required for that hook) and renders a plainly-visible red banner with the raw values — marked `TEMPORARY` in a code comment, with a removal note.
-- **This is intentionally loud for internal debugging and must not ship to the general public as-is** — before any public/production launch, strip the on-page banner (and ideally the raw `detail` text in the redirect URL) back down to a translated, generic message. Leaking raw Supabase/Google error strings to end users is not acceptable for launch.
+**Resilience fix shipped**
+- `src/app/auth/callback/route.ts`: added `clearStaleAuthCookies()`, which wipes every `sb-*` cookie whenever the callback is about to redirect back to `/login` with `auth_failed` (all three reasons: `provider_denied`, `exchange_failed`, `no_code`). Every retry now starts from a clean cookie slate instead of stacking more cruft on top of a failing one.
+- Full failure detail (`reason`/`detail`/`status`) is now only `console.error`-logged server-side in the callback route (visible in Vercel Function logs) — **the loud on-page banner was removed**, since the root cause is understood and clarix.se has real user traffic. `src/app/login/page.tsx` now shows the existing generic translated `t.login.errorGeneric` string ("Något gick fel. Försök igen.") for any `?error=` param, same as the email/password error path — no more silent blank form, but no raw internals leaked either.
+
+**Bulletproofing round 2 — persistent logging + user-facing recovery path**
+- New table `public.auth_failures` (migration `20260720000000_auth_failures_log.sql`): `id`, `created_at`, `reason`, `detail`, `status`. RLS enabled with an insert-only policy for `anon`/`authenticated` (no select/update/delete policy — the request that hits this table has, by definition, no valid session yet, so it must be writable unauthenticated; reading it back is dashboard-only via `service_role`). Chosen over Slack/email alerting since there's no existing notification infra in this repo (no Sentry, no webhook, no email service) — this reuses Supabase, needs no new secrets, and a Database Webhook can be layered on top later from the dashboard if push alerts are ever wanted.
+- `src/app/auth/callback/route.ts`: every `auth_failed` path (`provider_denied`, `exchange_failed`, `no_code`) now inserts a row into `auth_failures` in addition to the existing `console.error` log, before clearing cookies and redirecting. A logging failure itself only logs a console warning — it never blocks the redirect.
+- `src/app/login/page.tsx`: when `?error=` is present, a small "Rensa och försök igen" / "Clear and try again" text link now appears under the generic error message (`t.login.retryClearSession`, added to both `sv.ts`/`en.ts`). It wipes every client-side `sb-*` cookie and `localStorage` key, then immediately re-triggers `signInWithGoogle()` — giving a real end user the same recovery path that fixed this for us (incognito/cookie-clear) without needing to know about browser dev tools.
 
 **Files changed**
 - `src/app/auth/callback/route.ts`
 - `src/app/login/page.tsx`
+- `src/lib/i18n/sv.ts`, `src/lib/i18n/en.ts`
+- `supabase/migrations/20260720000000_auth_failures_log.sql` (new)
 
 **Verification**
-- `npx tsc --noEmit` passed.
-- Not yet reproduced live against the coworker's actual account — next step is to have them retry and read the banner/URL for the real `reason`/`detail`.
+- `npx tsc --noEmit` passed after every change.
+- Root cause confirmed live in production (Vercel logs + user's own repro). The cookie-clear, logging, and retry-button additions are all additive on already-failing paths (low risk) but not yet independently re-tested against a fresh forced failure in production.
 
-**Follow-up still needed**
-- Confirm root cause via the banner, then apply the real fix (add coworker to Google Cloud Console Test Users, or submit for OAuth verification, or resolve an identity conflict in Supabase's `auth.identities`).
-- **Before public launch: remove the loud diagnostic banner and raw error detail in the redirect URL, replacing them with a generic translated error message.**
+**Open follow-up (not urgent)**
+- Coworker should still confirm their own case clears via incognito/cookie-clear, per the same pattern.
+- Google Cloud Console is still in Testing mode with only 2 Test Users — unrelated to this bug, but still blocks any real user outside the team (see open priority #19 below) and should be resolved before public launch regardless.
+- **Not yet implemented, add only if this recurs**: capping the PKCE `code_verifier` cookie's own lifetime (shorter TTL so an abandoned attempt expires fast instead of lingering) — deferred since `@supabase/ssr`'s cookie TTL isn't directly configurable from this app's client setup without deeper research, and the cookie-clear-on-failure fix above already addresses the observed failure mode.
 
 ---
 

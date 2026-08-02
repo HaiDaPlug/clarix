@@ -2,6 +2,7 @@
 
 import { motion } from "motion/react";
 import { CheckCircle2, Plug } from "lucide-react";
+import { InfoTooltip } from "@/components/primitives/InfoTooltip";
 import { NoiseTile } from "@/components/ui/noise-tile";
 import { type SlideData } from "../slide-data";
 import { TREND_POS, ACCENT, AI_GRADIENT, AI_TEXT_PRIMARY, AI_TEXT_SECONDARY, AI_BORDER } from "../tokens";
@@ -22,16 +23,28 @@ export function SlideConversion({ d }: { d: SlideData }) {
         </motion.div>
         <div className="grid gap-4 sm:grid-cols-3">
           {[
-            { l: "Konverteringar", v: fmtNum(d.leads), dd: sign(d.leadsDelta) },
-            { l: "Bästa kanal", v: "Google SEO", dd: "42 %" },
-            { l: "Värde per lead", v: "—", dd: "" },
+            {
+              l: "Konverteringar", v: fmtNum(d.leads), dd: sign(d.leadsDelta),
+              tip: { title: "Vad räknas som en konvertering?", body: "Varje registrerad konvertering under perioden — t.ex. ifyllt kontaktformulär, telefonklick eller köp.", example: "167 konverteringar innebär 167 tillfällen där ett besök blev en affärshändelse." },
+            },
+            {
+              l: "Bästa kanal", v: "Google SEO", dd: "42 %",
+              tip: { title: "Hur räknas bästa kanal?", body: "Kanalen som stod för störst andel av periodens konverteringar.", example: "42 % av alla konverteringar kom via Google SEO." },
+            },
+            {
+              l: "Värde per lead", v: "—", dd: "",
+              tip: { title: "Vad är värde per lead?", body: "Genomsnittligt kronvärde per konvertering, baserat på angivna affärsvärden.", example: "Kräver att värden är kopplade till konverteringarna i Google Analytics." },
+            },
           ].map((m, i) => (
             <motion.div
               key={m.l}
               className="rounded-3xl border border-border bg-background/85 p-6"
               {...fadeUp(active, reduced, { y: 16, delay: 0.15 + i * 0.1 })}
             >
-              <p className="text-sm text-foreground">{m.l}</p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm text-foreground">{m.l}</p>
+                <InfoTooltip title={m.tip.title} body={m.tip.body} example={m.tip.example} side="above" />
+              </div>
               <p className="mt-2 font-stat text-3xl font-semibold tracking-tight tabular-nums">{m.v}</p>
               {m.dd && (
                 <p className="mt-1 text-xs font-medium" style={{ color: TREND_POS }}>

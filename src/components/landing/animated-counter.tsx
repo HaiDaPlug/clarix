@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 export function AnimatedCounter({
   value,
-  duration = 1000,
+  duration = 1500,
   format = (n: number) => n.toLocaleString(),
   animate = true,
 }: {
