@@ -57,7 +57,11 @@ export function SlideIntro({ d }: { d: SlideData }) {
   const meta = [d.clientDomain, d.period].filter(Boolean).join("  ·  ");
 
   return (
-    <div ref={ref} className="relative h-full flex flex-col">
+    /* justify-center, not the default top stack: this is the slide you land on,
+       and a title block pinned to the top left the whole lower half of the
+       canvas empty — the deck opened looking misaligned. The absolute favicon
+       and sparkline are anchored to the canvas, so only the type block moves. */
+    <div ref={ref} className="relative h-full flex flex-col justify-center">
       {/* Favicon — top-right, absolute */}
       {showFavicon && (
         <motion.img
