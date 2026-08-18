@@ -1,8 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import { AnimatePresence, motion } from "motion/react";
 import {
   CheckCircle2,
+  ChevronDown,
   Compass,
   Lightbulb,
   PenSquare,
@@ -158,6 +161,7 @@ export function MobileReportDeck({
   const signals = deriveSignalCards(insights);
   const aiInsight = aiInsights?.slide_insight;
   const domain = data.clientDomain ?? "example.com";
+  const [expandedChannel, setExpandedChannel] = useState<string | null>(null);
 
   const recommendations = [
     ["Skala", "Dubbla det som fungerar", "SEO-guiden drar flest besök. Bygg vidare på det innehåll som redan fungerar.", Zap],
@@ -261,15 +265,69 @@ export function MobileReportDeck({
           {data.topChannels.map((channel, index) => {
             const Icon = channel.icon;
             const color = CHANNEL_COLORS[index % CHANNEL_COLORS.length];
+            const hasSubChannels = !!channel.subChannels?.length;
+            const isExpanded = hasSubChannels && expandedChannel === channel.name;
             return (
-              <div key={channel.name} className="rounded-2xl border border-border bg-background/90 p-4">
+              <div
+                key={channel.name}
+                className="rounded-2xl border border-border bg-background/90 p-4"
+                role={hasSubChannels ? "button" : undefined}
+                tabIndex={hasSubChannels ? 0 : undefined}
+                aria-expanded={hasSubChannels ? isExpanded : undefined}
+                onClick={hasSubChannels ? () => setExpandedChannel(isExpanded ? null : channel.name) : undefined}
+                onKeyDown={
+                  hasSubChannels
+                    ? (e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setExpandedChannel(isExpanded ? null : channel.name);
+                        }
+                      }
+                    : undefined
+                }
+              >
                 <div className="flex items-start gap-3">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: `${color}1f` }}><Icon className="h-4 w-4" style={{ color }} /></span>
-                  <div className="min-w-0 flex-1"><p className="font-semibold leading-tight">{channel.name}</p><p className="mt-1 text-xs leading-relaxed text-foreground/50">{channel.sub}</p></div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <p className="font-semibold leading-tight">{channel.name}</p>
+                      {hasSubChannels && (
+                        <motion.span animate={{ rotate: isExpanded ? 180 : 0 }} transition={{ duration: 0.25, ease: "easeOut" }}>
+                          <ChevronDown className="h-3.5 w-3.5 text-foreground/40" />
+                        </motion.span>
+                      )}
+                    </div>
+                    <p className="mt-1 text-xs leading-relaxed text-foreground/50">{channel.sub}</p>
+                  </div>
                   <p className="font-stat text-2xl font-bold tabular-nums">{channel.pct}%</p>
                 </div>
                 <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full" style={{ width: `${channel.pct}%`, background: color }} /></div>
                 <div className="mt-2 flex items-center justify-between text-xs"><span className="text-foreground/50">{fmt(channel.visits)} besök</span><Delta value={channel.delta} /></div>
+                <AnimatePresence initial={false}>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                      className="overflow-hidden"
+                    >
+                      <div className="mt-3 space-y-2.5 border-t border-border/60 pt-3">
+                        {channel.subChannels!.map((sub) => {
+                          const SubIcon = sub.icon;
+                          return (
+                            <div key={sub.source} className="flex items-center gap-2.5">
+                              <SubIcon className="h-3.5 w-3.5 shrink-0 text-foreground/45" />
+                              <p className="min-w-0 flex-1 truncate text-xs font-medium text-foreground/70">{sub.name}</p>
+                              <span className="text-xs tabular-nums text-foreground/50">{fmt(sub.visits)}</span>
+                              <span className="font-stat text-xs font-bold tabular-nums text-foreground/70">{sub.pct}%</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             );
           })}
