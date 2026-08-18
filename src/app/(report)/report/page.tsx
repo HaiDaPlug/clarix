@@ -58,7 +58,7 @@ function ReportPageInner() {
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   // Fullscreen needs no scale branch: it grows the scroll viewport, which the
   // hook already observes, so the card grows on its own.
-  const { scale } = useCardScale(containerRef, scrollRef);
+  const { scale, edgePad } = useCardScale(containerRef, scrollRef);
   const gap = slideGap(scale);
   const dateRange = useDateRange();
   const rangeStart = dateRange.startDate;
@@ -363,7 +363,10 @@ function ReportPageInner() {
           {isPortrait && loading && <MobileReportLoading />}
           {isPortrait && !loading && reportData && !noSources && <MobileReportDeck data={slideData} reportData={reportData} aiInsights={aiInsights} aiLoading={aiInsightsLoading} />}
           {!isPortrait && (
-            <div className="flex flex-col items-center" style={{ gap, paddingTop: gap, paddingBottom: gap + HINTS_BAR_SPACE }}>
+            /* Top pad is the card's own centering offset, not the slide gap:
+               the deck opens with slide one centered in the viewport instead of
+               flush under the header with its lower half cut off. */
+            <div className="flex flex-col items-center" style={{ gap, paddingTop: edgePad, paddingBottom: edgePad + HINTS_BAR_SPACE }}>
               {loading ? Array.from({ length: 4 }).map((_, index) => (
                 <div key={index} style={{ height: CANVAS_H * scale, width: CANVAS_W * scale, borderRadius: 6, overflow: "hidden", background: "#ffffff", boxShadow: "0 2px 4px rgba(20,18,16,0.04), 0 12px 40px rgba(20,18,16,0.08)", border: "1px solid rgba(20,18,16,0.05)", flexShrink: 0 }}>
                   <div style={{ width: CANVAS_W, height: CANVAS_H, transform: `scale(${scale})`, transformOrigin: "top left", padding: "48px 64px" }}><SlideShimmer /></div>

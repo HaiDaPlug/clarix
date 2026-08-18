@@ -31,7 +31,7 @@ export function SharedReportClient({
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   // Fullscreen needs no scale branch: it grows the scroll viewport, which the
   // hook already observes, so the card grows on its own.
-  const { scale } = useCardScale(containerRef, scrollRef);
+  const { scale, edgePad } = useCardScale(containerRef, scrollRef);
   const gap = slideGap(scale);
 
   const isPortrait = usePortraitReport();
@@ -157,9 +157,11 @@ export function SharedReportClient({
           {isPortrait ? (
             <MobileReportDeck data={slideData} reportData={reportData} aiInsights={aiInsights} />
           ) : (
+            /* Top pad is the card's own centering offset, not the slide gap, so
+               a shared link opens with slide one centered in the viewport. */
             <div
               className="flex flex-col items-center"
-              style={{ gap, paddingTop: gap, paddingBottom: gap + HINTS_BAR_SPACE }}
+              style={{ gap, paddingTop: edgePad, paddingBottom: edgePad + HINTS_BAR_SPACE }}
             >
               {slides.map((slide, i) => (
                 <SlideCard
