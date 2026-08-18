@@ -2,15 +2,17 @@
 
 import { useState } from "react";
 import { motion } from "motion/react";
+import { CANVAS_H } from "../tokens";
 import { type SlideData } from "../slide-data";
 import { useSlideReveal, fadeUp } from "../primitives/reveal";
 
 function Sparkline() {
   // Fixed decorative bezier — not data-driven.
-  // Canvas is 1280×720; SVG anchored to canvas top-left (py-12=48px, px-16=64px padding).
+  // SVG anchored to canvas top-left (py-12=48px, px-16=64px padding), sized to
+  // the canvas so the curve keeps sweeping corner to corner on any ratio.
   // Curve: nearly flat along the bottom-left, sweeps up to exit top-right corner.
   const W = 1460;
-  const H = 720;
+  const H = CANVAS_H;
   const line = `M 0 ${H} C 800 ${H} 1080 210 ${W} -40`;
   const area = `${line} L ${W} ${H} L 0 ${H} Z`;
 

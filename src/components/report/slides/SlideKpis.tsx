@@ -54,17 +54,20 @@ export function SlideKpis({ d }: { d: SlideData }) {
     },
   ];
   return (
-    <div ref={ref} className="space-y-8">
+    // h-full + flex-1 on the grid: the card area claims all height left by the
+    // heading, so the slide fills the canvas instead of centring a fixed-height
+    // block and leaving a dead band underneath.
+    <div ref={ref} className="flex h-full flex-col gap-8">
       <motion.div {...fadeUp(active, reduced)}>
         <SlideHeading sub="Så ser perioden ut i siffror — jämfört med föregående månad.">
           Snabb överblick
         </SlideHeading>
       </motion.div>
-      <div className="grid grid-cols-2 gap-4 sm:gap-6">
+      <div className="grid min-h-0 flex-1 grid-cols-2 gap-4 sm:gap-6">
         {kpis.map((k, i) => (
           <motion.div
             key={k.l}
-            className="flex h-full min-h-[200px] flex-col rounded-3xl border border-border bg-background/85 p-6 shadow-[0_2px_4px_rgba(15,23,42,0.04),0_18px_40px_-22px_rgba(15,23,42,0.22)]"
+            className="flex h-full min-h-0 flex-col rounded-3xl border border-border bg-background/85 p-6 shadow-[0_2px_4px_rgba(15,23,42,0.04),0_18px_40px_-22px_rgba(15,23,42,0.22)] sm:p-8"
             {...fadeUp(active, reduced, { y: 16, delay: 0.25 + i * 0.13 })}
           >
             <div className="flex items-start justify-between gap-3">
@@ -74,7 +77,7 @@ export function SlideKpis({ d }: { d: SlideData }) {
               </div>
               <TrendPill delta={k.d} positive={k.p} size="md" />
             </div>
-            <p className="mt-auto pt-6 font-stat text-[4.2rem] font-semibold leading-none tracking-tight tabular-nums">
+            <p className="mt-auto pt-6 font-stat text-[5rem] font-semibold leading-none tracking-tight tabular-nums">
               {k.value == null ? "–" : <NumberTicker value={k.value} format={k.format} />}
             </p>
           </motion.div>
