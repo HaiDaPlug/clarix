@@ -49,6 +49,31 @@ export function buildGa4ChannelRequest(dateRange: DateRange) {
   };
 }
 
+/** Paid Social sessions split by source, as its own filtered request.
+ *
+ *  Adding sessionSource to buildGa4ChannelRequest instead would look cheaper but
+ *  changes that response from ~8 rows to one row per (channel × source) pair.
+ *  sessionSource is high-cardinality — Referral alone routinely exceeds 100
+ *  sources — so any row cap silently truncates the channel totals that
+ *  organicSessions/paidSessions/directSessions/referralSessions and every share
+ *  percentage are derived from. Keeping the split in a filtered query means those
+ *  numbers stay on the low-cardinality response and cannot drift. */
+export function buildGa4PaidSocialRequest(dateRange: DateRange) {
+  return {
+    dateRanges: [dateRange],
+    dimensions: [{ name: "sessionSource" }],
+    metrics: [{ name: "sessions" }],
+    dimensionFilter: {
+      filter: {
+        fieldName: "sessionDefaultChannelGroup",
+        stringFilter: { matchType: "EXACT", value: "Paid Social" },
+      },
+    },
+    orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
+    limit: 25,
+  };
+}
+
 export function buildGa4TimeSeriesRequest(dateRange: DateRange) {
   return {
     dateRanges: [dateRange],

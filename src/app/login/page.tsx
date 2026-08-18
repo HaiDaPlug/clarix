@@ -20,12 +20,9 @@ function LoginContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // TEMPORARY: loud diagnostic banner for the /auth/callback?error=... redirect.
-  // Remove once the Google OAuth test-user / verification issue is resolved.
+  // Full failure reason/detail is logged server-side in /auth/callback;
+  // only a generic message is shown here to avoid leaking internals.
   const oauthError = searchParams.get("error");
-  const oauthReason = searchParams.get("reason");
-  const oauthDetail = searchParams.get("detail");
-  const oauthStatus = searchParams.get("status");
 
   async function signInWithGoogle() {
     const supabase = createClient();
@@ -38,6 +35,31 @@ function LoginContent() {
         queryParams: { access_type: "offline", prompt: "consent" },
       },
     });
+  }
+
+  // A stale/partial sb-* cookie (e.g. left over from a previous failed
+  // attempt) can block the PKCE handshake indefinitely. Wiping client-side
+  // auth state before retrying gives users a way out without needing to
+  // know about incognito mode or manual cookie clearing.
+  function clearClientAuthState() {
+    document.cookie.split(";").forEach((entry) => {
+      const name = entry.split("=")[0]?.trim();
+      if (name?.startsWith("sb-")) {
+        document.cookie = `${name}=; Max-Age=0; path=/`;
+      }
+    });
+    try {
+      Object.keys(window.localStorage)
+        .filter((key) => key.startsWith("sb-"))
+        .forEach((key) => window.localStorage.removeItem(key));
+    } catch {
+      // localStorage can throw in some private-browsing modes — safe to ignore.
+    }
+  }
+
+  async function handleRetryAfterOAuthError() {
+    clearClientAuthState();
+    await signInWithGoogle();
   }
 
   async function handleEmailAuth(e: React.FormEvent) {
@@ -98,14 +120,18 @@ function LoginContent() {
           </h1>
 
           {oauthError && (
-            <div
-              className="rounded-lg px-4 py-3 text-xs leading-relaxed"
-              style={{ backgroundColor: "#FDECEC", color: "#B00020", border: "1px solid #B00020" }}
-            >
-              <p className="font-semibold mb-1">Login failed: {oauthError}</p>
-              {oauthReason && <p>reason: {oauthReason}</p>}
-              {oauthDetail && <p>detail: {oauthDetail}</p>}
-              {oauthStatus && <p>status: {oauthStatus}</p>}
+            <div className="flex flex-col gap-2">
+              <p className="text-xs leading-relaxed" style={{ color: "var(--signal-down)" }}>
+                {t.login.errorGeneric}
+              </p>
+              <button
+                type="button"
+                onClick={handleRetryAfterOAuthError}
+                className="text-xs text-left underline underline-offset-2 transition-opacity hover:opacity-60 cursor-pointer"
+                style={{ color: "var(--signal-down)" }}
+              >
+                {t.login.retryClearSession}
+              </button>
             </div>
           )}
 

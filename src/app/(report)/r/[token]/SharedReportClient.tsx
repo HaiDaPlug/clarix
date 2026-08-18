@@ -8,15 +8,13 @@ import {
 import { KeyboardHints } from "@/components/report/KeyboardHints";
 import type { AiInsightsPayload } from "@/lib/ai-insights/types";
 import type { ReportData } from "@/types/schema";
-import { SLIDE_GAP } from "@/components/report/tokens";
+import { HINTS_BAR_SPACE, slideGap } from "@/components/report/tokens";
 import { buildSlideData } from "@/components/report/slide-data";
 import { buildSlides } from "@/components/report/slide-list";
 import { useCardScale } from "@/components/report/layout/useCardScale";
 import { SlideCard } from "@/components/report/layout/SlideCard";
 import { MobileReportDeck } from "@/components/report/MobileReportDeck";
 import { usePortraitReport } from "@/components/report/usePortraitReport";
-
-const FULLSCREEN_SCALE_BUMP = 1;
 
 export function SharedReportClient({
   reportData,
@@ -28,14 +26,13 @@ export function SharedReportClient({
   const [activeIndex, setActiveIndex] = useState(0);
   const activeIndexRef = useRef(0);
   const [isFs, setIsFs] = useState(false);
-  const [presentationScale, setPresentationScale] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const { scale } = useCardScale(containerRef, scrollRef);
-  const viewerScale = isFs && presentationScale !== null
-    ? Math.min(scale, presentationScale * FULLSCREEN_SCALE_BUMP)
-    : scale;
+  // Fullscreen needs no scale branch: it grows the scroll viewport, which the
+  // hook already observes, so the card grows on its own.
+  const { scale, edgePad } = useCardScale(containerRef, scrollRef);
+  const gap = slideGap(scale);
 
   const isPortrait = usePortraitReport();
 
@@ -110,26 +107,17 @@ export function SharedReportClient({
     return () => window.removeEventListener("keydown", onKey);
   }, [total, scrollToIndex, isPortrait]);
 
+  // Tracked only to label the button; the card scale recomputes itself from
+  // the resized viewport.
   useEffect(() => {
-    const onFs = () => {
-      const fullscreen = !!document.fullscreenElement;
-      setIsFs(fullscreen);
-      if (fullscreen) {
-        setPresentationScale((current) => current ?? scale);
-      } else {
-        setPresentationScale(null);
-      }
-    };
+    const onFs = () => setIsFs(!!document.fullscreenElement);
     document.addEventListener("fullscreenchange", onFs);
     return () => document.removeEventListener("fullscreenchange", onFs);
-  }, [scale]);
+  }, []);
 
   const togglePresent = () => {
-    const el = document.documentElement;
     if (!document.fullscreenElement) {
-      setPresentationScale(scale);
-      const request = el.requestFullscreen?.();
-      if (request) void request.catch(() => setPresentationScale(null));
+      void document.documentElement.requestFullscreen?.().catch(() => {});
     } else {
       document.exitFullscreen?.();
     }
@@ -165,19 +153,21 @@ export function SharedReportClient({
         className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
         style={{ scrollbarWidth: "none", overscrollBehaviorY: "auto" }}
       >
-        <div ref={containerRef} className={isPortrait ? "mx-auto w-full" : "mx-auto w-full px-2 sm:px-5 lg:px-8 2xl:px-12"}>
+        <div ref={containerRef} className="mx-auto w-full">
           {isPortrait ? (
             <MobileReportDeck data={slideData} reportData={reportData} aiInsights={aiInsights} />
           ) : (
+            /* Top pad is the card's own centering offset, not the slide gap, so
+               a shared link opens with slide one centered in the viewport. */
             <div
               className="flex flex-col items-center"
-              style={{ gap: SLIDE_GAP, paddingTop: SLIDE_GAP, paddingBottom: SLIDE_GAP }}
+              style={{ gap, paddingTop: edgePad, paddingBottom: edgePad + HINTS_BAR_SPACE }}
             >
               {slides.map((slide, i) => (
                 <SlideCard
                   key={slide.id}
                   slide={slide}
-                  scale={viewerScale}
+                  scale={scale}
                   innerRef={setCardRefs[i]}
                 />
               ))}
@@ -207,7 +197,7 @@ export function SharedReportClient({
       </div>
 
       {!isPortrait && (
-        <div className="fixed bottom-5 left-1/2 z-20 -translate-x-1/2 print:hidden">
+        <div className="fixed bottom-9 left-1/2 z-20 -translate-x-1/2 print:hidden">
           <KeyboardHints />
         </div>
       )}

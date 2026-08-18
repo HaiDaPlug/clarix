@@ -60,8 +60,8 @@ export const scenario2: ReportData = {
   trafficOverview: {
     totalSessions: { label: "Totala sessioner", value: 31_420, previousValue: 29_840, unit: "number", trend: "up", trendGood: true },
     organicSessions: { label: "Organisk trafik", value: 14_800, previousValue: 15_260, unit: "number", trend: "down", trendGood: false },
-    directSessions: { label: "Direkt", value: 5_420, previousValue: 5_180, unit: "number", trend: "up", trendGood: true },
-    paidSessions: { label: "Betald trafik", value: 11_200, previousValue: 9_400, unit: "number", trend: "up", trendGood: true },
+    directSessions: { label: "Direkt", value: 3_620, previousValue: 3_480, unit: "number", trend: "up", trendGood: true },
+    paidSessions: { label: "Betald trafik", value: 9_400, previousValue: 8_100, unit: "number", trend: "up", trendGood: true },
     bounceRate: { label: "Avvisningsfrekvens", value: 44.8, previousValue: 46.1, unit: "percent", trend: "down", trendGood: true },
     avgSessionDuration: { label: "Genomsn. sessionslängd", value: 138, previousValue: 132, unit: "seconds", trend: "up", trendGood: true },
     timeSeries: [
@@ -80,10 +80,31 @@ export const scenario2: ReportData = {
       { date: "2026-03-28", value: 1040, secondaryValue: 400 },
       { date: "2026-03-31", value: 1080, secondaryValue: 430 },
     ],
+    // Seven channels on purpose: more than the six SlideChannels will draw, so
+    // the long tail rolls up — and Paid Social sits 6th by volume, below E-post.
+    // Without the pin-channels-with-subChannels rule it would fall into "Övriga
+    // kanaler" and the drill-down would disappear, so this scenario covers both
+    // the rollup and the pin. Sessions sum to 31 420 / 29 840 to match
+    // totalSessions above.
     channelBreakdown: [
-      { channel: "Organisk sökning", sessions: 14_800, share: 47.1 },
-      { channel: "Betald sökning", sessions: 11_200, share: 35.6 },
-      { channel: "Direkt", sessions: 5_420, share: 17.3 },
+      { channel: "Organisk sökning", sessions: 14_800, previousSessions: 15_260, share: 47.1 },
+      { channel: "Betald sökning", sessions: 9_400, previousSessions: 8_100, share: 29.9 },
+      { channel: "Direkt", sessions: 3_620, previousSessions: 3_480, share: 11.5 },
+      { channel: "Hänvisningar", sessions: 1_540, previousSessions: 1_320, share: 4.9 },
+      { channel: "E-post", sessions: 780, previousSessions: 690, share: 2.5 },
+      {
+        channel: "Paid Social",
+        sessions: 720,
+        previousSessions: 560,
+        share: 2.3,
+        subChannels: [
+          { source: "facebook", sessions: 340, previousSessions: 260, share: 47.2 },
+          { source: "instagram", sessions: 210, previousSessions: 150, share: 29.2 },
+          { source: "linkedin", sessions: 96, previousSessions: 110, share: 13.3 },
+          { source: "tiktok", sessions: 74, previousSessions: 40, share: 10.3 },
+        ],
+      },
+      { channel: "Organisk social", sessions: 560, previousSessions: 430, share: 1.8 },
     ],
   },
 

@@ -32,13 +32,13 @@ export function SlideRecommendations({ aiInsights }: { aiInsights: AiInsightsPay
     },
   ];
   return (
-    <div ref={ref} className="space-y-7">
+    <div ref={ref} className="flex h-full flex-col gap-7">
       <motion.div {...fadeUp(active, reduced)}>
         <SlideHeading sub="Tre fokusområden att prioritera den närmaste perioden.">
           Rekommenderade fokusområden
         </SlideHeading>
       </motion.div>
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid min-h-0 flex-1 gap-4 md:grid-cols-3">
         {actions.map((a, index) => {
           const Icon = a.icon;
           const body = aiInsights === null

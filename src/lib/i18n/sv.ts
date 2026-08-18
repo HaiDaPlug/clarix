@@ -256,6 +256,7 @@ const sv = {
     errorInvalidCredentials: "Fel e-post eller lösenord.",
     errorEmailNotConfirmed: "Kolla inkorgen och bekräfta din e-post innan du loggar in.",
     errorGeneric: "Något gick fel. Försök igen.",
+    retryClearSession: "Rensa och försök igen",
     successSignup: "Konto skapat — kolla inkorgen för att bekräfta din e-post.",
   },
 

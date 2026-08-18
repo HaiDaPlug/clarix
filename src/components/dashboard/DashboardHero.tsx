@@ -41,7 +41,7 @@ export function DashboardHero({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={HERO_ENTER}
-      className="relative flex-1 overflow-hidden rounded-[1.4rem] p-5 sm:rounded-[2rem] sm:p-10 lg:p-16"
+      className="relative flex flex-1 flex-col overflow-hidden rounded-[1.4rem] p-5 sm:rounded-[2rem] sm:p-10 lg:p-16"
       style={{ background: AI_GRADIENT, boxShadow: AI_SHADOW.replace(/_/g, " "), border: `1px solid ${AI_BORDER}`, minHeight }}
     >
       <div className="pointer-events-none absolute -top-32 -left-20 h-80 w-80 rounded-full opacity-60 blur-3xl" style={{ background: "radial-gradient(circle, oklch(0.85 0.16 300 / 0.55), transparent 70%)" }} />
@@ -49,7 +49,7 @@ export function DashboardHero({
       <NoiseTexture preset="fine" blendMode="soft-light" opacity={0.45} />
       {loading && <ShimmerOverlay />}
 
-      <div className="relative z-10 grid h-full grid-cols-1 items-center gap-8 sm:gap-10 lg:grid-cols-12">
+      <div className="relative z-10 mx-auto grid w-full max-w-[1400px] flex-1 grid-cols-1 content-center items-center gap-8 sm:gap-10 lg:grid-cols-12">
         {/* Left: "Denna vecka" label + headline */}
         <div className="lg:col-span-5 flex flex-col gap-3">
           <div className="flex items-center gap-2">

@@ -21,7 +21,7 @@ import { deriveExecutiveSummary } from "@/lib/engine/derive-executive-summary";
 import { useAiInsights } from "@/lib/hooks/useAiInsights";
 import type { ReportData } from "@/types/schema";
 import { readReportSnapshot, writeReportSnapshot } from "@/lib/report-snapshot";
-import { CANVAS_W, CANVAS_H, SLIDE_GAP } from "@/components/report/tokens";
+import { CANVAS_W, CANVAS_H, HINTS_BAR_SPACE, slideGap } from "@/components/report/tokens";
 import { SlideShimmer } from "@/components/report/primitives/Shimmer";
 import { buildSlideData } from "@/components/report/slide-data";
 import { buildSlides } from "@/components/report/slide-list";
@@ -29,8 +29,6 @@ import { useCardScale } from "@/components/report/layout/useCardScale";
 import { SlideCard } from "@/components/report/layout/SlideCard";
 import { MobileReportDeck, MobileReportLoading } from "@/components/report/MobileReportDeck";
 import { usePortraitReport } from "@/components/report/usePortraitReport";
-
-const FULLSCREEN_SCALE_BUMP = 1;
 
 /* Page */
 
@@ -51,7 +49,6 @@ function ReportPageInner() {
   const [activeIndex, setActiveIndex] = useState(0);
   const activeIndexRef = useRef(0);
   const [isFs, setIsFs] = useState(false);
-  const [presentationScale, setPresentationScale] = useState<number | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
   const [shareFailed, setShareFailed] = useState(false);
@@ -59,10 +56,10 @@ function ReportPageInner() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const { scale } = useCardScale(containerRef, scrollRef);
-  const viewerScale = isFs && presentationScale !== null
-    ? Math.min(scale, presentationScale * FULLSCREEN_SCALE_BUMP)
-    : scale;
+  // Fullscreen needs no scale branch: it grows the scroll viewport, which the
+  // hook already observes, so the card grows on its own.
+  const { scale, edgePad } = useCardScale(containerRef, scrollRef);
+  const gap = slideGap(scale);
   const dateRange = useDateRange();
   const rangeStart = dateRange.startDate;
   const rangeEnd = dateRange.endDate;
@@ -275,27 +272,17 @@ function ReportPageInner() {
     return () => window.removeEventListener("keydown", onKey);
   }, [total, scrollToIndex, isPortrait]);
 
-  // Fullscreen
+  // Fullscreen — tracked only to label the button; the card scale recomputes
+  // itself from the resized viewport.
   useEffect(() => {
-    const onFs = () => {
-      const fullscreen = !!document.fullscreenElement;
-      setIsFs(fullscreen);
-      if (fullscreen) {
-        setPresentationScale((current) => current ?? scale);
-      } else {
-        setPresentationScale(null);
-      }
-    };
+    const onFs = () => setIsFs(!!document.fullscreenElement);
     document.addEventListener("fullscreenchange", onFs);
     return () => document.removeEventListener("fullscreenchange", onFs);
-  }, [scale]);
+  }, []);
 
   const togglePresent = () => {
-    const el = document.documentElement;
     if (!document.fullscreenElement) {
-      setPresentationScale(scale);
-      const request = el.requestFullscreen?.();
-      if (request) void request.catch(() => setPresentationScale(null));
+      void document.documentElement.requestFullscreen?.().catch(() => {});
     } else {
       document.exitFullscreen?.();
     }
@@ -365,7 +352,7 @@ function ReportPageInner() {
         </div>
       </header>
       <div ref={scrollRef} className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden" style={{ scrollbarWidth: "none", overscrollBehaviorY: "auto" }}>
-        <div ref={containerRef} className={isPortrait ? "mx-auto w-full" : "mx-auto w-full px-2 sm:px-5 lg:px-8 2xl:px-12"}>
+        <div ref={containerRef} className="mx-auto w-full">
           {!loading && noSources && (
             <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-6 text-center">
               <p className="font-display text-2xl font-bold">Ingen data för den här perioden<span style={{ color: "#FF6B55" }}>.</span></p>
@@ -376,13 +363,16 @@ function ReportPageInner() {
           {isPortrait && loading && <MobileReportLoading />}
           {isPortrait && !loading && reportData && !noSources && <MobileReportDeck data={slideData} reportData={reportData} aiInsights={aiInsights} aiLoading={aiInsightsLoading} />}
           {!isPortrait && (
-            <div className="flex flex-col items-center" style={{ gap: SLIDE_GAP, paddingTop: SLIDE_GAP, paddingBottom: SLIDE_GAP }}>
+            /* Top pad is the card's own centering offset, not the slide gap:
+               the deck opens with slide one centered in the viewport instead of
+               flush under the header with its lower half cut off. */
+            <div className="flex flex-col items-center" style={{ gap, paddingTop: edgePad, paddingBottom: edgePad + HINTS_BAR_SPACE }}>
               {loading ? Array.from({ length: 4 }).map((_, index) => (
-                <div key={index} style={{ height: CANVAS_H * viewerScale, width: CANVAS_W * viewerScale, borderRadius: 6, overflow: "hidden", background: "#ffffff", boxShadow: "0 2px 4px rgba(20,18,16,0.04), 0 12px 40px rgba(20,18,16,0.08)", border: "1px solid rgba(20,18,16,0.05)", flexShrink: 0 }}>
-                  <div style={{ width: CANVAS_W, height: CANVAS_H, transform: `scale(${viewerScale})`, transformOrigin: "top left", padding: "48px 64px" }}><SlideShimmer /></div>
+                <div key={index} style={{ height: CANVAS_H * scale, width: CANVAS_W * scale, borderRadius: 6, overflow: "hidden", background: "#ffffff", boxShadow: "0 2px 4px rgba(20,18,16,0.04), 0 12px 40px rgba(20,18,16,0.08)", border: "1px solid rgba(20,18,16,0.05)", flexShrink: 0 }}>
+                  <div style={{ width: CANVAS_W, height: CANVAS_H, transform: `scale(${scale})`, transformOrigin: "top left", padding: "48px 64px" }}><SlideShimmer /></div>
                 </div>
               )) : !noSources && slides.map((slide, index) => (
-                <SlideCard key={slide.id} slide={slide} scale={viewerScale} innerRef={setCardRefs[index]} />
+                <SlideCard key={slide.id} slide={slide} scale={scale} innerRef={setCardRefs[index]} />
               ))}
             </div>
           )}
@@ -395,7 +385,7 @@ function ReportPageInner() {
           </div>
         )}
       </div>
-      {!isPortrait && <div className="fixed bottom-5 left-1/2 z-20 -translate-x-1/2 print:hidden"><KeyboardHints /></div>}
+      {!isPortrait && <div className="fixed bottom-9 left-1/2 z-20 -translate-x-1/2 print:hidden"><KeyboardHints /></div>}
     </div>
   );
 }
