@@ -37,6 +37,10 @@ export type GscSearchAnalyticsResponse = {
 export type Ga4ResponseSet = {
   summary: Ga4RunReportResponse;
   channels: Ga4RunReportResponse;
+  /** Paid Social broken out by source. Deliberately a separate request from
+   *  `channels` so the channel-group totals every other consumer reads stay on
+   *  a low-cardinality query — see buildGa4PaidSocialRequest. */
+  paidSocial: Ga4RunReportResponse;
   timeSeries: Ga4RunReportResponse;
   topPages: Ga4RunReportResponse;
 };

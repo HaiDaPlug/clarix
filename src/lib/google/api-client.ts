@@ -7,6 +7,7 @@ import type {
 } from "./report-types";
 import {
   buildGa4ChannelRequest,
+  buildGa4PaidSocialRequest,
   buildGa4SummaryRequest,
   buildGa4TimeSeriesRequest,
   buildGa4TopPagesRequest,
@@ -57,20 +58,21 @@ export async function fetchGa4ReportSet(params: {
   const endpoint = ga4Endpoint(params.propertyId);
 
   // summary is required — let it throw if it fails.
-  // channels, timeSeries, and topPages are optional: a failure returns an empty
-  // response so the report still shows core session/bounce metrics.
-  const [summary, channels, timeSeries, topPages] = await Promise.all([
+  // channels, paidSocial, timeSeries, and topPages are optional: a failure returns
+  // an empty response so the report still shows core session/bounce metrics.
+  const [summary, channels, paidSocial, timeSeries, topPages] = await Promise.all([
     postGoogleJson<Ga4RunReportResponse>(
       endpoint,
       params.accessToken,
       buildGa4SummaryRequest(params.dateRange),
     ),
     fetchGa4Optional(endpoint, params.accessToken, buildGa4ChannelRequest(params.dateRange)),
+    fetchGa4Optional(endpoint, params.accessToken, buildGa4PaidSocialRequest(params.dateRange)),
     fetchGa4Optional(endpoint, params.accessToken, buildGa4TimeSeriesRequest(params.dateRange)),
     fetchGa4Optional(endpoint, params.accessToken, buildGa4TopPagesRequest(params.dateRange)),
   ]);
 
-  return { summary, channels, timeSeries, topPages };
+  return { summary, channels, paidSocial, timeSeries, topPages };
 }
 
 export async function fetchGscReportSet(params: {

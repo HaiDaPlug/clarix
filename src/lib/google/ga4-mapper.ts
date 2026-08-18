@@ -59,6 +59,8 @@ export function mapGa4Report(params: {
   const priorSummary = readGa4Summary(params.prior.summary);
   const channels = readGa4Channels(params.current.channels);
   const priorChannels = readGa4Channels(params.prior.channels);
+  const paidSocialBySource = readPaidSocialBySource(params.current.paidSocial);
+  const priorPaidSocialBySource = readPaidSocialBySource(params.prior.paidSocial);
 
   const channelBreakdown =
     channels.rows.length > 0
@@ -69,6 +71,10 @@ export function mapGa4Report(params: {
           share: channels.totalSessions
             ? round((row.sessions / channels.totalSessions) * 100)
             : 0,
+          subChannels:
+            row.channel === PAID_SOCIAL_CHANNEL
+              ? mapPaidSocialSubChannels(paidSocialBySource, priorPaidSocialBySource)
+              : undefined,
         }))
       : undefined;
 
@@ -314,6 +320,88 @@ function readGa4Summary(response: Ga4RunReportResponse): Ga4Summary | undefined 
     conversions: metricNumber(row, response, "conversions", 6) ?? 0,
     conversionRate: metricNumber(row, response, "sessionConversionRate", 7) ?? 0,
   };
+}
+
+const PAID_SOCIAL_CHANNEL = "Paid Social";
+
+/** Named networks shown individually; everything else rolls into OTHER_SOURCE. */
+const MAX_NAMED_SUB_CHANNELS = 4;
+export const OTHER_SOURCE = "other";
+
+/** GA4 reports whatever utm_source the advertiser set, so one network arrives
+ *  under many spellings — "facebook", "Facebook", "m.facebook.com", "fb". Left
+ *  raw these become separate rows that split one network's sessions in two and
+ *  collide on display name in the UI. Collapse to a canonical key here, where
+ *  sessions are summed, rather than downstream where they are only labelled. */
+const SOURCE_ALIASES: Record<string, string> = {
+  facebook: "facebook", "facebook.com": "facebook", "m.facebook.com": "facebook",
+  "l.facebook.com": "facebook", "lm.facebook.com": "facebook", fb: "facebook",
+  "fb.com": "facebook", meta: "facebook", "business.facebook.com": "facebook",
+  instagram: "instagram", "instagram.com": "instagram", "l.instagram.com": "instagram", ig: "instagram",
+  linkedin: "linkedin", "linkedin.com": "linkedin", "lnkd.in": "linkedin", "l.linkedin.com": "linkedin",
+  tiktok: "tiktok", "tiktok.com": "tiktok", "ads.tiktok.com": "tiktok", "vm.tiktok.com": "tiktok",
+  snapchat: "snapchat", "snapchat.com": "snapchat",
+  pinterest: "pinterest", "pinterest.com": "pinterest",
+  twitter: "x", "twitter.com": "x", "t.co": "x", x: "x", "x.com": "x",
+  youtube: "youtube", "youtube.com": "youtube", "m.youtube.com": "youtube",
+  reddit: "reddit", "reddit.com": "reddit",
+};
+
+export function normalizeSource(raw: string): string {
+  const cleaned = raw.trim().toLowerCase().replace(/^www\./, "");
+  return SOURCE_ALIASES[cleaned] ?? cleaned;
+}
+
+/** Paid Social sessions by canonical source, newest period and prior. */
+function readPaidSocialBySource(response: Ga4RunReportResponse): Map<string, number> {
+  const bySource = new Map<string, number>();
+
+  for (const row of ga4Rows(response)) {
+    const rawSource = dimension(row, response, "sessionSource", 0);
+    const sessions = metricNumber(row, response, "sessions", 0);
+    if (!rawSource || sessions === undefined) continue;
+    const source = normalizeSource(rawSource);
+    bySource.set(source, (bySource.get(source) ?? 0) + sessions);
+  }
+
+  return bySource;
+}
+
+function mapPaidSocialSubChannels(
+  bySource: Map<string, number>,
+  priorBySource: Map<string, number>,
+): Array<{ source: string; sessions: number; previousSessions: number | undefined; share: number }> | undefined {
+  if (bySource.size === 0) return undefined;
+
+  const total = Array.from(bySource.values()).reduce((sum, sessions) => sum + sessions, 0);
+  if (total <= 0) return undefined;
+
+  const sorted = Array.from(bySource).sort((a, b) => b[1] - a[1]);
+  const named = sorted.slice(0, MAX_NAMED_SUB_CHANNELS);
+  const tail = sorted.slice(MAX_NAMED_SUB_CHANNELS);
+
+  const toRow = (source: string, sessions: number, previousSessions: number | undefined) => ({
+    source,
+    sessions,
+    previousSessions,
+    share: round((sessions / total) * 100),
+  });
+
+  const rows = named.map(([source, sessions]) =>
+    toRow(source, sessions, priorBySource.get(source)),
+  );
+
+  // Same honest-rollup rule the channel list uses: the long tail is merged
+  // rather than dropped, so sub-channel shares still sum to 100%.
+  if (tail.length > 0) {
+    const tailSessions = tail.reduce((sum, [, sessions]) => sum + sessions, 0);
+    const tailPrior = tail.reduce((sum, [source]) => sum + (priorBySource.get(source) ?? 0), 0);
+    if (tailSessions > 0) {
+      rows.push(toRow(OTHER_SOURCE, tailSessions, tailPrior > 0 ? tailPrior : undefined));
+    }
+  }
+
+  return rows;
 }
 
 function readGa4Channels(response: Ga4RunReportResponse): {
