@@ -13,13 +13,15 @@ export const TREND_POS_BG = "oklch(0.7 0.16 155 / 0.14)";
 export const TREND_NEG_BG = "oklch(0.62 0.22 22 / 0.14)";
 export const ACCENT = "oklch(0.5 0.18 290)";
 
-// 16:9. A 16:10 canvas was tried to close the fullscreen height gap on
-// MacBooks, but windowed mode is height-bound: a taller canvas spends the
-// height budget and forces the card narrower (87% vs 97% of window width on a
-// 16" MacBook), which reads as timid. The fullscreen height gap is better
-// closed by slides that fill their canvas than by reshaping the canvas.
+// 2:1. Taller canvases were tried and reverted: 16:10 spends the height budget
+// and forces the card narrower (87% vs 97% of window width on a 16" MacBook),
+// which reads as timid. Widening moves the other way — on a width-bound screen
+// the card keeps its full width and simply gets shorter, so the deck reads as a
+// letterbox rather than a box. Chosen over 16:9 deliberately; the tradeoff is
+// that every slide has ~11% less vertical room, so layouts must be checked
+// against the canvas, not assumed to fit.
 export const CANVAS_W = 1280;
-export const CANVAS_H = 720;
+export const CANVAS_H = 640;
 
 // Gap between stacked slide cards, at scale 1. Callers multiply by the live
 // card scale (see slideGap) so the rhythm between cards stays proportional to
