@@ -8,7 +8,6 @@ import { type SlideData } from "./slide-data";
 import { SlideIntro } from "./slides/SlideIntro";
 import { SlideHero } from "./slides/SlideHero";
 import { SlideKpis } from "./slides/SlideKpis";
-import { SlideTrend } from "./slides/SlideTrend";
 import { SlideChannels } from "./slides/SlideChannels";
 import { SlidePages } from "./slides/SlidePages";
 import { SlideStrategicInsight } from "./slides/SlideStrategicInsight";
@@ -27,7 +26,6 @@ export function buildSlides(
     { id: "intro", title: "Introduktion", render: () => <SlideIntro d={d} /> },
     { id: "hero", title: "Sammanfattning", render: () => <SlideHero d={d} headline={headline} aiInsights={aiInsights} /> },
     { id: "kpis", title: "Nyckeltal", render: () => <SlideKpis d={d} /> },
-    { id: "trend", title: "Trafikutveckling", render: () => <SlideTrend d={d} /> },
     { id: "channels", title: "Trafikkällor", render: () => <SlideChannels d={d} /> },
     { id: "conv", title: "Konvertering", render: () => <SlideConversion d={d} /> },
     { id: "pages", title: "Bästa sidor", render: () => <SlidePages d={d} /> },
