@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Download } from "lucide-react";
 import { localizeMockReportData, scenario1, scenario2, scenario3 } from "@/lib/mock-data";
 import { assembleDashboard } from "@/lib/dashboard/assemble";
+import { kpiGridClass } from "@/lib/dashboard/grid";
 import { useLocale } from "@/lib/i18n";
 import { ShimmerCard, ShimmerOverlay } from "@/components/primitives/ShimmerCard";
 import { ConnectableSource, ConnectedSource, mergeReportData } from "@/lib/google/connected-sources";
@@ -386,7 +387,7 @@ function DashboardPageInner() {
         {isLoadingRealData ? (
           <>
             {skeletonKpiCount > 0 && (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <div className={`grid gap-4 ${kpiGridClass(skeletonKpiCount)}`}>
                 {Array.from({ length: skeletonKpiCount }).map((_, i) => (
                   <ShimmerCard key={i} loading height={160} />
                 ))}
@@ -406,7 +407,7 @@ function DashboardPageInner() {
             className="flex flex-col gap-5 sm:gap-7"
           >
             {kpiItems.length > 0 && (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <div className={`grid gap-4 ${kpiGridClass(kpiItems.length)}`}>
                 {kpiItems.map((item, index) => (
                   <KpiCard key={item.itemId} item={item} data={activeData} index={index} loading={false} animateNumbers={hasConnectedSources} />
                 ))}

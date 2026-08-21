@@ -9,15 +9,7 @@ import { type SlideData } from "../slide-data";
 import { fmtNum, sign, TrendPill } from "../primitives/TrendPill";
 import { SlideHeading } from "../primitives/SlideHeading";
 import { useSlideReveal, fadeUp } from "../primitives/reveal";
-
-const CHANNEL_COLORS = [
-  "#FF6B6B", // rose
-  "#F59E0B", // amber
-  "#6B8FFF", // blue
-  "#34C759", // green
-  "#A855F7", // purple
-  "#F97316", // orange
-];
+import { channelColor } from "../channel-colors";
 
 const CARD_SHELL =
   "relative flex flex-col rounded-3xl border border-border bg-background/85 shadow-[0_2px_4px_rgba(15,23,42,0.04),0_18px_40px_-22px_rgba(15,23,42,0.22)]";
@@ -108,7 +100,7 @@ function ChannelLayout(props: LayoutProps) {
 function HeroLayout({ channels, active, reduced }: LayoutProps) {
   const c = channels[0];
   const Icon = c.icon;
-  const color = CHANNEL_COLORS[0];
+  const color = channelColor(c.name);
   const subs = c.subChannels ?? [];
 
   return (
@@ -176,7 +168,7 @@ function DuoLayout({ channels, active, reduced, expanded, onToggle }: LayoutProp
         <ChannelCard
           key={c.name}
           channel={c}
-          color={CHANNEL_COLORS[i % CHANNEL_COLORS.length]}
+          color={channelColor(c.name)}
           size="lg"
           index={i}
           active={active}
@@ -200,7 +192,7 @@ function RowsLayout({ channels, active, reduced, expanded, onToggle }: LayoutPro
         <ChannelBarRow
           key={c.name}
           channel={c}
-          color={CHANNEL_COLORS[i % CHANNEL_COLORS.length]}
+          color={channelColor(c.name)}
           index={i}
           active={active}
           reduced={reduced}
@@ -222,7 +214,7 @@ function QuadLayout({ channels, active, reduced, expanded, onToggle }: LayoutPro
         <ChannelCard
           key={c.name}
           channel={c}
-          color={CHANNEL_COLORS[i % CHANNEL_COLORS.length]}
+          color={channelColor(c.name)}
           size="md"
           index={i}
           active={active}
@@ -248,7 +240,7 @@ function FeatureLayout({ channels, active, reduced, expanded, onToggle }: Layout
       <div className="col-span-1 row-span-2 min-h-0">
         <ChannelCard
           channel={lead}
-          color={CHANNEL_COLORS[0]}
+          color={channelColor(lead.name)}
           size="lg"
           index={0}
           active={active}
@@ -261,7 +253,7 @@ function FeatureLayout({ channels, active, reduced, expanded, onToggle }: Layout
         <ChannelCard
           key={c.name}
           channel={c}
-          color={CHANNEL_COLORS[(i + 1) % CHANNEL_COLORS.length]}
+          color={channelColor(c.name)}
           size="sm"
           index={i + 1}
           active={active}
@@ -285,7 +277,7 @@ function GridLayout({ channels, active, reduced, expanded, onToggle }: LayoutPro
         <ChannelCard
           key={c.name}
           channel={c}
-          color={CHANNEL_COLORS[i % CHANNEL_COLORS.length]}
+          color={channelColor(c.name)}
           size="sm"
           index={i}
           active={active}
@@ -430,7 +422,7 @@ function ChannelCard({
               </div>
               <div
                 className="relative mt-3 h-2 w-full overflow-hidden rounded-full"
-                style={{ background: "#F1F2F4" }}
+                style={{ background: "var(--rule-light)" }}
               >
                 <motion.div
                   className="absolute inset-y-0 left-0 rounded-full"
@@ -534,7 +526,7 @@ function ChannelBarRow({
         <div className="relative flex-1">
           <div
             className="relative h-[52px] w-full overflow-hidden rounded-[12px]"
-            style={{ background: "#F1F2F4" }}
+            style={{ background: "var(--rule-light)" }}
           >
             <motion.div
               className="absolute inset-y-0 left-0 overflow-hidden rounded-r-[10px]"
@@ -605,7 +597,7 @@ function SubRow({ sub, color, dense }: { sub: SubChannel; color: string; dense?:
       >
         {sub.name}
       </p>
-      <div className="relative h-[6px] flex-1 overflow-hidden rounded-full" style={{ background: "#F1F2F4" }}>
+      <div className="relative h-[6px] flex-1 overflow-hidden rounded-full" style={{ background: "var(--rule-light)" }}>
         <div
           className="h-full rounded-full"
           style={{ width: `${sub.pct}%`, background: `${color}99` }}

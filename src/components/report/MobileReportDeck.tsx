@@ -14,15 +14,6 @@ import {
   TrendingUp,
   Zap,
 } from "lucide-react";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import type { AiInsightsPayload } from "@/lib/ai-insights/types";
 import { deriveInsights } from "@/lib/engine/derive-insights";
 import { deriveSignalCards } from "@/lib/engine/signal-cards";
@@ -31,6 +22,7 @@ import { highlightNumbers } from "@/lib/utils/highlight-numbers";
 import { withPeriod } from "@/lib/utils/text";
 import type { ReportData } from "@/types/schema";
 import type { SlideData } from "./slide-data";
+import { channelColor } from "./channel-colors";
 import {
   ACCENT,
   AI_BORDER,
@@ -46,7 +38,6 @@ import {
 const SECTION_LINKS = [
   ["Översikt", "mobile-summary"],
   ["Nyckeltal", "mobile-kpis"],
-  ["Utveckling", "mobile-trend"],
   ["Kanaler", "mobile-channels"],
   ["Affär", "mobile-conversion"],
   ["Sidor", "mobile-pages"],
@@ -55,7 +46,6 @@ const SECTION_LINKS = [
   ["Summering", "mobile-recap"],
 ] as const;
 
-const CHANNEL_COLORS = ["#FF6B6B", "#F59E0B", "#6B8FFF", "#34C759", "#A855F7"];
 
 function fmt(value: number | null) {
   return value == null ? "—" : value.toLocaleString("sv-SE");
@@ -237,34 +227,11 @@ export function MobileReportDeck({
         </div>
       </Section>
 
-      <Section id="mobile-trend" number="03 — Utveckling" title="Så hittar besökarna till er" sub={data.period}>
-        <div className="rounded-3xl border border-border bg-background/90 p-4">
-          <div className="mb-4 flex items-end justify-between gap-3">
-            <div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground/50">Totala besök</p><p className="font-stat mt-1 text-4xl font-bold tabular-nums">{fmt(data.visits)}</p></div>
-            <Delta value={data.trafficDelta} />
-          </div>
-          <div className="h-60 w-full">
-            {data.timeSeries.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                <AreaChart data={data.timeSeries} margin={{ top: 8, right: 4, left: -18, bottom: 0 }}>
-                  <defs><linearGradient id="mobile-report-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={ACCENT} stopOpacity={0.22} /><stop offset="100%" stopColor={ACCENT} stopOpacity={0} /></linearGradient></defs>
-                  <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="date" tick={{ fontSize: 9, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={false} interval="preserveStartEnd" tickFormatter={(value) => String(value).slice(5)} />
-                  <YAxis tick={{ fontSize: 9, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={false} width={32} />
-                  <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid var(--border)", fontSize: 12 }} />
-                  <Area type="monotone" dataKey="sessions" stroke={ACCENT} strokeWidth={2.5} fill="url(#mobile-report-area)" dot={false} />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : <div className="flex h-full items-center justify-center text-sm text-foreground/45">Ingen tidsserie för perioden</div>}
-          </div>
-        </div>
-      </Section>
-
-      <Section id="mobile-channels" number="04 — Kanaler" title="Dina bästa trafikkällor" sub="Källorna som driver flest besök till sidan.">
+      <Section id="mobile-channels" number="03 — Kanaler" title="Dina bästa trafikkällor" sub="Källorna som driver flest besök till sidan.">
         <div className="space-y-3">
-          {data.topChannels.map((channel, index) => {
+          {data.topChannels.map((channel) => {
             const Icon = channel.icon;
-            const color = CHANNEL_COLORS[index % CHANNEL_COLORS.length];
+            const color = channelColor(channel.name);
             const hasSubChannels = !!channel.subChannels?.length;
             const isExpanded = hasSubChannels && expandedChannel === channel.name;
             return (
@@ -334,7 +301,7 @@ export function MobileReportDeck({
         </div>
       </Section>
 
-      <Section id="mobile-conversion" number="05 — Affär" title={data.hasConversions ? "Affären bakom trafiken" : "Du ser trafiken — men inte affären"} sub={data.hasConversions ? "Alla mätta konverteringar under perioden." : "Konverteringsspårning är inte aktiverad ännu."}>
+      <Section id="mobile-conversion" number="04 — Affär" title={data.hasConversions ? "Affären bakom trafiken" : "Du ser trafiken — men inte affären"} sub={data.hasConversions ? "Alla mätta konverteringar under perioden." : "Konverteringsspårning är inte aktiverad ännu."}>
         {data.hasConversions ? (
           <div className="rounded-3xl border border-border bg-background/90 p-5"><p className="text-sm text-foreground/55">Konverteringar</p><p className="font-stat mt-2 text-4xl font-bold tabular-nums">{fmt(data.leads)}</p><div className="mt-2"><Delta value={data.leadsDelta} /></div></div>
         ) : (
@@ -345,7 +312,7 @@ export function MobileReportDeck({
         )}
       </Section>
 
-      <Section id="mobile-pages" number="06 — Sidor" title="Dina mest besökta sidor" sub="Sidorna som drog mest trafik under perioden.">
+      <Section id="mobile-pages" number="05 — Sidor" title="Dina mest besökta sidor" sub="Sidorna som drog mest trafik under perioden.">
         <div className="divide-y divide-border overflow-hidden rounded-3xl border border-border bg-background/90">
           {data.topPages.map((page) => {
             const href = `https://${domain}${page.p}`;
@@ -354,7 +321,7 @@ export function MobileReportDeck({
         </div>
       </Section>
 
-      <Section id="mobile-insight" number="07 — Bedömning" title="Vad siffrorna betyder" sub="Bedömningen bakom dashboarden.">
+      <Section id="mobile-insight" number="06 — Bedömning" title="Vad siffrorna betyder" sub="Bedömningen bakom dashboarden.">
         {signals.length > 0 && <ul className="mb-3 space-y-3">{signals.map((signal) => <li key={signal.label} className="flex items-start gap-3 rounded-2xl border border-border bg-background/90 p-4"><span className="mt-2 h-2 w-2 shrink-0 rounded-full" style={{ background: signal.positive ? TREND_POS : TREND_NEG }} /><div><p className="font-semibold">{signal.label}</p><p className="mt-1 text-sm leading-relaxed text-foreground/60">{signal.body}</p></div></li>)}</ul>}
         <InsightCard label="Det vi ser just nu">
           {aiLoading ? <LoadingLines /> : aiInsight ? aiInsight.body.map((paragraph) => <p key={paragraph}>{highlightNumbers(withPeriod(paragraph), "light")}</p>) : <p>Fokusera på skillnaden mellan ökad synlighet och de affärshändelser som trafiken faktiskt leder till.</p>}
@@ -362,11 +329,11 @@ export function MobileReportDeck({
         </InsightCard>
       </Section>
 
-      <Section id="mobile-recommendations" number="08 — Fokus" title="Rekommenderade fokusområden" sub="Tre prioriteringar för nästa period.">
+      <Section id="mobile-recommendations" number="07 — Fokus" title="Rekommenderade fokusområden" sub="Tre prioriteringar för nästa period.">
         <div className="space-y-3">{recommendations.map(([tag, title, fallback, Icon], index) => { const body = aiLoading ? null : aiInsights?.slide_recs?.[index]?.body ?? fallback; return <div key={title} className="rounded-3xl border border-border bg-background/95 p-5 shadow-sm"><div className="flex items-center justify-between"><span className="flex h-11 w-11 items-center justify-center rounded-2xl text-white" style={{ background: "linear-gradient(135deg, #FF4D9E, #FF6B55, #FFB830)" }}><Icon className="h-5 w-5" /></span><span className="rounded-full border border-border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em]">{tag}</span></div><h3 className="font-display mt-5 text-2xl font-bold">{title}</h3><div className="mt-3 text-[15px] leading-relaxed text-foreground/65">{body === null ? <LoadingLines /> : <p>{highlightNumbers(withPeriod(body), "light")}</p>}</div></div>; })}</div>
       </Section>
 
-      <Section id="mobile-recap" number="09 — Summering" title="Tre saker att komma ihåg" sub="Det kortaste sättet att ta rapporten vidare.">
+      <Section id="mobile-recap" number="08 — Summering" title="Tre saker att komma ihåg" sub="Det kortaste sättet att ta rapporten vidare.">
         <ul className="space-y-3">{recap.map(([title, fallback, positive], index) => { const body = aiLoading ? null : aiInsights?.slide_recap?.[index]?.body ?? fallback; return <li key={title} className="flex items-start gap-3 rounded-2xl border border-border bg-background/90 p-4"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full" style={{ background: positive ? TREND_POS_BG : "oklch(0.94 0.04 60 / 0.6)", color: positive ? TREND_POS : "oklch(0.55 0.14 60)" }}>{positive ? <TrendingUp className="h-4 w-4" /> : <Compass className="h-4 w-4" />}</span><div><p className="font-semibold">{title}</p><div className="mt-1 text-sm leading-relaxed text-foreground/60">{body === null ? <LoadingLines /> : <p>{highlightNumbers(withPeriod(body), "light")}</p>}</div></div></li>; })}</ul>
         <div className="mt-4"><InsightCard><Lightbulb className="h-5 w-5" style={{ color: ACCENT }} /><p className="font-display text-2xl font-bold">Vill du gå igenom rapporten tillsammans?</p><p className="text-sm font-normal">Ta med rapporten till nästa möte eller öppna den i landskap för presentationsvyn.</p><Link href="/dashboard" className="mt-2 inline-flex min-h-11 items-center rounded-full px-5 text-sm font-bold text-white" style={{ background: ACCENT }}>Till dashboarden</Link></InsightCard></div>
       </Section>

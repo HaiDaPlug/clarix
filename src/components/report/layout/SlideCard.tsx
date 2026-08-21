@@ -43,7 +43,7 @@ export const SlideCard = memo(function SlideCard({ slide, scale, innerRef }: {
           containIntrinsicSize: `${cardW}px ${cardH}px`,
         }}
       >
-        {/* Canvas — full 1280×720, scaled down to fit */}
+        {/* Canvas — full CANVAS_W×CANVAS_H, scaled down to fit */}
         <div
           style={{
             width: CANVAS_W,
