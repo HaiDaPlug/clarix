@@ -162,23 +162,26 @@ export function KpiCard({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={CARD_ENTER(index)}
-      className="relative overflow-hidden rounded-2xl flex flex-col"
+      className="@container relative overflow-hidden rounded-2xl flex flex-col"
       style={{
         background: "var(--bone)",
         border: "1px solid var(--rule)",
         boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 8px 24px -8px rgba(0,0,0,0.06)",
       }}
     >
-      <div className="px-5 pt-5 pb-4 flex flex-col gap-3">
-        {/* Label + number grouped, icon floated top-right */}
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex flex-col gap-1 min-w-0">
+      {/* Source mark anchored to the card corner, so it holds its place in both layouts */}
+      {SourceLogo && <SourceLogo className="absolute right-5 top-5 h-7 w-7 @3xl:right-7 @3xl:top-7" />}
+
+      {/* Stacks in a normal card; splits into stat | insight once the card owns a wide row */}
+      <div className="px-5 pt-5 pb-4 flex flex-col gap-3 @3xl:flex-row @3xl:items-start @3xl:gap-8 @3xl:px-7 @3xl:pt-7 @3xl:pb-5">
+        <div className="flex flex-col gap-3 min-w-0 @3xl:flex-1">
+          <div className="flex flex-col gap-1 min-w-0 pr-9">
             <p className="eyebrow" style={{ color: "var(--slate)", letterSpacing: "0.1em" }}>
               {getKpiLabel(item.itemId, metric, t)}
             </p>
             <div className="flex items-baseline gap-3">
               <NumberFlash delay={0.1 + index * 0.05}>
-                <span style={{ fontFamily: "var(--font-numeric)", fontVariantNumeric: "tabular-nums", fontSize: "2.4rem", fontWeight: 700, lineHeight: 1, letterSpacing: "-0.04em", color: "var(--charcoal)" }}>
+                <span style={{ fontFamily: "var(--font-numeric)", fontVariantNumeric: "tabular-nums", fontSize: "clamp(2.4rem, 5.5cqw, 3.4rem)", fontWeight: 700, lineHeight: 1, letterSpacing: "-0.04em", color: "var(--charcoal)" }}>
                   {loading ? (
                     <motion.span
                       animate={{ opacity: [0.3, 0.7, 0.3] }}
@@ -202,29 +205,31 @@ export function KpiCard({
               )}
             </div>
           </div>
-          {SourceLogo && <SourceLogo className="h-7 w-7 shrink-0 mt-0.5" />}
+
+          {!loading && state && state.change.direction !== "flat" && (
+            <div
+              className="inline-flex items-center gap-1 rounded-full px-3 py-1 self-start"
+              style={{
+                background: state.isGood ? "oklch(0.92 0.1 145)" : "oklch(0.92 0.08 20)",
+                color: state.isGood ? "oklch(0.35 0.18 145)" : "oklch(0.4 0.2 20)",
+              }}
+            >
+              {state.change.direction === "up"
+                ? <ArrowUpRight className="h-4 w-4" strokeWidth={2.5} />
+                : <ArrowDownRight className="h-4 w-4" strokeWidth={2.5} />
+              }
+              <span style={{ fontSize: "14px", fontWeight: 800, letterSpacing: "-0.01em" }}>
+                {state.change.value}
+              </span>
+            </div>
+          )}
         </div>
 
-        {!loading && state && state.change.direction !== "flat" && (
-          <div
-            className="inline-flex items-center gap-1 rounded-full px-3 py-1 self-start"
-            style={{
-              background: state.isGood ? "oklch(0.92 0.1 145)" : "oklch(0.92 0.08 20)",
-              color: state.isGood ? "oklch(0.35 0.18 145)" : "oklch(0.4 0.2 20)",
-            }}
-          >
-            {state.change.direction === "up"
-              ? <ArrowUpRight className="h-4 w-4" strokeWidth={2.5} />
-              : <ArrowDownRight className="h-4 w-4" strokeWidth={2.5} />
-            }
-            <span style={{ fontSize: "14px", fontWeight: 800, letterSpacing: "-0.01em" }}>
-              {state.change.value}
-            </span>
-          </div>
-        )}
-
         {!loading && isFull && (headline || insight) && (
-          <div style={{ borderTop: "1px solid var(--rule)", paddingTop: "12px", marginTop: "4px" }}>
+          <div
+            className="border-t pt-3 mt-1 @3xl:mt-0 @3xl:flex-1 @3xl:self-stretch @3xl:border-t-0 @3xl:border-l @3xl:pt-1 @3xl:pl-8 @3xl:pr-10"
+            style={{ borderColor: "var(--rule)" }}
+          >
             {headline && (
               <p style={{ fontSize: "13px", fontWeight: 600, color: "var(--charcoal)", lineHeight: 1.4, marginBottom: "3px" }}>
                 {headline}
@@ -239,7 +244,7 @@ export function KpiCard({
         )}
       </div>
 
-      <div className="h-12 w-full overflow-hidden" style={{ marginTop: "auto" }}>
+      <div className="h-12 w-full overflow-hidden @3xl:h-24" style={{ marginTop: "auto" }}>
         {!loading && sparkData.length > 1 && (
           <SparklineReveal accent={SPARK_COLOR} sparkId={sparkId} sparkData={sparkData} delay={0.18 + index * 0.06} />
         )}
