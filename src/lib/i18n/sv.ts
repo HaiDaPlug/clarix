@@ -218,7 +218,7 @@ const sv = {
       connect: "Anslut",
       disconnect: "Koppla från",
     },
-    trust: "🔒 Vi använder skrivskyddade OAuth-behörigheter. Vi lagrar aldrig rådata utöver sessionen. Du kan koppla från en källa när som helst.",
+    trust: "🔒 Vi använder skrivskyddade OAuth-behörigheter. Sammanställda rapportvärden mellanlagras i högst 24 timmar för snabbare laddning — aldrig rådata. Du kan koppla från Google eller ta bort en egendom när som helst.",
     sources: {
       ga4: {
         name: "Google Analytics 4",

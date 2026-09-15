@@ -205,7 +205,7 @@ const en: Translations = {
       connect: "Connect",
       disconnect: "Disconnect",
     },
-    trust: "🔒 We use read-only OAuth scopes. We never store raw data beyond your session. You can disconnect any source at any time.",
+    trust: "🔒 We use read-only OAuth scopes. Aggregated report values are cached for at most 24 hours to load faster — never raw data. You can disconnect Google or remove a property at any time.",
     sources: {
       ga4: {
         name: "Google Analytics 4",
