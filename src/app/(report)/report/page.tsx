@@ -9,18 +9,13 @@ import {
   Share2,
 } from "lucide-react";
 import { KeyboardHints } from "@/components/report/KeyboardHints";
-import { createClient } from "@/utils/supabase/client";
-import {
-  ConnectableSource,
-  ConnectedSource,
-  mergeReportData,
-} from "@/lib/google/connected-sources";
 import { useDateRange } from "@/lib/google/date-presets";
 import { DateRangePicker } from "@/components/primitives/DateRangePicker";
-import { deriveExecutiveSummary } from "@/lib/engine/derive-executive-summary";
 import { useAiInsights } from "@/lib/hooks/useAiInsights";
 import type { ReportData } from "@/types/schema";
-import { readReportSnapshot, writeReportSnapshot } from "@/lib/report-snapshot";
+import type { ReportDataBuildResult } from "@/lib/report-data/server";
+import type { ClientWorkspace } from "@/lib/clients/types";
+import { propertyKeyFor, readReportSnapshot, writeReportSnapshot } from "@/lib/report-snapshot";
 import { CANVAS_W, CANVAS_H, HINTS_BAR_SPACE, slideGap } from "@/components/report/tokens";
 import { SlideShimmer } from "@/components/report/primitives/Shimmer";
 import { buildSlideData } from "@/components/report/slide-data";
@@ -40,12 +35,17 @@ export default function ReportPage() {
   );
 }
 
+type EmptyState = "no_sources" | "reconnect_required" | "unavailable" | "no_data";
+
 function ReportPageInner() {
   const [reportData, setReportData] = useState<ReportData | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
+  // The workspace this deck shows: resolved once from the user's preference,
+  // then named explicitly on every request. undefined = not resolved yet.
+  const [workspaceId, setWorkspaceId] = useState<string | null | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [noSources, setNoSources] = useState(false);
+  const [emptyState, setEmptyState] = useState<EmptyState | null>(null);
+  const noSources = emptyState !== null;
   const [activeIndex, setActiveIndex] = useState(0);
   const activeIndexRef = useRef(0);
   const [isFs, setIsFs] = useState(false);
@@ -72,25 +72,62 @@ function ReportPageInner() {
   // stale data). It still fires exactly once per period + data fingerprint.
   const { insights: aiInsights, loading: aiInsightsLoading } = useAiInsights(
     reportData,
-    userId,
+    workspaceId ?? null,
     reportData?.meta?.period?.startDate ?? dateRange.startDate,
     reportData?.meta?.period?.endDate ?? dateRange.endDate,
     periodLabel,
   );
 
+  // Resolve which workspace to show, once per mount.
   useEffect(() => {
+    let cancelled = false;
+    async function resolveWorkspace() {
+      try {
+        const res = await fetch("/api/clients/active", { cache: "no-store" });
+        if (cancelled) return;
+        if (res.status === 401) {
+          window.location.assign("/login");
+          return;
+        }
+        const payload = res.ok ? ((await res.json()) as { client: ClientWorkspace | null }) : { client: null };
+        if (!cancelled) setWorkspaceId(payload.client?.id ?? null);
+      } catch {
+        if (!cancelled) setWorkspaceId(null);
+      }
+    }
+    void resolveWorkspace();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (workspaceId === undefined) return;
     let cancelled = false;
 
     async function load() {
-      setNoSources(false);
+      setEmptyState(null);
 
-      // Stale-while-revalidate: a session snapshot for this range paints
-      // immediately; otherwise slides from the previous range stay up while
-      // the new range fetches. Shimmer only on a true cold load.
-      const snapshot = readReportSnapshot(rangeStart, rangeEnd);
+      const fail = (state: EmptyState) => {
+        reportDataRef.current = null;
+        setReportData(null);
+        setEmptyState(state);
+        setLoading(false);
+        setRefreshing(false);
+      };
+
+      // Narrowed copy: the closure cannot see the effect-level undefined check.
+      const id = workspaceId;
+      if (!id) {
+        fail("no_sources");
+        return;
+      }
+
+      // Stale-while-revalidate: a session snapshot for THIS workspace and
+      // range paints immediately; otherwise slides from the previous range
+      // stay up while the new range fetches. Shimmer only on a true cold load.
+      const snapshot = readReportSnapshot(id, rangeStart, rangeEnd);
       if (snapshot) {
-        reportDataRef.current = snapshot;
-        setReportData(snapshot);
+        reportDataRef.current = snapshot.data;
+        setReportData(snapshot.data);
         setLoading(false);
         setRefreshing(true);
       } else if (reportDataRef.current) {
@@ -99,106 +136,60 @@ function ReportPageInner() {
         setLoading(true);
       }
 
-      const failNoSources = () => {
-        reportDataRef.current = null;
-        setReportData(null);
-        setNoSources(true);
-        setLoading(false);
-        setRefreshing(false);
-      };
-
-      const supabase = createClient();
-      // Kicked off here so auth resolves alongside the data fetches instead of
-      // adding a serial round trip before first paint; awaited where needed.
-      const userPromise = supabase.auth.getUser().catch(() => ({ data: { user: null } }));
-
-      const { data, error } = await supabase
-        .from("connected_sources")
-        .select("id, source, property_id, display_name, token_expires_at")
-        .in("source", ["ga4", "gsc"])
-        .neq("property_id", "_pending");
+      let result: ReportDataBuildResult;
+      try {
+        const res = await fetch("/api/report-data", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            clientId: id,
+            dateRange: { startDate: rangeStart, endDate: rangeEnd },
+            periodLabel: fmtDateRange(rangeStart, rangeEnd),
+            locale: "sv",
+          }),
+        });
+        if (cancelled) return;
+        if (res.status === 401) {
+          window.location.assign("/login");
+          return;
+        }
+        if (res.status === 404) {
+          // Workspace deleted elsewhere.
+          fail("no_sources");
+          return;
+        }
+        if (!res.ok) {
+          fail("unavailable");
+          return;
+        }
+        result = (await res.json()) as ReportDataBuildResult;
+      } catch {
+        if (!cancelled) fail("unavailable");
+        return;
+      }
 
       if (cancelled) return;
 
-      if (error || !data || data.length === 0) {
-        failNoSources();
-        return;
-      }
+      if (result.status === "no_sources") { fail("no_sources"); return; }
+      if (result.status === "reconnect_required") { fail("reconnect_required"); return; }
+      if (result.status === "unavailable") { fail("unavailable"); return; }
+      if (result.status === "no_data") { fail("no_data"); return; }
 
-      const sources = data.filter(
-        (s): s is ConnectedSource => s.source === "ga4" || s.source === "gsc",
-      );
-
-      if (sources.length === 0) {
-        failNoSources();
-        return;
-      }
-
-      let ga4WebsiteUri: string | null = null;
-
-      const parts = await Promise.all(
-        sources.map(async (source) => {
-          try {
-            const endpoint = source.source === "ga4" ? "/api/ga4" : "/api/gsc";
-            const body = source.source === "ga4"
-              ? { propertyId: source.property_id, dateRange: { startDate: rangeStart, endDate: rangeEnd }, locale: "sv" }
-              : { siteUrl: source.property_id, dateRange: { startDate: rangeStart, endDate: rangeEnd }, locale: "sv" };
-            const res = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-            if (!res.ok) return undefined;
-            const json = await res.json() as Partial<ReportData> & { websiteUri?: string };
-            if (source.source === "ga4" && json.websiteUri) ga4WebsiteUri = json.websiteUri;
-            return json as Partial<ReportData>;
-          } catch { return undefined; }
-        }),
-      );
-
-      if (cancelled) return;
-
-      const realParts = parts.filter((p): p is Partial<ReportData> => p !== undefined);
-      if (realParts.length === 0) {
-        failNoSources();
-        return;
-      }
-
-      const connectedIds = sources.map((s) => s.source) as ConnectableSource[];
-      const base = realParts[0] as ReportData;
-      const merged = realParts.length > 1
-        ? mergeReportData(base, realParts.slice(1), connectedIds)
-        : { ...base, meta: { ...base.meta, availableSources: connectedIds } };
-      if (!merged.executiveSummary) merged.executiveSummary = deriveExecutiveSummary(merged, "sv");
-
-      // Inject source metadata - API routes return no meta, so we derive it here
-      const ga4Source = sources.find((s) => s.source === "ga4");
-      const gscSource = sources.find((s) => s.source === "gsc");
-      const rawName = ga4Source?.display_name ?? gscSource?.display_name ?? null;
-      const sourceName = rawName ? cleanSourceName(rawName) : null;
-      // GSC property_id is always a URL/domain; GA4 property_id is a numeric ID.
-      // Fall back to websiteUri from the GA4 Admin API when GSC isn't connected.
-      const rawPropertyId = gscSource?.property_id ?? ga4WebsiteUri ?? null;
-      const clientDomain = rawPropertyId ? extractDomain(rawPropertyId) : null;
-      const resolvedPeriodLabel = fmtDateRange(rangeStart, rangeEnd);
-      merged.meta = {
-        ...merged.meta,
-        ...(sourceName ? { clientName: sourceName } : {}),
-        ...(clientDomain ? { clientDomain } : {}),
-        period: { label: resolvedPeriodLabel, startDate: rangeStart, endDate: rangeEnd },
-      };
-
-      reportDataRef.current = merged;
-      setReportData(merged);
+      reportDataRef.current = result.data;
+      setReportData(result.data);
       setLoading(false);
       setRefreshing(false);
-      writeReportSnapshot(sources.map((s) => s.id), rangeStart, rangeEnd, merged);
-
-      const {
-        data: { user },
-      } = await userPromise;
-      if (!cancelled && user) setUserId(user.id);
+      writeReportSnapshot(
+        { workspaceId: result.workspace.id, propertyKey: propertyKeyFor(result.sources) },
+        rangeStart,
+        rangeEnd,
+        result.data,
+      );
     }
 
     load();
     return () => { cancelled = true; };
-  }, [rangeStart, rangeEnd]);
+  }, [workspaceId, rangeStart, rangeEnd]);
 
   const slideData = useMemo(() => buildSlideData(reportData), [reportData]);
   const slides = useMemo(
@@ -289,7 +280,7 @@ function ReportPageInner() {
   };
 
   const handleShare = useCallback(async () => {
-    if (!reportData) return;
+    if (!reportData || !workspaceId) return;
 
     setShareLoading(true);
     setShareCopied(false);
@@ -300,6 +291,7 @@ function ReportPageInner() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          clientId: workspaceId,
           period: {
             start: dateRange.startDate,
             end: dateRange.endDate,
@@ -324,7 +316,7 @@ function ReportPageInner() {
     } finally {
       setShareLoading(false);
     }
-  }, [dateRange.endDate, dateRange.startDate, periodLabel, reportData]);
+  }, [dateRange.endDate, dateRange.startDate, periodLabel, reportData, workspaceId]);
 
   return (
     <div className="relative flex h-dvh flex-col overflow-hidden bg-[oklch(0.965_0.005_270)] text-foreground print:bg-white" style={{ overscrollBehavior: "auto" }}>
@@ -353,11 +345,13 @@ function ReportPageInner() {
       </header>
       <div ref={scrollRef} className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden" style={{ scrollbarWidth: "none", overscrollBehaviorY: "auto" }}>
         <div ref={containerRef} className="mx-auto w-full">
-          {!loading && noSources && (
+          {!loading && emptyState && (
             <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-6 text-center">
-              <p className="font-display text-2xl font-bold">Ingen data för den här perioden<span style={{ color: "#FF6B55" }}>.</span></p>
-              <p className="max-w-sm text-sm text-foreground/60">Koppla ihop Google Analytics eller Search Console under Integrationer för att se din rapport.</p>
-              <Link href="/integrations" className="inline-flex min-h-11 items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-white" style={{ background: "#FF6B55" }}>Gå till Integrationer</Link>
+              <p className="font-display text-2xl font-bold">{EMPTY_COPY[emptyState].title}<span style={{ color: "#FF6B55" }}>.</span></p>
+              <p className="max-w-sm text-sm text-foreground/60">{EMPTY_COPY[emptyState].body}</p>
+              {EMPTY_COPY[emptyState].cta && (
+                <Link href="/integrations" className="inline-flex min-h-11 items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-white" style={{ background: "#FF6B55" }}>{EMPTY_COPY[emptyState].cta}</Link>
+              )}
             </div>
           )}
           {isPortrait && loading && <MobileReportLoading />}
@@ -400,33 +394,26 @@ function fmtDateRange(startIso: string, endIso: string): string {
   return sy === ey ? `${start} – ${end}` : `${start} ${sy} – ${end}`;
 }
 
-function cleanSourceName(name: string): string {
-  const noise = [
-    "GA4",
-    "Google Analytics 4",
-    "Google Analytics",
-    "Analytics",
-    "GSC",
-    "Google Search Console",
-    "Search Console",
-    "Google Ads",
-    "Ads",
-  ];
-  const pattern = noise.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
-  const re = new RegExp(
-    `(?:[\\s\\-–“|]+(?:${pattern})\\s*$|^\\s*(?:${pattern})[\\s\\-–“|]+|\\s*[\\(\\[](?:${pattern})[\\)\\]])`,
-    "gi",
-  );
-  return name.replace(re, "").trim();
-}
-
-function extractDomain(propertyId: string): string {
-  if (propertyId.startsWith("sc-domain:")) return propertyId.slice("sc-domain:".length);
-  try {
-    // Full URL like https://example.com/
-    return new URL(propertyId).hostname.replace(/^www\./, "");
-  } catch {
-    // Bare hostname like "www.example.com" from GA4 hostname dimension
-    return propertyId.replace(/^www\./, "");
-  }
-}
+// Each empty state says exactly what is true. None of them shows sample data.
+const EMPTY_COPY: Record<EmptyState, { title: string; body: string; cta: string | null }> = {
+  no_sources: {
+    title: "Ingen data för den här perioden",
+    body: "Koppla ihop Google Analytics eller Search Console under Integrationer för att se din rapport.",
+    cta: "Gå till Integrationer",
+  },
+  reconnect_required: {
+    title: "Google-åtkomsten behöver förnyas",
+    body: "Dina valda egendomar finns kvar. Anslut Google igen under Integrationer så hämtas rapporten.",
+    cta: "Anslut Google igen",
+  },
+  unavailable: {
+    title: "Google svarade inte just nu",
+    body: "Din anslutning är oförändrad. Ladda om sidan om en stund.",
+    cta: null,
+  },
+  no_data: {
+    title: "Ingen data för den här perioden",
+    body: "Google gav inga siffror för den valda perioden. Prova en annan period, eller kontrollera egendomen under Integrationer.",
+    cta: "Gå till Integrationer",
+  },
+};

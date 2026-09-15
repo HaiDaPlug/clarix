@@ -107,6 +107,35 @@ export async function fetchGscReportSet(params: {
   return { summary, timeSeries, topQueries, topPages };
 }
 
+/**
+ * The hostname that received the most sessions in the range — used to give a
+ * GA4-only workspace a domain for the report cover. Best-effort: any failure
+ * (including auth) returns null; the main report set is where auth errors
+ * are surfaced.
+ */
+export async function fetchGa4TopHostname(params: {
+  accessToken: string;
+  propertyId: string;
+  dateRange: DateRange;
+}): Promise<string | null> {
+  try {
+    const data = await postGoogleJsonOnce<Ga4RunReportResponse>(
+      ga4Endpoint(params.propertyId),
+      params.accessToken,
+      {
+        dimensions: [{ name: "hostname" }],
+        metrics: [{ name: "sessions" }],
+        dateRanges: [{ startDate: params.dateRange.startDate, endDate: params.dateRange.endDate }],
+        limit: 1,
+        orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
+      },
+    );
+    return data.rows?.[0]?.dimensionValues?.[0]?.value ?? null;
+  } catch {
+    return null;
+  }
+}
+
 async function postGoogleJson<T>(
   url: string,
   accessToken: string,

@@ -1,11 +1,12 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { getAuthedContext, unauthorizedJson } from "@/lib/auth/server";
+import { listAssignedPropertyIds } from "@/lib/clients/server";
 import { GoogleApiError } from "@/lib/google/api-client";
+import { getGoogleConnectionStore, withGoogleAccessToken } from "@/lib/google/connection";
+import type { GoogleConnectionHealth } from "@/lib/google/connection-types";
 import { assertDateRange, getPriorDateRange } from "@/lib/google/date-range";
 import { ga4Endpoint } from "@/lib/google/report-queries";
-import { getValidAccessToken } from "@/lib/google/token-refresh";
-import { createClient } from "@/utils/supabase/server";
 import type { DateRange, Ga4RunReportResponse } from "@/lib/google/report-types";
 import { ga4Rows, metricNumber, dimension } from "@/lib/google/mapper-utils";
 
@@ -40,6 +41,7 @@ export type Ga4ExplorerData = {
   landingPages: Ga4ExplorerRow[];
   events: Ga4ExplorerRow[];
   topPages: Ga4ExplorerRow[];
+  google?: GoogleConnectionHealth;
 };
 
 export async function POST(request: Request) {
@@ -53,79 +55,28 @@ export async function POST(request: Request) {
     const dateRange = assertDateRange(rawRange);
     const priorRange = getPriorDateRange(dateRange);
 
-    const cookieStore = await cookies();
-    const supabase = createClient(cookieStore);
-    const { data: { user } } = await supabase.auth.getUser();
-    const { data: { session } } = await supabase.auth.getSession();
+    const ctx = await getAuthedContext();
+    if (!ctx) return unauthorizedJson();
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    // Only properties the user has deliberately assigned to a workspace can
+    // be explored — the same rule the dashboard and report follow.
+    const assigned = await listAssignedPropertyIds(ctx.supabase, ctx.user.id, "ga4");
+    if (!assigned.some((a) => a.propertyId === propertyId)) {
+      return NextResponse.json({ error: "Property is not assigned to any workspace." }, { status: 403 });
     }
 
-    const accessToken = await getValidAccessToken(
-      supabase, user.id, "ga4", propertyId, session?.provider_token ?? undefined,
+    const result = await withGoogleAccessToken(
+      getGoogleConnectionStore(),
+      ctx.user.id,
+      (accessToken) => runExplorer(accessToken, propertyId, dateRange, priorRange),
+      (error) => error instanceof GoogleApiError && error.status === 401,
     );
 
-    if (!accessToken) {
-      return NextResponse.json({ connected: false } satisfies Partial<Ga4ExplorerData>);
+    if (!result.ok) {
+      return NextResponse.json({ connected: false, google: result.health } satisfies Partial<Ga4ExplorerData>);
     }
 
-    const endpoint = ga4Endpoint(propertyId);
-
-    // summary + priorSummary are required — let them throw on failure.
-    // All dimension breakdowns are optional: a quota/size error on a long range
-    // returns empty rows rather than killing the entire explorer response.
-    const [
-      summary, priorSummary,
-      devices, priorDevices,
-      countries, priorCountries,
-      channels, priorChannels,
-      landingPages, priorLandingPages,
-      events, priorEvents,
-      topPages, priorTopPages,
-    ] = await Promise.all([
-      ga4Report(endpoint, accessToken, summaryRequest(dateRange)),
-      ga4Report(endpoint, accessToken, summaryRequest(priorRange)),
-      ga4ReportOptional(endpoint, accessToken, dimensionRequest(dateRange, "deviceCategory", "sessions")),
-      ga4ReportOptional(endpoint, accessToken, dimensionRequest(priorRange, "deviceCategory", "sessions")),
-      ga4ReportOptional(endpoint, accessToken, dimensionRequest(dateRange, "country", "sessions", 10)),
-      ga4ReportOptional(endpoint, accessToken, dimensionRequest(priorRange, "country", "sessions", 10)),
-      ga4ReportOptional(endpoint, accessToken, dimensionRequest(dateRange, "sessionDefaultChannelGroup", "sessions")),
-      ga4ReportOptional(endpoint, accessToken, dimensionRequest(priorRange, "sessionDefaultChannelGroup", "sessions")),
-      ga4ReportOptional(endpoint, accessToken, dimensionRequest(dateRange, "landingPage", "sessions", 10)),
-      ga4ReportOptional(endpoint, accessToken, dimensionRequest(priorRange, "landingPage", "sessions", 10)),
-      ga4ReportOptional(endpoint, accessToken, dimensionRequest(dateRange, "eventName", "eventCount", 15)),
-      ga4ReportOptional(endpoint, accessToken, dimensionRequest(priorRange, "eventName", "eventCount", 15)),
-      ga4ReportOptional(endpoint, accessToken, topPagesRequest(dateRange)),
-      ga4ReportOptional(endpoint, accessToken, topPagesRequest(priorRange)),
-    ]);
-
-    const row0 = ga4Rows(summary)[0];
-    const priorRow0 = ga4Rows(priorSummary)[0];
-
-    const overviewMetrics: Ga4ExplorerMetric[] = [
-      metric("sessions", "Totala sessioner", row0, summary, priorRow0, priorSummary, "number", true),
-      metric("totalUsers", "Användare", row0, summary, priorRow0, priorSummary, "number", true),
-      metric("newUsers", "Nya användare", row0, summary, priorRow0, priorSummary, "number", true),
-      metric("screenPageViews", "Sidvisningar", row0, summary, priorRow0, priorSummary, "number", true),
-      metric("engagementRate", "Engagemangsgrad", row0, summary, priorRow0, priorSummary, "percent", true),
-      metric("bounceRate", "Avvisningsfrekvens", row0, summary, priorRow0, priorSummary, "percent", false),
-      metric("averageSessionDuration", "Genomsn. besökstid", row0, summary, priorRow0, priorSummary, "seconds", true),
-      metric("conversions", "Konverteringar", row0, summary, priorRow0, priorSummary, "number", true),
-      metric("sessionConversionRate", "Konverteringsgrad", row0, summary, priorRow0, priorSummary, "percent", true),
-      metric("userEngagementDuration", "Engagemangstid", row0, summary, priorRow0, priorSummary, "seconds", true),
-    ];
-
-    return NextResponse.json({
-      connected: true,
-      overview: overviewMetrics,
-      devices: toRows(devices, priorDevices, "deviceCategory", "sessions"),
-      countries: toRows(countries, priorCountries, "country", "sessions"),
-      channels: toRows(channels, priorChannels, "sessionDefaultChannelGroup", "sessions"),
-      landingPages: toRows(landingPages, priorLandingPages, "landingPage", "sessions"),
-      events: toRows(events, priorEvents, "eventName", "eventCount"),
-      topPages: toRows(topPages, priorTopPages, "pagePath", "screenPageViews"),
-    } satisfies Ga4ExplorerData);
+    return NextResponse.json({ ...result.value, google: result.health } satisfies Ga4ExplorerData);
   } catch (error) {
     if (error instanceof GoogleApiError) {
       const isAuth = error.status === 401 || error.status === 403;
@@ -134,8 +85,73 @@ export async function POST(request: Request) {
         { status: error.status },
       );
     }
+    console.error("[ga4-explorer] failed", error instanceof Error ? error.message : String(error));
     return NextResponse.json({ error: "Unexpected error." }, { status: 500 });
   }
+}
+
+async function runExplorer(
+  accessToken: string,
+  propertyId: string,
+  dateRange: DateRange,
+  priorRange: DateRange,
+): Promise<Omit<Ga4ExplorerData, "google">> {
+  const endpoint = ga4Endpoint(propertyId);
+
+  // summary + priorSummary are required — let them throw on failure.
+  // All dimension breakdowns are optional: a quota/size error on a long range
+  // returns empty rows rather than killing the entire explorer response.
+  const [
+    summary, priorSummary,
+    devices, priorDevices,
+    countries, priorCountries,
+    channels, priorChannels,
+    landingPages, priorLandingPages,
+    events, priorEvents,
+    topPages, priorTopPages,
+  ] = await Promise.all([
+    ga4Report(endpoint, accessToken, summaryRequest(dateRange)),
+    ga4Report(endpoint, accessToken, summaryRequest(priorRange)),
+    ga4ReportOptional(endpoint, accessToken, dimensionRequest(dateRange, "deviceCategory", "sessions")),
+    ga4ReportOptional(endpoint, accessToken, dimensionRequest(priorRange, "deviceCategory", "sessions")),
+    ga4ReportOptional(endpoint, accessToken, dimensionRequest(dateRange, "country", "sessions", 10)),
+    ga4ReportOptional(endpoint, accessToken, dimensionRequest(priorRange, "country", "sessions", 10)),
+    ga4ReportOptional(endpoint, accessToken, dimensionRequest(dateRange, "sessionDefaultChannelGroup", "sessions")),
+    ga4ReportOptional(endpoint, accessToken, dimensionRequest(priorRange, "sessionDefaultChannelGroup", "sessions")),
+    ga4ReportOptional(endpoint, accessToken, dimensionRequest(dateRange, "landingPage", "sessions", 10)),
+    ga4ReportOptional(endpoint, accessToken, dimensionRequest(priorRange, "landingPage", "sessions", 10)),
+    ga4ReportOptional(endpoint, accessToken, dimensionRequest(dateRange, "eventName", "eventCount", 15)),
+    ga4ReportOptional(endpoint, accessToken, dimensionRequest(priorRange, "eventName", "eventCount", 15)),
+    ga4ReportOptional(endpoint, accessToken, topPagesRequest(dateRange)),
+    ga4ReportOptional(endpoint, accessToken, topPagesRequest(priorRange)),
+  ]);
+
+  const row0 = ga4Rows(summary)[0];
+  const priorRow0 = ga4Rows(priorSummary)[0];
+
+  const overviewMetrics: Ga4ExplorerMetric[] = [
+    metric("sessions", "Totala sessioner", row0, summary, priorRow0, priorSummary, "number", true),
+    metric("totalUsers", "Användare", row0, summary, priorRow0, priorSummary, "number", true),
+    metric("newUsers", "Nya användare", row0, summary, priorRow0, priorSummary, "number", true),
+    metric("screenPageViews", "Sidvisningar", row0, summary, priorRow0, priorSummary, "number", true),
+    metric("engagementRate", "Engagemangsgrad", row0, summary, priorRow0, priorSummary, "percent", true),
+    metric("bounceRate", "Avvisningsfrekvens", row0, summary, priorRow0, priorSummary, "percent", false),
+    metric("averageSessionDuration", "Genomsn. besökstid", row0, summary, priorRow0, priorSummary, "seconds", true),
+    metric("conversions", "Konverteringar", row0, summary, priorRow0, priorSummary, "number", true),
+    metric("sessionConversionRate", "Konverteringsgrad", row0, summary, priorRow0, priorSummary, "percent", true),
+    metric("userEngagementDuration", "Engagemangstid", row0, summary, priorRow0, priorSummary, "seconds", true),
+  ];
+
+  return {
+    connected: true,
+    overview: overviewMetrics,
+    devices: toRows(devices, priorDevices, "deviceCategory", "sessions"),
+    countries: toRows(countries, priorCountries, "country", "sessions"),
+    channels: toRows(channels, priorChannels, "sessionDefaultChannelGroup", "sessions"),
+    landingPages: toRows(landingPages, priorLandingPages, "landingPage", "sessions"),
+    events: toRows(events, priorEvents, "eventName", "eventCount"),
+    topPages: toRows(topPages, priorTopPages, "pagePath", "screenPageViews"),
+  };
 }
 
 function summaryRequest(dateRange: DateRange) {

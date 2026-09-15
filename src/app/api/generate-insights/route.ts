@@ -14,6 +14,7 @@ import {
 } from "@/lib/ai-insights/types";
 import { hashAiInsightMetrics } from "@/lib/ai-insights/cache";
 import { deriveNextSteps } from "@/lib/dashboard/next-steps";
+import { ClientNotFoundError } from "@/lib/clients/server";
 import { buildReportDataForUser } from "@/lib/report-data/server";
 import type { ReportData } from "@/types/schema";
 import type { Insight, InsightSurface, InsightType } from "@/lib/engine/derive-insights";
@@ -26,6 +27,9 @@ const RequestSchema = z.object({
     end: z.string().min(1),
     label: z.string().min(1),
   }),
+  // The workspace whose numbers the caller is showing. Insights are built
+  // and cached for exactly this workspace; there is no "active" fallback.
+  clientId: z.string().uuid(),
 });
 
 function insightsForSurface(insights: Insight[], surface: InsightSurface) {
@@ -343,7 +347,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 
-    const { period } = parsed.data;
+    const { period, clientId } = parsed.data;
     const cookieStore = await cookies();
     const supabase = createClient(cookieStore);
     const { data: userData, error: userError } = await supabase.auth.getUser();
@@ -353,18 +357,28 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const report = await buildReportDataForUser({
-      supabase,
-      userId: user.id,
-      dateRange: { startDate: period.start, endDate: period.end },
-      periodLabel: period.label,
-      locale: "sv",
-      caller: "generate-insights",
-    });
+    let report: Awaited<ReturnType<typeof buildReportDataForUser>>;
+    try {
+      report = await buildReportDataForUser({
+        supabase,
+        userId: user.id,
+        clientId,
+        dateRange: { startDate: period.start, endDate: period.end },
+        periodLabel: period.label,
+        locale: "sv",
+        caller: "generate-insights",
+      });
+    } catch (err) {
+      if (err instanceof ClientNotFoundError) {
+        return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+      }
+      throw err;
+    }
 
     if (report.status !== "ok") {
       console.warn("[generate-insights] buildReportData did not return ok", {
         user: user.id.slice(0, 8),
+        client: clientId.slice(0, 8),
         period: `${period.start}..${period.end}`,
         status: report.status,
       });
@@ -378,6 +392,7 @@ export async function POST(req: Request) {
     const metricsHash = hashAiInsightMetrics(reportData);
     const logContext = {
       user: user.id.slice(0, 8),
+      client: clientId.slice(0, 8),
       period: `${period.start}..${period.end}`,
       label: period.label,
       hash: metricsHash.slice(0, 12),
@@ -393,6 +408,7 @@ export async function POST(req: Request) {
       "claim_ai_insights_generation",
       {
         p_user_id:       user.id,
+        p_client_id:     clientId,
         p_period_start:  period.start,
         p_period_end:    period.end,
         p_metrics_hash:  metricsHash,
@@ -416,6 +432,7 @@ export async function POST(req: Request) {
         .from("ai_report_cache")
         .select("insights")
         .eq("user_id", user.id)
+        .eq("client_id", clientId)
         .eq("period_start", period.start)
         .eq("period_end", period.end)
         .maybeSingle();
@@ -460,6 +477,7 @@ export async function POST(req: Request) {
       await supabase.from("ai_report_cache").upsert(
         {
           user_id: user.id,
+          client_id: clientId,
           period_start: period.start,
           period_end: period.end,
           metrics_hash: metricsHash,
@@ -468,7 +486,7 @@ export async function POST(req: Request) {
           generated_at: new Date().toISOString(),
           insights: payload,
         },
-        { onConflict: "user_id,period_start,period_end" },
+        { onConflict: "user_id,client_id,period_start,period_end" },
       );
       console.log("[generate-insights] cached null payload: insufficient data", logContext);
       return NextResponse.json({ insights: payload, cached: false });
@@ -482,6 +500,7 @@ export async function POST(req: Request) {
         generation_expires_at: null,
       })
       .eq("user_id", user.id)
+      .eq("client_id", clientId)
       .eq("period_start", period.start)
       .eq("period_end", period.end);
 
@@ -533,6 +552,7 @@ export async function POST(req: Request) {
     await supabase.from("ai_report_cache").upsert(
       {
         user_id: user.id,
+        client_id: clientId,
         period_start: period.start,
         period_end: period.end,
         metrics_hash: metricsHash,
@@ -541,7 +561,7 @@ export async function POST(req: Request) {
         generated_at: new Date().toISOString(),
         insights: payload,
       },
-      { onConflict: "user_id,period_start,period_end" },
+      { onConflict: "user_id,client_id,period_start,period_end" },
     );
 
     console.log("[generate-insights] cache write done", {
