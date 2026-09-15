@@ -2,10 +2,10 @@
 
 import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import { motion } from "motion/react";
-import { createClient } from "@/utils/supabase/client";
 import { useDateRange } from "@/lib/google/date-presets";
 import { DateRangePicker } from "@/components/primitives/DateRangePicker";
 import { useLocale } from "@/lib/i18n";
+import type { ClientsResponse } from "@/lib/clients/types";
 import type { Ga4ExplorerData, Ga4ExplorerMetric, Ga4ExplorerRow } from "@/app/api/ga4-explorer/route";
 
 // ─── Card definitions ─────────────────────────────────────────────────────────
@@ -450,19 +450,31 @@ function DataPageInner() {
   });
   const [hidden, setHidden] = useState<Set<string>>(new Set());
 
-  // Load all GA4 properties once
+  // The GA4 properties assigned to the user's workspaces, active workspace first.
   useEffect(() => {
-    const supabase = createClient();
-    supabase
-      .from("connected_sources")
-      .select("property_id, display_name")
-      .eq("source", "ga4")
-      .neq("property_id", "_pending")
-      .then(({ data }) => {
-        if (!data || data.length === 0) { setNoSource(true); setLoading(false); return; }
-        setProperties(data);
-        setActivePropertyId(prev => prev ?? data[0].property_id);
+    let cancelled = false;
+    fetch("/api/clients", { cache: "no-store" })
+      .then((res) => (res.ok ? (res.json() as Promise<ClientsResponse>) : null))
+      .then((payload) => {
+        if (cancelled) return;
+        const seen = new Set<string>();
+        const list = (payload?.clients ?? [])
+          .slice()
+          .sort((a, b) => Number(b.isActive) - Number(a.isActive))
+          .flatMap((c) => {
+            const ref = c.sources.ga4;
+            if (!ref || seen.has(ref.propertyId)) return [];
+            seen.add(ref.propertyId);
+            return [{ property_id: ref.propertyId, display_name: ref.displayName ?? c.name }];
+          });
+        if (list.length === 0) { setNoSource(true); setLoading(false); return; }
+        setProperties(list);
+        setActivePropertyId((prev) => prev ?? list[0].property_id);
+      })
+      .catch(() => {
+        if (!cancelled) { setNoSource(true); setLoading(false); }
       });
+    return () => { cancelled = true; };
   }, []);
 
   // Fetch data when property or date range changes

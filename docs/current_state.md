@@ -2,7 +2,77 @@
 
 ---
 
-## NOW - Open priorities (2026-08-01)
+## NOW - Open priorities (2026-09-14)
+
+### Done this session (2026-09-14) — auth split, Google grant health model, workspaces ("Kunder"), scoped data path
+
+**The one-line version:** Clarix sign-in (Supabase) and the Google Analytics/Search Console grant are now two separate things; "connected" is a server-verified fact instead of "a row exists"; every report is built from exactly one workspace's GA4 + GSC property, named explicitly on the request; refresh tokens are no longer readable from the browser. Full manual-config checklist and end-to-end test script: [docs/google-oauth-production.md](google-oauth-production.md).
+
+**Status wording, deliberately:** implementation complete; local verification complete (typecheck, lint, build, 107 unit tests); **production integration verification pending** — no real Supabase session, real Google refresh token, real revoked grant, or the migrations against the live schema have been exercised yet. Those are exactly where auth systems fail; the manual script in the production doc is the acceptance run.
+
+**Follow-up pass (same day) — three production-readiness fixes from review**
+1. **Explicit `clientId` on every customer-data request; active workspace is a preference only.** `POST /api/report-data`, `/api/generate-insights` and `/api/reports/share` now *require* `clientId` (uuid), `buildReportDataForUser()` takes it and throws `ClientNotFoundError` (→ 404) if it is not the user's — nothing is ever substituted. Pages resolve the preference once per mount from the new `GET /api/clients/active`, then name that workspace on every request, so header and numbers always come from the same customer even if another device switches the active one mid-flight. `set_active_client()` is navigation state, not a data-security context. Report snapshots are read by explicit workspace id (`readReportSnapshot(workspaceId, …)`); the old "active marker" is gone.
+2. **Legacy tokens locked down now, not later.** `20260914000200_connected_sources_lockdown.sql` drops the own-row policy and revokes all grants on `connected_sources` from `anon`/`authenticated`. The table stays for rollback (service_role only); the migration header has the two statements that restore browser access if the old app must be redeployed.
+3. **Production doc corrected** to Google's actual order: Branding complete (+ brand verification only if a logo is added) → domain verified → Audience *In production* + Data Access scopes → sensitive-scope verification in the Verification Center. Publishing ends the seven-day Testing lifetime; verification is what removes the unverified-app interstitial and the 100-user cap. "Submit once steps 1–5 are done" was wrong and is replaced.
+
+**Root causes that were fixed**
+- Login and the data grant were one `signInWithOAuth` call with analytics scopes. Renewing Google meant logging in again; email/password users could never connect Google; picking a different Google account in the picker silently switched Clarix identity.
+- Tokens were copied per `connected_sources` row via the `_pending` sentinel; refresh only updated one row, so rows drifted and died separately.
+- `/api/google/connections` said "connected" if a row existed. The report path discovered `invalid_grant` later → Integrations green, Report "expired".
+- `refreshGoogleToken` threw the same `token_refresh_failed` for `invalid_grant` and for a Google 502, and nothing was ever marked. Truthful UI was impossible.
+- Dashboard, report, share and insights merged **every** `connected_sources` row. Two GA4 properties would have merged into one report.
+- Reloading `/auth/callback` re-sent a consumed code, failed the exchange, and wiped every `sb-*` cookie of the user who had just signed in.
+- `ai_report_cache` was keyed by (user, period) only — two customers thrashed one row.
+- Privacy policy claimed "analytics data never stored" (there is `google_report_cache`, `ai_report_cache`, `shared_reports`), "tokens encrypted" (plain, RLS only), "HTTP-only cookies" (Supabase browser cookies are JS-readable), and omitted OpenAI/Anthropic.
+- With own-row RLS on `connected_sources`, the user's JWT could `select refresh_token` from the browser.
+- **Likely cause of the weekly "expiry":** Google Cloud is still in *Testing*; Google expires test-user grants with sensitive scopes after 7 days. Code cannot fix that — see §5 of the production doc.
+
+**Architecture now**
+- `/login`, `/signup`: Google sign-in requests **no** analytics scopes. `/auth/callback` is identity-only, idempotent on reload (an existing session wins over a failed re-exchange), sends new users to `/integrations` and returning users to `/dashboard`.
+- Google grant: `GET /api/google/oauth/start` (PKCE S256 + HMAC-signed HttpOnly state cookie scoped to `/api/google/oauth`, bound to the signed-in user, 10-min TTL) → Google → `GET /api/google/oauth/callback` → `saveGoogleConnection()`. A reloaded callback is treated as success if this flow already produced an active grant. Failures redirect to `/integrations?google=error&reason=…` and log to `auth_failures` as `google_oauth_*`; they never touch Supabase cookies.
+- `google_connections` (one row per user, `user_id` PK): access/refresh token, expiry, granted scopes, `status` (`active` | `reconnect_required`) + `status_reason`. **RLS enabled, no policies** → only the service-role client (`src/utils/supabase/admin.ts`, `SUPABASE_SECRET_KEY`) can read it. Without that env var the app degrades to an explicit `server_misconfigured` health, never a crash.
+- `src/lib/google/connection.ts` is the **only** source of truth for Google health. `getGoogleAccessToken()` refreshes silently when expired (60 s skew), de-duplicates concurrent refreshes per user, marks `reconnect_required` on permanent token-endpoint failures (`invalid_grant` & co.) and on missing scope / missing refresh token, and returns `error/google_unavailable` on 5xx/network **without marking anything**. `withGoogleAccessToken()` retries a Google 401 exactly once after a forced refresh, then marks. `getGoogleConnectionHealth({ verify: true })` forces a real round-trip — the Integrations page uses it on every load, so it cannot show green for a dead grant.
+- Workspaces: `clients` (name, domain, `is_active`; partial unique index = one active per user) + `client_sources` (unique `(client_id, source)` = one property per source per workspace) + RPC `set_active_client()` (atomic switch). `src/lib/clients/server.ts` is the CRUD layer; `/api/clients`, `/api/clients/[id]`, `/api/clients/[id]/activate`, `/api/clients/[id]/sources` are the routes. Reconnect/disconnect Google never touches these tables.
+- Data path: `POST /api/report-data` (body carries `clientId`) is the **only** way the browser gets numbers. `buildReportDataForUser({ clientId })` verifies the workspace is the user's, fetches its ≤1 GA4 + ≤1 GSC property, and returns `ok | no_sources | reconnect_required | unavailable | no_data` with the workspace, sources, per-source failures and the Google health; an unknown/foreign id throws `ClientNotFoundError` → 404. `/api/ga4`, `/api/gsc`, `/api/google/connect`, `/api/google/connections`, `token-refresh.ts` are **deleted** so no unscoped path remains. `/api/ga4-explorer` only accepts properties assigned to a workspace (403 otherwise).
+- Caching: `ai_report_cache` gains `client_id` (backfilled to the migrated active workspace; `claim_ai_insights_generation` takes `p_client_id`). `useAiInsights` keys on workspace id and sends `clientId`, which the route requires. Report `sessionStorage` snapshots are keyed by workspace + property ids and read by explicit workspace id; `clearReportSnapshots()` tidies them on switches. `google_report_cache` was already property-keyed.
+- Proxy: unchanged `getUser()` gate for protected paths (`/data` added), plus signed-in users on `/login`/`/signup` bounce to `/dashboard` (was documented, never implemented). Sidebar user row follows `onAuthStateChange` and has a sign-out button (there was none).
+- Migration backfill (`20260914000000`): per user, best `connected_sources` token row → `google_connections` (no refresh token ⇒ `reconnect_required/missing_refresh_token`, properties kept); first GA4 + first GSC row → one active workspace; extra rows → their own workspaces. `connected_sources` is left untouched as the rollback path — **drop it in a later migration once verified**.
+
+**Files** — new: `src/lib/google/{oauth,oauth-state,connection,connection-types}.ts`, `src/lib/clients/{server,naming,types}.ts`, `src/lib/auth/server.ts`, `src/utils/supabase/admin.ts`, `src/app/api/google/oauth/{start,callback}/route.ts`, `src/app/api/google/connection/route.ts`, `src/app/api/clients/**`, `src/app/api/report-data/route.ts`, `src/components/integrations/{GoogleConnectionCard.tsx,copy.ts}`, `src/components/clients/{ClientEditor.tsx,copy.ts}`, two migrations, `docs/google-oauth-production.md`. Rewritten: `proxy.ts`, `auth/callback`, `google/{properties,disconnect}`, `ga4-explorer`, `generate-insights`, `reports/share`, `report-data/server.ts`, `useAiInsights`, `report-snapshot`, `connect-modal`, `Sidebar`, `integrations`, `clients`, `dashboard`, `report`, `data` pages, `privacy-policy`, `login`/`signup` (scopes removed), i18n trust line.
+
+**Verification**
+- `npx tsc --noEmit` clean (ignoring the dev server's generated `.next/dev/types/routes.d.ts` noise). Scoped `eslint` clean on every touched file. `npm run build` passes. Vitest **107/107** (48 existing + 59 new): `oauth-state.test.ts` (sign/verify/tamper/TTL, PKCE, next-path sanitising), `oauth.test.ts` (error classification, URL shape, token-endpoint normalisation, no token in logs), `connection.test.ts` (fresh → no call; expired + refresh → connected; `invalid_grant` → marked; 5xx → error, not marked; missing scope/refresh token; forced verify; concurrent de-dupe; 401-retry-once), `clients/naming.test.ts` (name/domain derivation, row mapping never leaks a source across workspaces), `report-data/server.test.ts` (only the named workspace's ids reach Google; a different id changes them; a foreign id is refused, never substituted; every grant-health outcome).
+- **Not verified here:** anything against real Google/Supabase — the migrations are unapplied, `SUPABASE_SECRET_KEY` is unset, and Google Cloud's redirect URI does not yet include `/api/google/oauth/callback`. The manual test script in the production doc (steps A1–D23) is the acceptance run.
+- Whole-project `eslint` has 3 pre-existing errors in files this session did not touch (`animated-counter.tsx`, `dia-text-reveal.tsx` unchanged vs HEAD; `SlidePages.tsx` is another agent's in-flight edit).
+
+**Manual configuration the owner must do (all in the production doc)**: set `SUPABASE_SECRET_KEY` and `NEXT_PUBLIC_APP_URL`; `supabase db push` (three migrations); add `https://www.clarix.se/api/google/oauth/callback` to the Google OAuth client's redirect URIs; enable Analytics Admin + Data + Search Console APIs; complete Branding (home page, privacy URL, authorized domain, contacts) and verify the domain in Search Console; move the app out of *Testing* to *In production* (ends the seven-day Testing token lifetime); declare exactly the two scopes; then submit sensitive-scope verification with a demo video — that approval is what makes the integration production-ready for arbitrary Google accounts.
+
+**Remaining risks / follow-ups**
+- Migrated users whose legacy row lacked a refresh token, or whose token came from a different OAuth client than `GOOGLE_CLIENT_ID`, must reconnect once. Properties survive.
+- `connected_sources` still holds plaintext tokens (service_role-only after the lockdown migration) until a follow-up drop migration.
+- Pages resolve the active workspace once per mount, so a tab left open keeps showing the workspace it opened with until reload — by design; the header and numbers always agree.
+- Google Ads is still "coming soon"; `client_sources` already accepts `google_ads`.
+- A `clients` row can exist with no sources (created from Kunder without picking properties) — dashboard/report state it as `no_sources`; intended.
+
+**⚠️ Files that are too long** (`git ls-files src | xargs wc -l`, after this session). Worth splitting before they grow further; none were split beyond what this session touched:
+- `src/app/(app)/integrations/page.tsx` — **871** (copy already extracted to `components/integrations/copy.ts`; the hero banner + integration card list could move to components)
+- `src/components/landing/landing-sections.tsx` — 719
+- `src/app/(app)/data/page.tsx` — 650 (canvas, cards, toolbar and page in one file)
+- `src/components/report/slides/SlideChannels.tsx` — 637
+- `src/app/api/generate-insights/route.ts` — 582 (the prompt text is ~200 lines and belongs in `lib/ai-insights`)
+- `src/components/integrations/connect-modal.tsx` — 564
+- `src/components/layout/Sidebar.tsx` — 526 (six inline icon components)
+- `src/lib/google/ga4-mapper.ts` — 493
+- `src/components/primitives/DateRangePicker.tsx` — 482
+- `src/app/(app)/dashboard/page.tsx` — 459
+- `src/lib/google/connection.ts` — 445 (new; store + health + writes could become three files if it grows)
+- `src/app/(app)/clients/page.tsx` — 424 (editor already extracted)
+
+**Process note:** built alongside another agent's uncommitted work (`SlidePages.tsx`, `MobileReportDeck.tsx`, `DateRangePicker.tsx`, `InfoTooltip.tsx`, `date-presets.ts`, `report-lab/*`, `scripts/*-shots.mjs`, `api/og-image`). Nothing of theirs was touched; nothing was stashed or committed.
+
+---
+
+## Previously — Open priorities (2026-08-01)
 
 ### Done this session (2026-08-01) — report polish: faster counters, custom date range, info tooltips, smooth-cursor removal
 

@@ -6,6 +6,9 @@ export const metadata: Metadata = {
   description: "Hur Clarix samlar in, använder och skyddar dina uppgifter.",
 };
 
+// Every statement below describes what the code in this repository does today.
+// If the implementation changes, this page changes in the same commit.
+
 export default function PrivacyPolicyPage() {
   return (
     <main className="min-h-dvh" style={{ backgroundColor: "var(--bone)", color: "var(--charcoal)" }}>
@@ -23,7 +26,7 @@ export default function PrivacyPolicyPage() {
           Integritetspolicy
         </h1>
         <p className="text-sm mb-12" style={{ color: "var(--slate)" }}>
-          Senast uppdaterad: maj 2025
+          Senast uppdaterad: september 2026
         </p>
 
         <div className="flex flex-col gap-10 text-sm leading-relaxed" style={{ color: "var(--charcoal)" }}>
@@ -42,30 +45,57 @@ export default function PrivacyPolicyPage() {
 
           <section className="flex flex-col gap-3">
             <h2 className="font-semibold text-base">2. Vilka uppgifter vi samlar in</h2>
-            <p>Vi samlar in två kategorier av uppgifter:</p>
             <ul className="flex flex-col gap-2 pl-4" style={{ listStyleType: "disc" }}>
               <li>
                 <strong>Kontouppgifter</strong> — e-postadress och lösenord (om du registrerar
                 dig med e-post), eller din Google-kontoinformation (namn, e-post, profilbild)
-                om du loggar in via Google.
+                om du loggar in via Google. Inloggning via Google ger Clarix enbart din
+                identitet — ingen åtkomst till din analysdata.
               </li>
               <li>
                 <strong>Google OAuth-tokens</strong> — åtkomsttoken och uppdateringstoken för
-                dina anslutna Google-tjänster (Google Analytics 4 och Google Search Console).
-                Dessa lagras krypterat i vår databas och används uteslutande för att hämta
-                din analysdata på begäran.
+                Google Analytics 4 och Google Search Console, som du ger separat under
+                Integrationer. De används uteslutande för att hämta din analysdata åt dig.
+              </li>
+              <li>
+                <strong>Arbetsytor</strong> — namn, domän och vilka GA4-egendomar och Search
+                Console-webbplatser du valt att rapportera på.
+              </li>
+              <li>
+                <strong>Teknisk logg vid inloggningsfel</strong> — felorsak och felkod från
+                Google eller Supabase när en inloggning eller Google-anslutning misslyckas,
+                utan tokens och utan personuppgifter, för felsökning.
               </li>
             </ul>
           </section>
 
           <section className="flex flex-col gap-3">
-            <h2 className="font-semibold text-base">3. Vad vi <em>inte</em> lagrar</h2>
+            <h2 className="font-semibold text-base">3. Analysdata: vad vi mellanlagrar och hur länge</h2>
             <p>
-              All analysdata från Google Analytics 4 och Google Search Console — trafik,
-              söktermer, sidvisningar och liknande — hämtas i realtid när du öppnar en
-              rapport och lagras <strong>aldrig</strong> i vår databas. Den behandlas enbart
-              i minnet på servern och visas sedan direkt i din webbläsare.
+              Analysdata från Google Analytics 4 och Google Search Console hämtas på begäran
+              när du öppnar dashboarden eller en rapport. För att sidorna ska ladda snabbt och
+              för att vi ska kunna generera sammanfattningar lagrar vi <strong>sammanställda</strong>{" "}
+              värden — aldrig råa händelseloggar eller uppgifter om enskilda besökare:
             </p>
+            <ul className="flex flex-col gap-2 pl-4" style={{ listStyleType: "disc" }}>
+              <li>
+                <strong>Rapportcache</strong> — det färdigmappade underlaget för en period
+                (besök, kanaler, toppsidor, klick, sökfrågor, positioner). Används i högst
+                24 timmar för en avslutad period och 30 minuter för en pågående, därefter
+                hämtas nya värden. Raderas när du byter egendom, kopplar från Google eller
+                tar bort ditt konto.
+              </li>
+              <li>
+                <strong>AI-sammanfattningar</strong> — den text som genereras utifrån de
+                sammanställda värdena, sparad per arbetsyta och period i högst 24 timmar
+                innan den genereras om.
+              </li>
+              <li>
+                <strong>Delade rapporter</strong> — när du skapar en delningslänk sparas en
+                ögonblicksbild av rapporten (samma sammanställda värden) så att mottagaren
+                kan öppna den. Den finns kvar tills länken tas bort.
+              </li>
+            </ul>
           </section>
 
           <section className="flex flex-col gap-3">
@@ -73,9 +103,15 @@ export default function PrivacyPolicyPage() {
             <ul className="flex flex-col gap-2 pl-4" style={{ listStyleType: "disc" }}>
               <li>Autentisera dig och hålla din session aktiv.</li>
               <li>
-                Hämta data från Google APIs på din begäran och presentera den i din rapport.
+                Hämta data från Google APIs på din begäran och presentera den i din dashboard
+                och rapport, enbart för de egendomar du valt för den aktiva arbetsytan.
               </li>
-              <li>Förnya dina Google-tokens automatiskt när de löper ut, så att du slipper logga in igen.</li>
+              <li>Förnya dina Google-tokens automatiskt när de löper ut, så att du slipper ansluta igen.</li>
+              <li>
+                Generera sammanfattningar i klartext: de sammanställda nyckeltalen för en period
+                skickas till vår AI-leverantör (se avsnitt 6). Inga tokens, ingen rådata och
+                inga uppgifter om enskilda besökare ingår.
+              </li>
               <li>Kontakta dig om det gäller viktiga servicemeddelanden.</li>
             </ul>
             <p>
@@ -94,17 +130,21 @@ export default function PrivacyPolicyPage() {
               <li><code className="text-xs bg-black/5 px-1 py-0.5 rounded">webmasters.readonly</code> — läsa din Search Console-data.</li>
             </ul>
             <p>
-              Vi skriver aldrig till dina Google-konton och vi delar aldrig data hämtad via
-              Google APIs med tredje part. Vår användning följer{" "}
+              Vi skriver aldrig till dina Google-konton. Data som hämtas via Google APIs
+              används bara för att visa och sammanfatta dina egna rapporter i Clarix, förs
+              inte vidare till annonsnätverk eller datamäklare, och läses aldrig av människor
+              utom med ditt uttryckliga medgivande eller när lagen kräver det. Vår användning
+              och överföring till andra appar av information som tas emot från Googles API:er
+              följer{" "}
               <a
                 href="https://developers.google.com/terms/api-services-user-data-policy"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="underline underline-offset-2"
               >
-                Googles Policy för användning av API-tjänster och användardata
+                Google API Services User Data Policy
               </a>
-              , inklusive krav på begränsad användning.
+              , inklusive kraven på begränsad användning (Limited Use).
             </p>
           </section>
 
@@ -113,13 +153,22 @@ export default function PrivacyPolicyPage() {
             <p>Vi använder följande tjänster för att driva Clarix:</p>
             <ul className="flex flex-col gap-2 pl-4" style={{ listStyleType: "disc" }}>
               <li>
-                <strong>Supabase</strong> — databas och autentisering. Dina kontouppgifter
-                och OAuth-tokens lagras här. Supabase är GDPR-kompatibelt och kan placera
-                data i EU-regionen.
+                <strong>Supabase</strong> — databas och autentisering. Dina kontouppgifter,
+                OAuth-tokens, arbetsytor och den mellanlagrade analysdatan lagras här.
+                Supabase är GDPR-kompatibelt och kan placera data i EU-regionen.
               </li>
               <li>
                 <strong>Google Cloud</strong> — OAuth-flöde och API-anrop till Analytics och
                 Search Console. Inga andra Google-produkter används.
+              </li>
+              <li>
+                <strong>Vercel</strong> — drift av webbapplikationen. Behandlar dina anrop och
+                serverloggar.
+              </li>
+              <li>
+                <strong>AI-leverantör (OpenAI eller Anthropic)</strong> — tar emot de
+                sammanställda nyckeltalen för en period för att generera sammanfattningar.
+                Tar aldrig emot tokens, rådata eller uppgifter om enskilda besökare.
               </li>
             </ul>
             <p>
@@ -132,14 +181,19 @@ export default function PrivacyPolicyPage() {
           <section className="flex flex-col gap-3">
             <h2 className="font-semibold text-base">7. Lagring och säkerhet</h2>
             <p>
-              OAuth-tokens lagras med radnivåsäkerhet (Row-Level Security) i Supabase —
-              du kan bara se och komma åt dina egna uppgifter. Sessioner hanteras via
-              HTTP-only cookies.
+              Google-tokens lagras i en tabell som bara servern kan läsa — de skickas
+              aldrig till webbläsaren och exponeras inte via vårt publika API. Övriga
+              uppgifter skyddas med radnivåsäkerhet (Row-Level Security) i Supabase, så att
+              du bara kan se dina egna uppgifter. All lagring är krypterad i vila på
+              infrastrukturnivå hos Supabase; vi tillämpar ingen ytterligare
+              applikationskryptering av tokens. Anslutningen till Google under auktorisering
+              skyddas med PKCE och en signerad, kortlivad kontrollcookie.
             </p>
             <p>
-              Vi behåller dina uppgifter så länge ditt konto är aktivt. Om du begär att
-              ditt konto tas bort raderas alla dina uppgifter, inklusive anslutna tokens,
-              inom 30 dagar.
+              Vi behåller dina uppgifter så länge ditt konto är aktivt. Kopplar du från Google
+              återkallas åtkomsten hos Google och tokens raderas direkt. Om du begär att
+              ditt konto tas bort raderas alla dina uppgifter, inklusive tokens, arbetsytor,
+              mellanlagrad analysdata och delade rapporter, inom 30 dagar.
             </p>
           </section>
 
@@ -150,7 +204,7 @@ export default function PrivacyPolicyPage() {
               <li>Få tillgång till de uppgifter vi lagrar om dig.</li>
               <li>Rätta felaktiga uppgifter.</li>
               <li>Begära radering av ditt konto och alla tillhörande uppgifter.</li>
-              <li>Återkalla ditt samtycke till Google-åtkomst när som helst via ditt Google-konto under <em>Säkerhet → Tredjepartsappar med kontoåtkomst</em>.</li>
+              <li>Koppla från Google när som helst under Integrationer i Clarix, eller återkalla åtkomsten via ditt Google-konto under <em>Säkerhet → Tredjepartsappar med kontoåtkomst</em>.</li>
               <li>Lämna in ett klagomål till Integritetsskyddsmyndigheten (IMY) om du anser att vi bryter mot GDPR.</li>
             </ul>
             <p>
@@ -165,8 +219,12 @@ export default function PrivacyPolicyPage() {
           <section className="flex flex-col gap-3">
             <h2 className="font-semibold text-base">9. Cookies</h2>
             <p>
-              Vi använder enbart session-cookies som krävs för inloggning och säkerhet
-              (satta av Supabase SSR). Vi använder inga spårnings- eller reklamcookies.
+              Vi använder enbart cookies som krävs för inloggning och säkerhet: Supabase
+              sessionscookies som håller dig inloggad, samt en tillfällig kontrollcookie
+              (högst 10 minuter) medan du ansluter Google. Vi använder inga spårnings-
+              eller reklamcookies. Webbläsarens lokala lagring används för dina egna
+              inställningar (t.ex. sidopanel och senast visad rapport) och lämnar aldrig
+              din enhet.
             </p>
           </section>
 

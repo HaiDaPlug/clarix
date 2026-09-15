@@ -24,15 +24,15 @@ function LoginContent() {
   // only a generic message is shown here to avoid leaking internals.
   const oauthError = searchParams.get("error");
 
+  // Identity only. Analytics / Search Console access is a separate grant the
+  // user gives from Integrations, so signing in never asks for data scopes and
+  // a Google-login user can renew that grant without "logging in again".
   async function signInWithGoogle() {
     const supabase = createClient();
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
-        scopes:
-          "https://www.googleapis.com/auth/analytics.readonly https://www.googleapis.com/auth/webmasters.readonly",
-        queryParams: { access_type: "offline", prompt: "consent" },
       },
     });
   }

@@ -92,20 +92,24 @@ export async function writeReportCache(
 }
 
 /**
- * Drops every cached row the user has for a source — used when a source is
- * disconnected or its property changes. Failures are swallowed.
+ * Drops cached rows the user has for a source — optionally narrowed to one
+ * property. Used when a workspace stops using a property. Failures are
+ * swallowed.
  */
 export async function clearReportCache(
   supabase: SupabaseClient,
   userId: string,
   source: GoogleCacheSource,
+  propertyId?: string,
 ): Promise<void> {
   try {
-    await supabase
+    let query = supabase
       .from("google_report_cache")
       .delete()
       .eq("user_id", userId)
       .eq("source", source);
+    if (propertyId) query = query.eq("property_id", propertyId);
+    await query;
   } catch {
     // Silent by design.
   }

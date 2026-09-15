@@ -3,9 +3,7 @@
 import React from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Check, Loader2, Lock, ShieldCheck, X } from "lucide-react";
-import type {
-  ConnectedSource,
-} from "@/lib/google/connected-sources";
+import type { ClientSourceRef } from "@/lib/clients/types";
 
 type PropertyOption = { id: string; displayName: string };
 
@@ -20,11 +18,11 @@ type VisualIntegration = {
 export type ConnectModalCopy = {
   loadingProperties: string;
   choose: string;
+  chooseReplace: string;
   noProperties: string;
+  noPropertiesHelp: string;
   reconnect: string;
   connectedTo: string;
-  refreshNeeded: string;
-  refreshHelp: string;
   connecting: string;
   disconnecting: string;
   failedConnect: string;
@@ -32,6 +30,17 @@ export type ConnectModalCopy = {
   failedConnections: string;
   failedProperties: string;
   loadingConnections: string;
+  selectedTitle: string;
+  selectedHelp: string;
+  changeProperty: string;
+  removeProperty: string;
+  done: string;
+  cancel: string;
+  chooseTitle: string;
+  propertyLabel: string;
+  workspaceLabel: string;
+  readOnlyNote: string;
+  googleNotReady: string;
 };
 
 /* ─── BrandMark ─── */
@@ -96,27 +105,35 @@ export function ModalRow({
 
 export function ConnectModal({
   integration,
-  connectedSource,
+  selected,
+  workspaceName,
   options,
   loadingProperties,
   pendingOptionId,
+  removing,
+  googleReady,
   copy,
   onClose,
-  onConnect,
-  onDisconnect,
+  onSelect,
+  onRemove,
 }: {
   integration: VisualIntegration;
-  connectedSource: ConnectedSource | undefined;
+  /** The property the active workspace currently uses for this source, if any. */
+  selected: ClientSourceRef | undefined;
+  workspaceName: string | null;
   options: PropertyOption[];
   loadingProperties: boolean;
   pendingOptionId: string | null;
+  removing: boolean;
+  /** False when the Google grant cannot be used right now (picker is hidden). */
+  googleReady: boolean;
   copy: ConnectModalCopy;
   onClose: () => void;
-  onConnect: (option: PropertyOption) => void;
-  onDisconnect: () => void;
+  onSelect: (option: PropertyOption) => void;
+  onRemove: () => void;
 }) {
-  const isConnected = Boolean(connectedSource);
-  const isPending = pendingOptionId !== null;
+  const [choosing, setChoosing] = React.useState(!selected);
+  const isPending = pendingOptionId !== null || removing;
 
   return (
     <motion.div
@@ -133,6 +150,9 @@ export function ConnectModal({
         exit={{ opacity: 0, scale: 0.96, y: 8 }}
         transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={integration.name}
         className="relative w-full max-w-md overflow-hidden rounded-2xl border"
         style={{
           backgroundColor: "var(--parchment)",
@@ -148,7 +168,7 @@ export function ConnectModal({
           <div className="flex items-center gap-2">
             <Lock className="h-3 w-3" style={{ color: "var(--slate-light)" }} />
             <span style={{ fontSize: "12px", fontWeight: 500, color: "var(--slate)" }}>
-              accounts.google.com
+              clarix
             </span>
           </div>
           <button
@@ -190,22 +210,28 @@ export function ConnectModal({
             </div>
           </div>
 
-          {isConnected ? (
-            <ConnectedState
-              connectedSource={connectedSource!}
+          {selected && !choosing ? (
+            <SelectedState
+              selected={selected}
+              workspaceName={workspaceName}
               isPending={isPending}
+              removing={removing}
+              googleReady={googleReady}
               copy={copy}
               onClose={onClose}
-              onDisconnect={onDisconnect}
+              onChange={() => setChoosing(true)}
+              onRemove={onRemove}
             />
           ) : (
-            <ConnectState
+            <ChooseState
               options={options}
+              selectedId={selected?.propertyId ?? null}
               loadingProperties={loadingProperties}
               pendingOptionId={pendingOptionId}
+              googleReady={googleReady}
               copy={copy}
-              onClose={onClose}
-              onConnect={onConnect}
+              onCancel={selected ? () => setChoosing(false) : onClose}
+              onSelect={onSelect}
             />
           )}
         </div>
@@ -214,27 +240,35 @@ export function ConnectModal({
   );
 }
 
-function ConnectedState({
-  connectedSource,
+function SelectedState({
+  selected,
+  workspaceName,
   isPending,
+  removing,
+  googleReady,
   copy,
   onClose,
-  onDisconnect,
+  onChange,
+  onRemove,
 }: {
-  connectedSource: ConnectedSource;
+  selected: ClientSourceRef;
+  workspaceName: string | null;
   isPending: boolean;
+  removing: boolean;
+  googleReady: boolean;
   copy: ConnectModalCopy;
   onClose: () => void;
-  onDisconnect: () => void;
+  onChange: () => void;
+  onRemove: () => void;
 }) {
   return (
     <div>
       <div className="flex items-center gap-2 mb-4">
         <div
           className="flex h-6 w-6 items-center justify-center rounded-full"
-          style={{ backgroundColor: "var(--signal-up-bg)" }}
+          style={{ backgroundColor: googleReady ? "var(--signal-up-bg)" : "var(--bone-dark)" }}
         >
-          <Check className="h-3.5 w-3.5" style={{ color: "var(--signal-up)" }} />
+          <Check className="h-3.5 w-3.5" style={{ color: googleReady ? "var(--signal-up)" : "var(--slate)" }} />
         </div>
         <h2
           style={{
@@ -245,12 +279,12 @@ function ConnectedState({
             letterSpacing: "-0.02em",
           }}
         >
-          Ansluten
+          {copy.selectedTitle}
         </h2>
       </div>
 
       <p style={{ fontSize: "13px", color: "var(--slate)", marginBottom: "16px" }}>
-        Data synkas automatiskt.
+        {googleReady ? copy.selectedHelp : copy.googleNotReady}
       </p>
 
       <div
@@ -262,68 +296,71 @@ function ConnectedState({
         }}
       >
         <ModalRow
-          label="Egendom"
-          value={connectedSource.display_name ?? connectedSource.property_id ?? "—"}
+          label={copy.propertyLabel}
+          value={selected.displayName ?? selected.propertyId}
         />
+        {workspaceName && <ModalRow label={copy.workspaceLabel} value={workspaceName} />}
         <ModalRow
           label="Status"
-          value={<span style={{ color: "var(--signal-up)", fontWeight: 600 }}>Aktiv</span>}
+          value={
+            googleReady ? (
+              <span style={{ color: "var(--signal-up)", fontWeight: 600 }}>Aktiv</span>
+            ) : (
+              <span style={{ color: "var(--slate)", fontWeight: 600 }}>{copy.reconnect}</span>
+            )
+          }
         />
-        <ModalRow label="Senast synkad" value="Just nu" />
       </div>
 
-      {connectedSource.needs_refresh && (
-        <div
-          className="rounded-xl px-3 py-2.5 mb-4"
-          style={{ backgroundColor: "var(--bone-dark)", border: "1px solid var(--rule)" }}
-        >
-          <p style={{ fontSize: "12px", fontWeight: 600, color: "var(--charcoal)" }}>
-            {copy.refreshNeeded}
-          </p>
-          <p style={{ fontSize: "11.5px", color: "var(--slate)", marginTop: "2px" }}>
-            {copy.refreshHelp}{" "}
-            <a href="/login" className="underline" style={{ color: "var(--charcoal)", fontWeight: 600 }}>
-              {copy.reconnect}
-            </a>
-          </p>
+      <div className="flex flex-wrap justify-between gap-2 mt-6">
+        <div className="flex gap-2">
+          <button
+            onClick={onRemove}
+            disabled={isPending}
+            className="rounded-full px-4 py-2 text-sm font-medium transition-opacity hover:opacity-80 disabled:opacity-40"
+            style={{ border: "1px solid var(--rule)", color: "var(--signal-down)", backgroundColor: "transparent" }}
+          >
+            {removing ? copy.disconnecting : copy.removeProperty}
+          </button>
+          <button
+            onClick={onChange}
+            disabled={isPending || !googleReady}
+            className="rounded-full px-4 py-2 text-sm font-medium transition-opacity hover:opacity-80 disabled:opacity-40"
+            style={{ border: "1px solid var(--rule)", color: "var(--charcoal)", backgroundColor: "transparent" }}
+          >
+            {copy.changeProperty}
+          </button>
         </div>
-      )}
-
-      <div className="flex justify-between gap-2 mt-6">
-        <button
-          onClick={onDisconnect}
-          disabled={isPending}
-          className="rounded-full px-4 py-2 text-sm font-medium transition-opacity hover:opacity-80 disabled:opacity-40"
-          style={{ border: "1px solid var(--rule)", color: "var(--signal-down)", backgroundColor: "transparent" }}
-        >
-          {isPending ? copy.disconnecting : "Koppla ifrån"}
-        </button>
         <button
           onClick={onClose}
           className="rounded-full px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-90"
           style={{ backgroundColor: "var(--charcoal)", color: "var(--parchment)" }}
         >
-          Klar
+          {copy.done}
         </button>
       </div>
     </div>
   );
 }
 
-function ConnectState({
+function ChooseState({
   options,
+  selectedId,
   loadingProperties,
   pendingOptionId,
+  googleReady,
   copy,
-  onClose,
-  onConnect,
+  onCancel,
+  onSelect,
 }: {
   options: PropertyOption[];
+  selectedId: string | null;
   loadingProperties: boolean;
   pendingOptionId: string | null;
+  googleReady: boolean;
   copy: ConnectModalCopy;
-  onClose: () => void;
-  onConnect: (option: PropertyOption) => void;
+  onCancel: () => void;
+  onSelect: (option: PropertyOption) => void;
 }) {
   const anyPending = pendingOptionId !== null;
 
@@ -339,15 +376,14 @@ function ConnectState({
           marginBottom: "4px",
         }}
       >
-        Välj egendom att ansluta
+        {copy.chooseTitle}
       </h2>
       <p style={{ fontSize: "13px", color: "var(--slate)", marginBottom: "16px" }}>
-        {loadingProperties ? copy.loadingProperties : copy.choose}
+        {!googleReady ? copy.googleNotReady : loadingProperties ? copy.loadingProperties : selectedId ? copy.chooseReplace : copy.choose}
       </p>
 
-      {/* Loading state */}
       <AnimatePresence mode="wait">
-        {loadingProperties && (
+        {googleReady && loadingProperties && (
           <motion.div
             key="loading"
             initial={{ opacity: 0 }}
@@ -372,8 +408,7 @@ function ConnectState({
           </motion.div>
         )}
 
-        {/* Empty state */}
-        {!loadingProperties && options.length === 0 && (
+        {googleReady && !loadingProperties && options.length === 0 && (
           <motion.div
             key="empty"
             initial={{ opacity: 0, y: 6 }}
@@ -384,23 +419,15 @@ function ConnectState({
             style={{ backgroundColor: "var(--bone)", border: "1px solid var(--rule)" }}
           >
             <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--charcoal)", marginBottom: "6px" }}>
-              Inga egendomar hittades
+              {copy.noProperties}
             </p>
             <p style={{ fontSize: "13px", color: "var(--slate)", lineHeight: "1.5" }}>
-              Kontot du loggade in med har ingen GA4-egendom kopplad. Logga in med Google-kontot som äger egendomen.
+              {copy.noPropertiesHelp}
             </p>
-            <a
-              href="/login"
-              className="inline-flex items-center gap-1.5 mt-4 rounded-full px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-80"
-              style={{ backgroundColor: "var(--charcoal)", color: "var(--parchment)" }}
-            >
-              Logga in med annat konto
-            </a>
           </motion.div>
         )}
 
-        {/* Property list */}
-        {!loadingProperties && options.length > 0 && (
+        {googleReady && !loadingProperties && options.length > 0 && (
           <motion.div
             key="list"
             initial={{ opacity: 0, y: 6 }}
@@ -412,6 +439,7 @@ function ConnectState({
           >
             {options.map((option, i) => {
               const isThisPending = pendingOptionId === option.id;
+              const isCurrent = selectedId === option.id;
               const isDimmed = anyPending && !isThisPending;
               return (
                 <motion.button
@@ -419,16 +447,18 @@ function ConnectState({
                   initial={{ opacity: 0, y: 4 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.2, delay: i * 0.04 }}
-                  onClick={() => onConnect(option)}
-                  disabled={anyPending}
+                  onClick={() => onSelect(option)}
+                  disabled={anyPending || isCurrent}
                   className="w-full text-left rounded-2xl px-4 py-3.5 transition-all group"
                   style={{
                     backgroundColor: isThisPending ? "var(--charcoal)" : "var(--bone)",
                     border: isThisPending
                       ? "1px solid var(--charcoal)"
-                      : "1px solid var(--rule)",
+                      : isCurrent
+                        ? "1px solid var(--charcoal)"
+                        : "1px solid var(--rule)",
                     opacity: isDimmed ? 0.4 : 1,
-                    cursor: anyPending ? "default" : "pointer",
+                    cursor: anyPending || isCurrent ? "default" : "pointer",
                   }}
                 >
                   <div className="flex items-center justify-between gap-3">
@@ -464,8 +494,10 @@ function ConnectState({
                         display: "flex", alignItems: "center", justifyContent: "center",
                         background: isThisPending
                           ? "rgba(255,255,255,0.15)"
-                          : "var(--parchment)",
-                        border: isThisPending ? "none" : "1px solid var(--rule)",
+                          : isCurrent
+                            ? "var(--charcoal)"
+                            : "var(--parchment)",
+                        border: isThisPending || isCurrent ? "none" : "1px solid var(--rule)",
                         transition: "background 0.2s ease",
                       }}
                     >
@@ -474,6 +506,8 @@ function ConnectState({
                           className="h-3.5 w-3.5 animate-spin"
                           style={{ color: "var(--parchment)" }}
                         />
+                      ) : isCurrent ? (
+                        <Check className="h-3.5 w-3.5" style={{ color: "var(--parchment)" }} />
                       ) : (
                         <span
                           style={{
@@ -511,19 +545,18 @@ function ConnectState({
       >
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" style={{ color: "var(--signal-up)" }} />
         <p style={{ fontSize: "11.5px", color: "var(--slate)", lineHeight: 1.5 }}>
-          Clarix läser endast statistik. Vi publicerar aldrig innehåll och kan
-          inte ändra eller radera data.
+          {copy.readOnlyNote}
         </p>
       </div>
 
       <div className="flex justify-end mt-4">
         <button
-          onClick={onClose}
+          onClick={onCancel}
           disabled={anyPending}
           className="rounded-full px-4 py-2 text-sm font-medium transition-all disabled:opacity-40"
           style={{ border: "1px solid var(--rule)", color: "var(--slate)", backgroundColor: "transparent" }}
         >
-          Avbryt
+          {copy.cancel}
         </button>
       </div>
     </div>

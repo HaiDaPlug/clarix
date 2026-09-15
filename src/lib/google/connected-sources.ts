@@ -1,19 +1,13 @@
 import type { DataSource, Metric, ReportData } from "@/types/schema";
+import type { GoogleConnectionHealth } from "@/lib/google/connection-types";
 
 export type ConnectableSource = "ga4" | "gsc";
-
-export type ConnectedSource = {
-  id: string;
-  source: ConnectableSource;
-  property_id: string;
-  display_name: string | null;
-  token_expires_at: string | null;
-  needs_refresh?: boolean;
-};
 
 export type GooglePropertiesResponse = {
   ga4: Array<{ propertyId: string; displayName: string }>;
   gsc: Array<{ siteUrl: string; displayName: string }>;
+  /** Present on every successful answer; tells the UI why lists may be empty. */
+  google?: GoogleConnectionHealth;
   error?: {
     type: "auth" | "data";
     message: string;
@@ -46,6 +40,11 @@ export function currentCalendarMonthRange(today = new Date()): {
   };
 }
 
+/**
+ * Combines the GA4 part and the GSC part of ONE workspace into one ReportData.
+ * Callers guarantee at most one part per source; this never merges two
+ * properties of the same kind.
+ */
 export function mergeReportData(
   fallback: ReportData,
   parts: Array<Partial<ReportData> | undefined>,

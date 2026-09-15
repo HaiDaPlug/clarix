@@ -2,9 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { X, PanelLeft } from "lucide-react";
-import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { X, PanelLeft, LogOut } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { useLocale, Locale } from "@/lib/i18n";
@@ -33,26 +33,64 @@ const DUR = 0.22;
 
 export function Sidebar({ collapsed, mobileOpen, onCollapseToggle, onMobileClose }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { t, locale, setLocale } = useLocale();
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
   const { activeId, setActiveId } = useDevScenario();
   const prefersReduced = useReducedMotion();
 
+  // The user row mirrors real auth state: it is filled from a server-validated
+  // getUser() and follows sign-out / session loss through onAuthStateChange.
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
-      const user = data?.user;
-      if (!user) return;
+    let active = true;
+
+    const apply = (user: { email?: string; user_metadata?: Record<string, unknown> } | null) => {
+      if (!active) return;
+      if (!user) {
+        setUserEmail(null);
+        setUserName(null);
+        return;
+      }
       setUserEmail(user.email ?? null);
+      const meta = user.user_metadata ?? {};
       setUserName(
-        user.user_metadata?.full_name ??
-          user.user_metadata?.name ??
-          user.email?.split("@")[0] ??
+        (typeof meta.full_name === "string" && meta.full_name) ||
+          (typeof meta.name === "string" && meta.name) ||
+          user.email?.split("@")[0] ||
           null
       );
+    };
+
+    supabase.auth.getUser().then(({ data }) => apply(data?.user ?? null));
+
+    const { data: subscription } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT") {
+        apply(null);
+        router.replace("/login");
+        return;
+      }
+      if (session?.user) apply(session.user);
     });
-  }, []);
+
+    return () => {
+      active = false;
+      subscription.subscription.unsubscribe();
+    };
+  }, [router]);
+
+  const signOut = useCallback(async () => {
+    setSigningOut(true);
+    try {
+      await createClient().auth.signOut();
+    } finally {
+      // onAuthStateChange redirects on SIGNED_OUT; this covers the case where
+      // the event does not fire (e.g. the session was already gone).
+      router.replace("/login");
+    }
+  }, [router]);
 
   const nav = [
     {
@@ -87,6 +125,8 @@ export function Sidebar({ collapsed, mobileOpen, onCollapseToggle, onMobileClose
       setActiveId={setActiveId}
       t={t}
       prefersReduced={!!prefersReduced}
+      onSignOut={signOut}
+      signingOut={signingOut}
     />
   );
 
@@ -153,6 +193,8 @@ export function Sidebar({ collapsed, mobileOpen, onCollapseToggle, onMobileClose
                 setActiveId={setActiveId}
                 t={t}
                 prefersReduced={!!prefersReduced}
+                onSignOut={signOut}
+                signingOut={signingOut}
               />
             </motion.aside>
           </>
@@ -184,6 +226,8 @@ type ContentProps = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   t: any;
   prefersReduced: boolean;
+  onSignOut: () => void;
+  signingOut: boolean;
 };
 
 function SidebarContent({
@@ -201,8 +245,11 @@ function SidebarContent({
   setActiveId,
   t,
   prefersReduced,
+  onSignOut,
+  signingOut,
 }: ContentProps) {
   const show = !collapsed || isMobile;
+  const signOutLabel = locale === "sv" ? "Logga ut" : "Sign out";
 
   return (
     <div className="flex h-full flex-col">
@@ -375,14 +422,27 @@ function SidebarContent({
                 animate={{ opacity: 1, width: "auto" }}
                 exit={{ opacity: 0, width: 0 }}
                 transition={{ duration: prefersReduced ? 0 : 0.16, ease: EASE }}
-                className="overflow-hidden whitespace-nowrap min-w-0"
+                className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden whitespace-nowrap"
               >
-                <p className="text-[13px] font-medium leading-tight truncate" style={{ color: "var(--charcoal)" }}>
-                  {userName ?? t.nav.user.account}
-                </p>
-                <p className="text-[11px] leading-tight truncate" style={{ color: "var(--slate-light)" }}>
-                  {userEmail ?? t.nav.user.plan}
-                </p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13px] font-medium leading-tight truncate" style={{ color: "var(--charcoal)" }}>
+                    {userName ?? t.nav.user.account}
+                  </p>
+                  <p className="text-[11px] leading-tight truncate" style={{ color: "var(--slate-light)" }}>
+                    {userEmail ?? t.nav.user.plan}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={onSignOut}
+                  disabled={signingOut}
+                  aria-label={signOutLabel}
+                  title={signOutLabel}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-[var(--rule)] disabled:opacity-40"
+                  style={{ color: "var(--slate)" }}
+                >
+                  <LogOut className="h-[15px] w-[15px]" />
+                </button>
               </motion.div>
             )}
           </AnimatePresence>

@@ -37,9 +37,16 @@ const MAX_POLL_ATTEMPTS = 8;
 // Delay between polls in ms (3 seconds).
 const POLL_INTERVAL_MS = 3_000;
 
+/**
+ * @param reportData  the data the insights are for (null while loading)
+ * @param workspaceId the workspace those numbers belong to. Part of the dedup
+ *                    key — switching workspace can never reuse another
+ *                    customer's copy — and sent to the server so it can refuse
+ *                    to generate if the active workspace changed meanwhile.
+ */
 export function useAiInsights(
   reportData: ReportData | null,
-  userId: string | null,
+  workspaceId: string | null,
   periodStart: string,
   periodEnd: string,
   periodLabel: string,
@@ -49,11 +56,11 @@ export function useAiInsights(
   const inflightKeyRef = useRef<string | null>(null);
 
   const fingerprint = reportData ? clientDataFingerprint(reportData) : "no-data";
-  const key = `${periodStart}:${periodEnd}:${fingerprint}`;
+  const key = `${workspaceId ?? "-"}:${periodStart}:${periodEnd}:${fingerprint}`;
   const hasData = reportData !== null;
 
   useEffect(() => {
-    if (!hasData || !userId) return;
+    if (!hasData || !workspaceId) return;
     if (inflightKeyRef.current === key) return;
 
     let cancelled = false;
@@ -68,6 +75,7 @@ export function useAiInsights(
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             period: { start: periodStart, end: periodEnd, label: periodLabel },
+            clientId: workspaceId,
           }),
         });
 
@@ -106,6 +114,7 @@ export function useAiInsights(
           console.log("[useAiInsights] insights received", {
             key,
             cached: json.cached ?? false,
+            reason: json.reason ?? null,
             slots: Object.entries(json.insights)
               .filter(([, value]) => value !== null)
               .map(([slot]) => slot),
@@ -142,13 +151,13 @@ export function useAiInsights(
     return () => {
       cancelled = true;
     };
-  // key encodes period + data fingerprint; userId gates the fetch.
+  // key encodes workspace + period + data fingerprint; workspaceId gates the fetch.
   // hasData guards against null reportData without object identity churn.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, userId, hasData]);
+  }, [key, workspaceId, hasData]);
 
   return {
     insights: insightsState?.key === key ? insightsState.payload : null,
-    loading: loading || (hasData && Boolean(userId) && insightsState?.key !== key),
+    loading: loading || (hasData && Boolean(workspaceId) && insightsState?.key !== key),
   };
 }

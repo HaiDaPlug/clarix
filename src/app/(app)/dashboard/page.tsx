@@ -10,13 +10,12 @@ import { assembleDashboard } from "@/lib/dashboard/assemble";
 import { kpiGridClass } from "@/lib/dashboard/grid";
 import { useLocale } from "@/lib/i18n";
 import { ShimmerCard, ShimmerOverlay } from "@/components/primitives/ShimmerCard";
-import { ConnectableSource, ConnectedSource, mergeReportData } from "@/lib/google/connected-sources";
 import { useDateRange } from "@/lib/google/date-presets";
 import { DateRangePicker } from "@/components/primitives/DateRangePicker";
-import { createClient } from "@/utils/supabase/client";
-import { deriveExecutiveSummary } from "@/lib/engine/derive-executive-summary";
 import { useAiInsights } from "@/lib/hooks/useAiInsights";
 import { useDevScenario } from "@/lib/dev-scenario";
+import type { ReportDataBuildResult, WorkspaceSummary } from "@/lib/report-data/server";
+import type { ClientWorkspace } from "@/lib/clients/types";
 import { AssembledDashboardItem } from "@/types/dashboard";
 import { ReportData } from "@/types/schema";
 import { DashboardHero } from "@/components/dashboard/DashboardHero";
@@ -71,6 +70,13 @@ function SectionItem({ item, data }: { item: AssembledDashboardItem; data: Repor
   return null;
 }
 
+// What the dashboard should say when the active workspace has sources but the
+// server could not produce numbers. Each maps to one banner, never to mock data.
+type DataProblem =
+  | { kind: "reconnect"; disconnected: boolean }
+  | { kind: "unavailable" }
+  | { kind: "partial"; sources: string[] };
+
 export default function DashboardPage() {
   return (
     <Suspense>
@@ -85,41 +91,31 @@ function DashboardPageInner() {
   const dateRange = useDateRange();
   const router = useRouter();
   const [reportData, setReportData] = useState<ReportData | null>(null);
+  // The workspace this page shows. Resolved once from the user's preference
+  // (`/api/clients/active`), then named explicitly on every data request —
+  // the server never substitutes another one. undefined = not resolved yet.
+  const [clientId, setClientId] = useState<string | null | undefined>(undefined);
+  const [workspace, setWorkspace] = useState<WorkspaceSummary | null>(null);
   const [hasConnectedSources, setHasConnectedSources] = useState(false);
   const [connectedSourceTypes, setConnectedSourceTypes] = useState<string[]>([]);
   const [isLoadingRealData, setIsLoadingRealData] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
-  const [expiredSources, setExpiredSources] = useState<string[]>([]);
+  const [problem, setProblem] = useState<DataProblem | null>(null);
   const [noDataForPeriod, setNoDataForPeriod] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [propertyName, setPropertyName] = useState<string | null>(null);
-
-  // Fetch user ID + active GA4 property name once
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
-      setUserId(data.user?.id ?? null);
-    });
-    supabase
-      .from("connected_sources")
-      .select("display_name")
-      .eq("source", "ga4")
-      .neq("property_id", "_pending")
-      .limit(1)
-      .single()
-      .then(({ data }) => {
-        setPropertyName(data?.display_name ?? null);
-      });
-  }, []);
 
   const active = useMemo(() => SCENARIOS.find((s) => s.id === activeId)!, [activeId]);
   const fallbackData = useMemo(() => localizeMockReportData(active.data, locale), [active.data, locale]);
   const activeData = reportData ?? fallbackData;
   const dashboard = useMemo(() => assembleDashboard(activeData, t), [activeData, t]);
 
+  // Insights are keyed by workspace, so switching customers can never reuse
+  // the previous one's copy. Only ask for them when real numbers exist —
+  // a reconnect / no-data state has nothing to summarise.
+  const insightsWorkspaceId =
+    reportData && hasConnectedSources && !problem && !noDataForPeriod ? workspace?.id ?? null : null;
   const { insights: aiInsights, loading: aiInsightsLoading } = useAiInsights(
     reportData,
-    userId,
+    insightsWorkspaceId,
     dateRange.startDate,
     dateRange.endDate,
     activeData.meta.period.label,
@@ -134,86 +130,57 @@ function DashboardPageInner() {
     return count;
   }, [isLoadingRealData, connectedSourceTypes]);
 
+  const rangeStart = dateRange.startDate;
+  const rangeEnd = dateRange.endDate;
+
+  // Resolve which workspace to show, once per mount.
   useEffect(() => {
+    let cancelled = false;
+    async function resolveWorkspace() {
+      try {
+        const response = await fetch("/api/clients/active", { cache: "no-store" });
+        if (cancelled) return;
+        if (response.status === 401) {
+          router.push("/login");
+          return;
+        }
+        const payload = response.ok ? ((await response.json()) as { client: ClientWorkspace | null }) : { client: null };
+        if (cancelled) return;
+        setClientId(payload.client?.id ?? null);
+        setWorkspace(payload.client ? { id: payload.client.id, name: payload.client.name, domain: payload.client.domain } : null);
+      } catch {
+        if (!cancelled) setClientId(null);
+      }
+    }
+    void resolveWorkspace();
+    return () => { cancelled = true; };
+  }, [router]);
+
+  useEffect(() => {
+    if (clientId === undefined) return;
+
     const controller = new AbortController();
     const { signal } = controller;
 
     async function loadRealData() {
       setIsLoadingRealData(true);
       setDataError(null);
+      setProblem(null);
       setReportData(null);
       setNoDataForPeriod(false);
 
-      const supabase = createClient();
-
-      const { data: { user } } = await supabase.auth.getUser();
-      if (signal.aborted) return;
-      if (!user) {
-        router.push("/login");
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("connected_sources")
-        .select("id, source, property_id, display_name, token_expires_at")
-        .in("source", ["ga4", "gsc"])
-        .neq("property_id", "_pending");
-
-      if (signal.aborted) return;
-
-      if (error) {
+      if (clientId === null) {
+        // No workspace yet: sample data + the "connect sources" banner.
         setHasConnectedSources(false);
-        setDataError("Could not load connected data sources.");
+        setConnectedSourceTypes([]);
         setIsLoadingRealData(false);
         return;
       }
 
-      const sources = (data ?? []).filter(
-        (source): source is ConnectedSource => source.source === "ga4" || source.source === "gsc",
-      );
-      setHasConnectedSources(sources.length > 0);
-      setConnectedSourceTypes([...new Set(sources.map((s) => s.source))]);
+      const periodLabel = formatDateRangeLabel({ startDate: rangeStart }, locale);
 
-      if (sources.length === 0) {
-        setIsLoadingRealData(false);
-        return;
-      }
-
-      const expired: string[] = [];
-      const successfulSourceIds: ConnectableSource[] = [];
-      const parts = await Promise.all(
-        sources.map(async (source) => {
-          try {
-            const endpoint = source.source === "ga4" ? "/api/ga4" : "/api/gsc";
-            const body = source.source === "ga4"
-              ? { propertyId: source.property_id, dateRange, locale }
-              : { siteUrl: source.property_id, dateRange, locale };
-            const response = await fetch(endpoint, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(body),
-              signal,
-            });
-            if (response.status === 401 || response.status === 403) {
-              expired.push(source.source === "ga4" ? "Google Analytics" : "Search Console");
-              return undefined;
-            }
-            if (!response.ok) return undefined;
-            const data = (await response.json()) as Partial<ReportData>;
-            const isConnected = data.sourceConfidence?.[source.source]?.connected !== false;
-            if (isConnected) successfulSourceIds.push(source.source);
-            return isConnected ? data : undefined;
-          } catch (err) {
-            if (err instanceof Error && err.name === "AbortError") return undefined;
-            return undefined;
-          }
-        }),
-      );
-
-      if (signal.aborted) return;
-
-      setExpiredSources(expired);
-      const periodLabel = formatDateRangeLabel(dateRange, locale);
+      // Numbers that must never be shown as if they were real when the
+      // workspace has sources but nothing could be fetched.
       const emptyBase: ReportData = {
         ...fallbackData,
         trafficOverview: undefined,
@@ -226,33 +193,119 @@ function DashboardPageInner() {
         meta: {
           ...fallbackData.meta,
           availableSources: [],
-          period: { label: periodLabel, startDate: dateRange.startDate, endDate: dateRange.endDate },
+          period: { label: periodLabel, startDate: rangeStart, endDate: rangeEnd },
         },
       };
-      const merged = mergeReportData(emptyBase, parts, successfulSourceIds);
-      merged.meta = {
-        ...merged.meta,
-        period: { label: periodLabel, startDate: dateRange.startDate, endDate: dateRange.endDate },
-      };
-      const hasMetrics = Boolean(merged.trafficOverview || merged.seoOverview);
-      setNoDataForPeriod(successfulSourceIds.length > 0 && !hasMetrics);
-      if (!hasMetrics) {
-        merged.executiveSummary = undefined;
-      } else if (!merged.executiveSummary) {
-        merged.executiveSummary = deriveExecutiveSummary(merged, locale);
+
+      let result: ReportDataBuildResult;
+      try {
+        const response = await fetch("/api/report-data", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ clientId, dateRange: { startDate: rangeStart, endDate: rangeEnd }, periodLabel, locale }),
+          signal,
+        });
+        if (signal.aborted) return;
+        if (response.status === 401) {
+          router.push("/login");
+          return;
+        }
+        if (response.status === 404) {
+          // The workspace was deleted elsewhere. Fall back to "nothing selected".
+          setClientId(null);
+          setWorkspace(null);
+          return;
+        }
+        if (!response.ok) throw new Error(`report-data ${response.status}`);
+        result = (await response.json()) as ReportDataBuildResult;
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") return;
+        if (signal.aborted) return;
+        setHasConnectedSources(false);
+        setDataError(locale === "sv" ? "Kunde inte hämta dina datakällor." : "Could not load your data sources.");
+        setIsLoadingRealData(false);
+        return;
       }
-      setReportData(merged);
+
+      if (signal.aborted) return;
+
+      setWorkspace(result.workspace);
+      const sourceTypes = [...new Set(result.sources.map((s) => s.source))];
+      setConnectedSourceTypes(sourceTypes);
+
+      if (result.status === "no_sources") {
+        setHasConnectedSources(false);
+        setIsLoadingRealData(false);
+        return;
+      }
+
+      setHasConnectedSources(true);
+
+      if (result.status === "reconnect_required") {
+        setProblem({ kind: "reconnect", disconnected: result.google.status === "disconnected" });
+        setReportData(emptyBase);
+        setIsLoadingRealData(false);
+        return;
+      }
+
+      if (result.status === "unavailable") {
+        setProblem({ kind: "unavailable" });
+        setReportData(emptyBase);
+        setIsLoadingRealData(false);
+        return;
+      }
+
+      if (result.status === "no_data") {
+        // The grant works; this range simply has nothing (or a property-level
+        // permission failed). Both are stated, neither is faked.
+        const denied = result.failures
+          .filter((f) => f.reason === "google_403" || f.reason === "google_401")
+          .map((f) => (f.source === "ga4" ? "Google Analytics" : "Search Console"));
+        if (denied.length > 0) setProblem({ kind: "partial", sources: denied });
+        else setNoDataForPeriod(true);
+        setReportData(emptyBase);
+        setIsLoadingRealData(false);
+        return;
+      }
+
+      const denied = result.failures
+        .filter((f) => f.reason === "google_403" || f.reason === "google_401")
+        .map((f) => (f.source === "ga4" ? "Google Analytics" : "Search Console"));
+      if (denied.length > 0) setProblem({ kind: "partial", sources: denied });
+
+      setReportData(result.data);
       setIsLoadingRealData(false);
     }
 
     loadRealData();
     return () => controller.abort();
-  }, [fallbackData, locale, dateRange.startDate, dateRange.endDate, router]);
+  }, [clientId, fallbackData, locale, rangeStart, rangeEnd, router]);
 
   const heroItem = dashboard.items.find((item) => item.definition.type === "hero");
   const kpiItems = dashboard.items.filter((item) => item.definition.type === "kpi");
   const chartItems = dashboard.items.filter((item) => item.definition.type === "chart");
   const sectionItems = dashboard.items.filter((item) => item.definition.type === "section");
+
+  const problemText = (() => {
+    if (!problem) return null;
+    if (problem.kind === "reconnect") {
+      return locale === "sv"
+        ? problem.disconnected
+          ? { strong: "Google är inte anslutet.", rest: "Anslut ditt Google-konto för att hämta data.", cta: "Anslut Google" }
+          : { strong: "Google-åtkomsten behöver förnyas.", rest: "Dina valda egendomar finns kvar — anslut igen så hämtas datan.", cta: "Anslut igen" }
+        : problem.disconnected
+          ? { strong: "Google is not connected.", rest: "Connect your Google account to fetch data.", cta: "Connect Google" }
+          : { strong: "Google access needs renewal.", rest: "Your selected properties are kept — reconnect and the data returns.", cta: "Reconnect" };
+    }
+    if (problem.kind === "unavailable") {
+      return locale === "sv"
+        ? { strong: "Google svarade inte just nu.", rest: "Din anslutning är oförändrad. Försök igen om en stund.", cta: null }
+        : { strong: "Google did not respond right now.", rest: "Your connection is unchanged. Try again in a moment.", cta: null };
+    }
+    return locale === "sv"
+      ? { strong: `${problem.sources.join(" och ")} saknar behörighet till den valda egendomen.`, rest: "Välj en annan egendom under Integrationer.", cta: "Integrationer" }
+      : { strong: `${problem.sources.join(" and ")} lacks permission to the selected property.`, rest: "Pick another property under Integrations.", cta: "Integrations" };
+  })();
 
   return (
     <div className="flex min-h-dvh flex-1 flex-col">
@@ -284,24 +337,27 @@ function DashboardPageInner() {
 
       <main className="flex flex-1 flex-col gap-5 px-4 py-5 sm:gap-7 sm:px-6 sm:py-8 lg:px-8">
 
-        {expiredSources.length > 0 && (
+        {problemText && !isLoadingRealData && (
           <motion.div
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: EASING }}
             className="flex flex-col gap-3 rounded-2xl px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between"
-            style={{ backgroundColor: "var(--bone)", border: "1px solid var(--signal-down-bg)" }}
+            style={{ backgroundColor: "var(--bone)", border: `1px solid ${problem?.kind === "unavailable" ? "var(--rule)" : "var(--signal-down-bg)"}` }}
+            role="status"
           >
             <div className="flex items-center gap-3">
-              <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: "var(--signal-down)" }} />
+              <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: problem?.kind === "unavailable" ? "var(--slate)" : "var(--signal-down)" }} />
               <p style={{ fontSize: "13px", color: "var(--slate)", lineHeight: 1.45 }}>
-                <span style={{ color: "var(--charcoal)", fontWeight: 500 }}>{expiredSources.join(" and ")} connection expired.</span>{" "}
-                Reconnect to see your latest data.
+                <span style={{ color: "var(--charcoal)", fontWeight: 500 }}>{problemText.strong}</span>{" "}
+                {problemText.rest}
               </p>
             </div>
-            <Link href="/integrations" className="shrink-0 sm:ml-6" style={{ fontSize: "12px", fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--charcoal)", textDecoration: "none" }}>
-              Reconnect
-            </Link>
+            {problemText.cta && (
+              <Link href="/integrations" className="shrink-0 sm:ml-6" style={{ fontSize: "12px", fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--charcoal)", textDecoration: "none" }}>
+                {problemText.cta}
+              </Link>
+            )}
           </motion.div>
         )}
 
@@ -358,10 +414,10 @@ function DashboardPageInner() {
               <p style={{ fontFamily: "var(--font-display)", fontSize: "clamp(1.75rem, 3vw, 2.75rem)", fontWeight: 700, color: "var(--charcoal)", letterSpacing: "-0.03em", lineHeight: 1.1 }}>
                 {isLoadingRealData || aiInsightsLoading ? (
                   <TextShimmer width="240px" height="2.75rem" />
-                ) : propertyName ? (
+                ) : workspace?.name ? (
                   <>
                     <span style={{ color: "var(--slate)", fontWeight: 400 }}>Välkommen, </span>
-                    {propertyName}
+                    {workspace.name}
                   </>
                 ) : (
                   "Välkommen"

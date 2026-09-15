@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { hashAiInsightMetrics } from "@/lib/ai-insights/cache";
 import { AiInsightsPayloadSchema } from "@/lib/ai-insights/types";
+import { ClientNotFoundError } from "@/lib/clients/server";
 import { buildReportDataForUser } from "@/lib/report-data/server";
 import { createClient } from "@/utils/supabase/server";
 
@@ -12,6 +13,8 @@ export const runtime = "nodejs";
 export const maxDuration = 30;
 
 const RequestSchema = z.object({
+  /** The workspace being shared. Verified to belong to the user; never defaulted. */
+  clientId: z.string().uuid(),
   period: z.object({
     start: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     end: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -31,7 +34,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 
-    const { period, locale = "sv" } = parsed.data;
+    const { clientId, period, locale = "sv" } = parsed.data;
     const cookieStore = await cookies();
     const supabase = createClient(cookieStore);
     const { data: userData, error: userError } = await supabase.auth.getUser();
@@ -41,14 +44,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const report = await buildReportDataForUser({
-      supabase,
-      userId: user.id,
-      dateRange: { startDate: period.start, endDate: period.end },
-      periodLabel: period.label,
-      locale,
-      caller: "reports-share",
-    });
+    let report: Awaited<ReturnType<typeof buildReportDataForUser>>;
+    try {
+      report = await buildReportDataForUser({
+        supabase,
+        userId: user.id,
+        clientId,
+        dateRange: { startDate: period.start, endDate: period.end },
+        periodLabel: period.label,
+        locale,
+        caller: "reports-share",
+      });
+    } catch (err) {
+      if (err instanceof ClientNotFoundError) {
+        return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+      }
+      throw err;
+    }
 
     if (report.status !== "ok") {
       return NextResponse.json(
@@ -57,10 +69,13 @@ export async function POST(request: Request) {
       );
     }
 
+    // Insights are cached per workspace; only the active workspace's copy may
+    // ever be attached to its snapshot.
     const { data: cacheRow } = await supabase
       .from("ai_report_cache")
       .select("insights, generation_status, metrics_hash")
       .eq("user_id", user.id)
+      .eq("client_id", report.workspace.id)
       .eq("period_start", period.start)
       .eq("period_end", period.end)
       .maybeSingle();
