@@ -21,15 +21,14 @@ function SignupContent() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  // Identity only — the Analytics / Search Console grant is given separately
+  // from Integrations after the account exists.
   async function signInWithGoogle() {
     const supabase = createClient();
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
-        scopes:
-          "https://www.googleapis.com/auth/analytics.readonly https://www.googleapis.com/auth/webmasters.readonly",
-        queryParams: { access_type: "offline", prompt: "consent" },
       },
     });
   }

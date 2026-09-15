@@ -84,6 +84,45 @@ async function fetchGscSites(accessToken: string): Promise<GoogleSiteOption[]> {
     .filter((site) => site.siteUrl);
 }
 
+type Ga4DataStreamsResponse = {
+  dataStreams?: Array<{
+    type?: string;
+    webStreamData?: { defaultUri?: string };
+  }>;
+};
+
+/**
+ * The website a GA4 property measures, from its first web data stream.
+ * Best-effort: returns null on any failure so callers can treat it as
+ * enrichment, never as a requirement.
+ */
+export async function fetchGa4PropertyWebsite(
+  accessToken: string,
+  propertyId: string,
+): Promise<string | null> {
+  const numericId = propertyId.trim().replace(/^properties\//, "");
+  if (!/^\d+$/.test(numericId)) return null;
+  try {
+    const response = await googleGet<Ga4DataStreamsResponse>(
+      `https://analyticsadmin.googleapis.com/v1beta/properties/${numericId}/dataStreams`,
+      accessToken,
+    );
+    const web = (response.dataStreams ?? []).find(
+      (stream) => stream.type === "WEB_DATA_STREAM" && stream.webStreamData?.defaultUri,
+    );
+    return web?.webStreamData?.defaultUri ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export class GooglePropertyDiscoveryError extends Error {
+  constructor(message: string, public readonly status: number) {
+    super(message);
+    this.name = "GooglePropertyDiscoveryError";
+  }
+}
+
 async function googleGet<T>(url: string, accessToken: string): Promise<T> {
   const response = await fetch(url, {
     headers: {
@@ -94,7 +133,10 @@ async function googleGet<T>(url: string, accessToken: string): Promise<T> {
 
   if (!response.ok) {
     const body = await response.text().catch(() => "");
-    throw new Error(`Google property discovery failed with ${response.status}: ${body}`);
+    throw new GooglePropertyDiscoveryError(
+      `Google property discovery failed with ${response.status}: ${body.slice(0, 300)}`,
+      response.status,
+    );
   }
 
   return response.json() as Promise<T>;

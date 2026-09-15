@@ -1,56 +1,40 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { z } from "zod";
+import { getAuthedContext, unauthorizedJson } from "@/lib/auth/server";
+import {
+  disconnectGoogle,
+  getGoogleConnectionHealth,
+  getGoogleConnectionStore,
+  misconfiguredHealth,
+} from "@/lib/google/connection";
 import { clearReportCache } from "@/lib/google/report-cache";
-import { createClient } from "@/utils/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-const requestSchema = z.object({
-  source: z.enum(["ga4", "gsc"]),
-});
+// Removes the Google grant (revoking it at Google first). Workspaces and
+// their property assignments are deliberately left intact: reconnecting
+// later brings everything back without re-selecting anything.
+export async function POST() {
+  const ctx = await getAuthedContext();
+  if (!ctx) return unauthorizedJson();
 
-export async function POST(request: Request) {
-  const parsed = requestSchema.safeParse(await request.json());
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: { type: "validation", message: "Invalid disconnect payload." } },
-      { status: 400 },
-    );
+  const store = getGoogleConnectionStore();
+  if (!store) {
+    return NextResponse.json({ google: misconfiguredHealth() }, { status: 500 });
   }
 
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  try {
+    await disconnectGoogle(store, ctx.user.id, { revoke: true });
+    await Promise.all([
+      clearReportCache(ctx.supabase, ctx.user.id, "ga4"),
+      clearReportCache(ctx.supabase, ctx.user.id, "gsc"),
+    ]);
+    const google = await getGoogleConnectionHealth(store, ctx.user.id);
+    return NextResponse.json({ success: true, google });
+  } catch (err) {
+    console.error("[google/disconnect] failed", err instanceof Error ? err.message : String(err));
     return NextResponse.json(
-      { error: { type: "auth", message: "You must be signed in." } },
-      { status: 401 },
-    );
-  }
-
-  const { error } = await supabase
-    .from("connected_sources")
-    .delete()
-    .eq("user_id", user.id)
-    .eq("source", parsed.data.source);
-
-  if (error) {
-    return NextResponse.json(
-      {
-        error: {
-          type: "database",
-          message: "Could not disconnect this source.",
-        },
-      },
+      { error: { type: "server", message: "Could not disconnect Google." } },
       { status: 500 },
     );
   }
-
-  await clearReportCache(supabase, user.id, parsed.data.source);
-
-  return NextResponse.json({ success: true });
 }
