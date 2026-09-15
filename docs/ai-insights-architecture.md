@@ -186,20 +186,30 @@ Every slot is nullable. The UI always checks for null before rendering AI copy.
 create table ai_report_cache (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users not null,
+  client_id uuid references clients not null,   -- workspace the numbers belong to (2026-09-14)
   period_start date not null,
   period_end date not null,
   metrics_hash text not null,
   generated_at timestamptz not null default now(),
   insights jsonb not null,
-  unique (user_id, period_start, period_end)
+  unique (user_id, client_id, period_start, period_end)
 );
 ```
 
 `metrics_hash` is a short hash of the key input values (visits, topChannel, bounceRate, leads). If GA4 backfills data and the hash changes, the cache is invalidated and regeneration fires on next dashboard load.
 
+**Scope (2026-09-14):** the key includes `client_id` — the active workspace
+("Kund") at generation time. Two customers sharing a period never share a
+cache row, and `claim_ai_insights_generation(p_user_id, p_client_id, …)`
+takes the workspace as well. The client sends the workspace id it rendered
+data for; if the active workspace changed meanwhile the route returns null
+insights with `reason: "workspace_changed"` instead of generating for the
+wrong customer.
+
 ### Invalidation rules
 
 Regenerate if:
+- Workspace changes (`client_id` differs from cached row)
 - Period changes (`period_start` / `period_end` differ from cached row)
 - `metrics_hash` differs from the cached row
 - Cache row is older than 24 hours (safety net)
