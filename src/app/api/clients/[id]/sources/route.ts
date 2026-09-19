@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getAuthedContext, unauthorizedJson } from "@/lib/auth/server";
+import { requireUser } from "@/lib/auth/server";
 import {
   ClientNotFoundError,
   fillClientDomainIfEmpty,
@@ -39,8 +39,8 @@ export async function PUT(request: Request, { params }: Context) {
     return NextResponse.json({ error: { type: "validation", message: "Invalid source payload." } }, { status: 400 });
   }
 
-  const ctx = await getAuthedContext();
-  if (!ctx) return unauthorizedJson();
+  const ctx = await requireUser();
+  if (!ctx.ok) return ctx.response;
 
   try {
     let client = await setClientSource(ctx.supabase, ctx.user.id, id, parsed.data.source, {
@@ -81,8 +81,8 @@ export async function DELETE(request: Request, { params }: Context) {
     return NextResponse.json({ error: { type: "validation", message: "Invalid source payload." } }, { status: 400 });
   }
 
-  const ctx = await getAuthedContext();
-  if (!ctx) return unauthorizedJson();
+  const ctx = await requireUser();
+  if (!ctx.ok) return ctx.response;
 
   try {
     const client = await removeClientSource(ctx.supabase, ctx.user.id, id, parsed.data.source);

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAuthedContext, unauthorizedJson } from "@/lib/auth/server";
+import { requireUser } from "@/lib/auth/server";
 import { getActiveClient } from "@/lib/clients/server";
 
 export const dynamic = "force-dynamic";
@@ -8,8 +8,8 @@ export const dynamic = "force-dynamic";
 // Pages resolve this once, then name that workspace explicitly on every
 // data request. It is a default, never a data-security context.
 export async function GET() {
-  const ctx = await getAuthedContext();
-  if (!ctx) return unauthorizedJson();
+  const ctx = await requireUser();
+  if (!ctx.ok) return ctx.response;
 
   try {
     const client = await getActiveClient(ctx.supabase, ctx.user.id);

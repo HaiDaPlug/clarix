@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAuthedContext, unauthorizedJson } from "@/lib/auth/server";
+import { requireUser } from "@/lib/auth/server";
 import { getGoogleConnectionStore, withGoogleAccessToken } from "@/lib/google/connection";
 import {
   GooglePropertyDiscoveryError,
@@ -12,8 +12,8 @@ export const dynamic = "force-dynamic";
 // empty list plus the health object (HTTP 200) when the grant is unusable —
 // that is a state, not an error, and the UI renders it as such.
 export async function GET() {
-  const ctx = await getAuthedContext();
-  if (!ctx) return unauthorizedJson();
+  const ctx = await requireUser();
+  if (!ctx.ok) return ctx.response;
 
   try {
     const result = await withGoogleAccessToken(

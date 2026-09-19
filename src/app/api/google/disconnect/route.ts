@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAuthedContext, unauthorizedJson } from "@/lib/auth/server";
+import { requireUser } from "@/lib/auth/server";
 import {
   disconnectGoogle,
   getGoogleConnectionHealth,
@@ -14,8 +14,8 @@ export const dynamic = "force-dynamic";
 // their property assignments are deliberately left intact: reconnecting
 // later brings everything back without re-selecting anything.
 export async function POST() {
-  const ctx = await getAuthedContext();
-  if (!ctx) return unauthorizedJson();
+  const ctx = await requireUser();
+  if (!ctx.ok) return ctx.response;
 
   const store = getGoogleConnectionStore();
   if (!store) {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getAuthedContext, unauthorizedJson } from "@/lib/auth/server";
+import { requireUser } from "@/lib/auth/server";
 import {
   ClientNotFoundError,
   deleteClientWorkspace,
@@ -30,8 +30,8 @@ export async function PATCH(request: Request, { params }: Context) {
     return NextResponse.json({ error: { type: "validation", message: "Invalid workspace payload." } }, { status: 400 });
   }
 
-  const ctx = await getAuthedContext();
-  if (!ctx) return unauthorizedJson();
+  const ctx = await requireUser();
+  if (!ctx.ok) return ctx.response;
 
   try {
     const client = await updateClientWorkspace(ctx.supabase, ctx.user.id, id, parsed.data);
@@ -51,8 +51,8 @@ export async function DELETE(_request: Request, { params }: Context) {
     return NextResponse.json({ error: { type: "validation", message: "Invalid workspace id." } }, { status: 400 });
   }
 
-  const ctx = await getAuthedContext();
-  if (!ctx) return unauthorizedJson();
+  const ctx = await requireUser();
+  if (!ctx.ok) return ctx.response;
 
   try {
     const { nextActiveId } = await deleteClientWorkspace(ctx.supabase, ctx.user.id, id);

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getAuthedContext, unauthorizedJson } from "@/lib/auth/server";
+import { requireUser } from "@/lib/auth/server";
 import { ClientNotFoundError } from "@/lib/clients/server";
 import { assertDateRange } from "@/lib/google/date-range";
 import { buildReportDataForUser } from "@/lib/report-data/server";
@@ -38,8 +38,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const ctx = await getAuthedContext();
-  if (!ctx) return unauthorizedJson();
+  const ctx = await requireUser();
+  if (!ctx.ok) return ctx.response;
 
   const periodLabel = parsed.data.periodLabel ?? `${dateRange.startDate} – ${dateRange.endDate}`;
 

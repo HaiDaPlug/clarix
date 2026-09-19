@@ -183,7 +183,7 @@ function IntegrationsPageInner() {
       const [health, clientsPayload] = await Promise.all([fetchGoogleHealth(true), fetchClients()]);
       if (cancelled) return;
       if (health === "unauthorized" || clientsPayload === "unauthorized") {
-        router.push("/login");
+        window.location.assign("/login");
         return;
       }
       setGoogle(health);
@@ -202,7 +202,7 @@ function IntegrationsPageInner() {
     setCheckingGoogle(true);
     const health = await fetchGoogleHealth(true);
     if (health === "unauthorized") {
-      router.push("/login");
+      window.location.assign("/login");
       return;
     }
     setGoogle(health);

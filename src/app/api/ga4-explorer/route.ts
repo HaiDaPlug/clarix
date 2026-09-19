@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getAuthedContext, unauthorizedJson } from "@/lib/auth/server";
+import { requireUser } from "@/lib/auth/server";
 import { listAssignedPropertyIds } from "@/lib/clients/server";
 import { GoogleApiError } from "@/lib/google/api-client";
 import { getGoogleConnectionStore, withGoogleAccessToken } from "@/lib/google/connection";
@@ -55,8 +55,8 @@ export async function POST(request: Request) {
     const dateRange = assertDateRange(rawRange);
     const priorRange = getPriorDateRange(dateRange);
 
-    const ctx = await getAuthedContext();
-    if (!ctx) return unauthorizedJson();
+    const ctx = await requireUser();
+    if (!ctx.ok) return ctx.response;
 
     // Only properties the user has deliberately assigned to a workspace can
     // be explored — the same rule the dashboard and report follow.

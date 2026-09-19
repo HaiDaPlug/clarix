@@ -141,7 +141,7 @@ function DashboardPageInner() {
         const response = await fetch("/api/clients/active", { cache: "no-store" });
         if (cancelled) return;
         if (response.status === 401) {
-          router.push("/login");
+          window.location.assign("/login");
           return;
         }
         const payload = response.ok ? ((await response.json()) as { client: ClientWorkspace | null }) : { client: null };
@@ -207,7 +207,7 @@ function DashboardPageInner() {
         });
         if (signal.aborted) return;
         if (response.status === 401) {
-          router.push("/login");
+          window.location.assign("/login");
           return;
         }
         if (response.status === 404) {

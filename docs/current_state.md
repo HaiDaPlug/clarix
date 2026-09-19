@@ -10,7 +10,16 @@
 
 **Status wording, deliberately:** implementation complete; local verification complete (typecheck, lint, build, 107 unit tests); **production integration verification pending** — no real Supabase session, real Google refresh token, real revoked grant, or the migrations against the live schema have been exercised yet. Those are exactly where auth systems fail; the manual script in the production doc is the acceptance run.
 
-**Follow-up pass (same day) — three production-readiness fixes from review**
+**Session-boundary fix (2026-09-19) — "I sign in and Clarix says I'm not signed in"**
+- Reported after deploy: login completes, protected routes still treat the person as unauthenticated. Audit (GPT, confirmed by reading `29537d3`) found three defects in the new identity layer; none require touching the Google-grant architecture.
+- **Host switch after the exchange.** `/auth/callback` redirected via `resolveAppOrigin()`, which prefers `NEXT_PUBLIC_APP_URL`. With that set to `https://www.clarix.se`, a sign-in started on any other host (apex, preview, localhost with a prod env) exchanged the code and wrote the host-scoped Supabase cookies on host A, then sent the browser to host B — which has no cookies, so the proxy correctly said "not signed in". Fixed: the identity callback now redirects with `resolveRequestOrigin()` (request URL, or `x-forwarded-host`/`-proto` behind Vercel, never on localhost) so the session and the redirect stay on one host. `NEXT_PUBLIC_APP_URL` is now used **only** by the Google data grant, and `/api/google/oauth/start` canonicalises to it *before* setting its state cookie instead of after.
+- **Verification errors reported as logout.** `getAuthedContext()` and the proxy discarded `getUser()`'s error, so "Supabase Auth unreachable" and "no session" both became 401 / redirect-to-login. New `src/lib/auth/verify.ts` classifies into `authenticated | unauthenticated | error` (`AuthSessionMissingError` and 4xx → unauthenticated; `AuthRetryableFetchError`, 5xx, no status → error). Proxy passes an `error` through without redirecting and stamps `x-clarix-auth` on every response; routes return 503 `auth_unavailable` via `requireUser()`; the callback never clears cookies on an `error`; `/login?error=auth_unavailable` shows a distinct message without the "clear cookies" link.
+- **Post-login soft navigation.** Email/password sign-in now does `window.location.assign("/dashboard")` so the first protected request is a plain document request carrying the just-written cookies. Pages hard-navigate to `/login` on a genuine 401 instead of `router.push`, which could ping-pong with the proxy.
+- Diagnostics: `[auth/callback]` logs host, forwarded host, configured origin, redirect origin, code present, exchange outcome, session returned, verification state. Never tokens, codes or cookies.
+- Tests: `src/lib/auth/verify.test.ts` (12) — classifier for every error shape, origin resolution for www/apex/localhost/preview/forwarded lists. Suite 119/119, typecheck, lint, build green. **Still not proven in a real browser against the deployment** — that is the acceptance run (production doc steps 28–30).
+- Supabase config to check: Authentication → URL Configuration → Redirect URLs must list every host people sign in from (`https://www.clarix.se/**`, `http://localhost:3000/**`, preview hosts). A missing host makes Supabase fall back to the Site URL = the same host-switch symptom from the other side.
+
+**Follow-up pass (2026-09-14) — three production-readiness fixes from review**
 1. **Explicit `clientId` on every customer-data request; active workspace is a preference only.** `POST /api/report-data`, `/api/generate-insights` and `/api/reports/share` now *require* `clientId` (uuid), `buildReportDataForUser()` takes it and throws `ClientNotFoundError` (→ 404) if it is not the user's — nothing is ever substituted. Pages resolve the preference once per mount from the new `GET /api/clients/active`, then name that workspace on every request, so header and numbers always come from the same customer even if another device switches the active one mid-flight. `set_active_client()` is navigation state, not a data-security context. Report snapshots are read by explicit workspace id (`readReportSnapshot(workspaceId, …)`); the old "active marker" is gone.
 2. **Legacy tokens locked down now, not later.** `20260914000200_connected_sources_lockdown.sql` drops the own-row policy and revokes all grants on `connected_sources` from `anon`/`authenticated`. The table stays for rollback (service_role only); the migration header has the two statements that restore browser access if the old app must be redeployed.
 3. **Production doc corrected** to Google's actual order: Branding complete (+ brand verification only if a logo is added) → domain verified → Audience *In production* + Data Access scopes → sensitive-scope verification in the Verification Center. Publishing ends the seven-day Testing lifetime; verification is what removes the unverified-app interstitial and the 100-user cap. "Submit once steps 1–5 are done" was wrong and is replaced.
@@ -72,6 +81,111 @@
 
 ---
 
+## Previously — Open priorities (2026-08-25)
+
+### Done this session (2026-08-25) — KPI grid: "Tid på sidan" → "Din populäraste kanal", leads-zero empty state
+
+Both surfaces changed together — `SlideKpis.tsx` (desktop deck, slide 3) and the `mobile-kpis` section of `MobileReportDeck.tsx`. They render the same "Snabb överblick" section and would otherwise drift.
+
+**"Tid på sidan" replaced by "Din populäraste kanal"**
+- Owner's call: average session duration is a metric nobody acts on. The card now shows the top traffic source — the channel's icon in a brand-tinted tile (`channelColor(name)` at 12.5% alpha) on the left, name to its right, with the channel's own delta in the existing `TrendPill`.
+- Data was already there: `d.topChannels[0]`, sorted by visits upstream in `buildSlideData`. No data-layer change.
+- Under the name, a quiet `{pct}% av alla besök` line. Added during the polish pass to fill what was otherwise the emptiest card in the grid — it's real data, not filler, but it's the one addition the owner didn't ask for.
+- `avgDuration` / `timeDelta` stay in `SlideData` — other slides still use them. Only the local `fmtDuration` helpers were deleted (both files, no other callers).
+
+**Leads at 0 now reads as "not measured", not as a result**
+- A 5rem `0` was telling clients they'd failed when the truth is conversion tracking was never switched on. The card now shows a rule glyph plus, **inside the same card**, "Du har inte konverteringsspårning på. Sätt på det för att mäta hur många affärer som konverteras."
+- The `Dash` glyph after three rounds of owner feedback: solid `bg-foreground` (not muted, not coral — both were tried and rejected), `0.25rem` tall × `5.5rem` wide on desktop, `0.175rem × 2.75rem` on mobile. Long and skinny is the point; it must not read as a disabled state.
+- On mobile the leads card takes `col-span-2` when tracking is off, so the sentence gets a full-width measure instead of a half-column.
+
+**The overflow bug this introduced, and the structural fix**
+- First cut hung the note after the value with `mt-auto pt-6` on the value itself. `mt-auto` consumes all the column's slack, so the note had nowhere to go and **rendered outside the card's bottom border**, over the slide background.
+- Fix: dash and note are one bottom-anchored block (`mt-auto flex flex-col gap-4 pt-6`) — the note is part of the value zone, not a caption hung off it. Every card in the grid now bottom-anchors its value zone the same way, so row 2's icon tile and the leads block end on the same line.
+- `overflow-hidden` added to the KPI card shell as a **guard, not a layout tool** — a card whose value zone grows must clip at its own border rather than spill onto the slide. Safe only because `InfoTooltip` portals to `document.body` (see the entry below); it would have clipped the bubble before that landed.
+- The KPI arrays in both files now carry a `body` ReactNode per card instead of `value` + `format`. Three of the four cards no longer render a plain number, so a single shared value renderer had stopped paying for itself.
+
+**Verification**
+- `npx tsc --noEmit` and scoped `eslint` clean. Not screenshot-verified from this session — the owner was running the dev server and reviewing each round in the browser, which is what drove the three dash revisions and the spacing pass.
+
+**Note on the process note below:** the 13 `MobileReportDeck.tsx` errors it reports were this work mid-write. They are resolved; a whole-project typecheck is clean again as of this entry.
+
+### Done this session (2026-08-25) — tooltip escapes its clip, date presets 3/6/12 months
+
+**`InfoTooltip` bubble now portals to `document.body`** (`src/components/primitives/InfoTooltip.tsx`)
+- Symptom: on `SlideChannels`, the definition bubble was cut off at the card's edge — only a white sliver showed above the "AI Assistant" card.
+- Cause: the bubble was `position: absolute` inside *two* clipping ancestors — the channel card's own `overflow-hidden` (`SlideChannels.tsx:332`) and the slide's clipping shell (`SlideCard.tsx:34`). No amount of `z-index` or `absolute` positioning escapes an ancestor's overflow clip; only leaving the subtree does.
+- Fix: the bubble renders through `createPortal` into `document.body` with `position: fixed`, anchored from the trigger's `getBoundingClientRect()` on hover.
+- **The non-obvious part: the slide canvas is `transform: scale(...)`, so a portaled bubble would render at native size and look oversized against a scaled-down slide.** The scale is recovered from the trigger's *painted* width — the trigger is 16px at scale 1, so `rect.width / 16` is the live scale of whatever transformed canvas it sits on. No context plumbing, works for any host.
+- Also added: viewport clamping on both axes, and a flip to the other `side` when the requested one doesn't fit. The flip is measured in a plain `useEffect`, which runs before the double-`rAF` that fades the bubble in — so it happens while the bubble is still at `opacity: 0` and is never seen. (`useLayoutEffect` would warn under SSR here for no benefit.)
+- Fixed positioning detaches from the page, so scroll and resize *dismiss* the bubble rather than chase the trigger.
+- Public API unchanged — all three `SlideChannels` call sites and every other consumer are untouched. The `stopPropagation` wrapper at `SlideChannels.tsx:363` is still needed: the trigger stays inside the card's toggle target, only the bubble moved.
+
+**Three new date presets: 3, 6 and 12 months** (`src/lib/google/date-presets.ts`)
+- `DatePresetId` gains `last-3-months`, `last-6-months`, `last-12-months`. Owner's label for the 12-month one is **"Senaste året"**, not "Senaste 12 månaderna".
+- All three are rolling windows ending on the last completed day, matching how the existing presets clamp off partial-day data.
+- `addMonths` clamps the day to the target month's length, so 31 Mar minus one month lands on 28/29 Feb instead of rolling forward into March. `rollingMonths` then pushes the start one day forward so the window is inclusive on both ends and spans exactly N months, not N months + 1 day.
+- Nothing else in the repo hardcodes preset ids, so no other call sites needed updating.
+
+**Preset column polished** (`src/components/primitives/DateRangePicker.tsx`)
+- Hierarchy was inverted: inactive labels sat at `--slate`/400 so the list read like a legend rather than a set of controls. Now `--charcoal`/500, with coral + 600 reserved for the active row.
+- Each window carries its resolved range as a quiet 11px tabular-nums sub-line (`1–20 aug`, `21 maj – 20 aug`). `formatPresetRange` drops the year while the range is in the current year and collapses to `1–20 aug` within a single month, so the common cases stay short. This is also what absorbs the column's dead space — ~200px → ~270px against a ~390px calendar, so it no longer floats.
+- Hairline before "Sen start": the four above are rolling windows, all-time is a different kind of answer. It is the one row with **no** sub-line on purpose — its `2020-01-01` floor is an arbitrary sentinel, not a real data start, and printing it would promise more than it means.
+- Hover was JS mutating `style.backgroundColor` on enter/leave, which bypassed the `transition-colors` already on the element. Now a conditional `hover:bg-[var(--bone)]` class, so the transition actually runs and the active row is excluded declaratively.
+- `formatDisplay` capitalised months (`1 Aug 2026`) — wrong in Swedish, where months are lowercase in running text. Extracted a shared `shortMonth` helper; the standalone `Augusti 2026` calendar title stays capitalised as a title.
+- Contrast note: coral was tried for the active row's sub-line and reverted — coral at 11px over the coral wash lands near 3:1, under AA. Sub-lines stay slate in both states; only the label carries coral.
+- No new tokens or components — reuses `CORAL`, `CORAL_SOFT_BG`, `--charcoal`, `--slate`, `--rule`, `--bone`.
+
+**Verification**
+- `npx tsc --noEmit` and scoped `eslint` clean on all three files. Not yet checked in a browser at the time of writing.
+
+**Process note**
+- `npx tsc --noEmit` currently reports 13 errors in `src/components/report/MobileReportDeck.tsx` (undefined `MOBILE_STAT`, `topChannel`, `noLeads`). That is another agent's in-flight work, untouched by this session — but it means a whole-project typecheck is not a clean signal right now; filter to the files you changed.
+
+### Done this session (2026-08-18/21) — report framing: centered deck, 2:1 canvas
+
+**The deck now opens centered instead of scrolled to the top** (`d394e10`)
+- Symptom: jumping into `/report` showed the first slide pushed down with its bottom cut off by the viewport edge, and a band of grey background above it.
+- Cause: the card was scaled to the *full* scroll-viewport height, leaving zero vertical slack, and the stack then added `paddingTop: gap` (~140px) above it. Because the canvas is wider than the viewport-minus-header on nearly every screen, height is the binding axis almost always — so the crop was near-universal, not an edge case.
+- `useCardScale` now reserves a small vertical inset (`INSET_Y = 0.03`, mirroring the existing `INSET_X`) so a card fits inside the viewport with its corners and shadow visible, and returns `edgePad` — the leftover height on one side. Both viewers (`report/page.tsx`, `SharedReportClient.tsx`) use `edgePad` as the stack's edge padding instead of the slide gap. The gap *between* cards is unchanged.
+- Percentage padding in CSS resolves against width, not height, so "center the first card in a scrolling column" genuinely has to be computed in JS. `edgePad` is the minimum to do that, not a flourish.
+- Note: `INSET_Y` makes every card ~6% smaller than a pure fix required — a deliberate framing choice, flagged to the owner as arguably beyond the bug. Drop it to `0` and cards fill the viewport height exactly, still uncropped.
+
+**SlideIntro's title block centered on its canvas** (`7c2f2ac`)
+- Even with the deck centered, the slide you land on read as top-heavy: `SlideIntro`'s root was a plain flex column, so the title, subtitle and meta line stacked against the top edge with the entire lower half of the canvas empty. That empty half — not the card position — is what made the report look like it opened scrolled to the top.
+- One-word fix: `justify-center` on the root. The favicon and sparkline are absolutely positioned against the canvas, so only the type block moves.
+
+**Slide canvas widened from 16:9 to 2:1** (`4fd3634`)
+- `CANVAS_H` 720 → 640 in `tokens.ts`. Owner's call after seeing the corrected (uncropped) 16:9 card and finding it "squarey" — the pre-fix cropped slice had read as a letterbox, and the true 16:9 read squarer by comparison.
+- On a width-bound screen — most of them — the card keeps its full width and simply gets shorter, so widening buys the letterbox framing without giving up any card width. This is the opposite of the 16:10 experiment recorded in the 2026-07 notes, which spent height budget and forced the card *narrower*.
+- Every slide was re-rendered against the new canvas with AI copy built to the prompt's stated maximums. Eight of nine fit unchanged; KPIs and channels read better tighter.
+- **`SlideRecommendations` was a genuine regression** and was refit in the same commit: its cards clip their overflow, and a long two-sentence rec ran past the bottom edge at 640 while fitting at 720. Recovered from card chrome and leading rather than by capping copy — `gap-7`→`gap-5`, `p-7`→`p-5`, icon 48→44px, `mt-6`→`mt-4`, body `leading-relaxed`→`leading-snug` and 21px→20px. Nothing in the AI schema bounds rec length, so this is sized to the prompt's upper bound, not to the copy we happen to see today.
+
+**Files changed**
+- `src/components/report/layout/useCardScale.ts` (`INSET_Y`, `edgePad`)
+- `src/app/(report)/report/page.tsx`, `src/app/(report)/r/[token]/SharedReportClient.tsx` (edge padding)
+- `src/components/report/slides/SlideIntro.tsx` (`justify-center`)
+- `src/components/report/tokens.ts` (`CANVAS_H` 640 + rationale comment)
+- `src/components/report/layout/SlideCard.tsx` (stale `1280×720` comment)
+- `src/components/report/slides/SlideRecommendations.tsx` (refit for 640)
+
+**Verification**
+- Verified in a real browser via a throwaway harness (`src/app/deck-check/` + `scripts/_deck-measure.mjs`, both **deleted after use**) rendering the real slide components with `scenario1`/`scenario2` and a schema-max AI payload, driven by Playwright at four viewports.
+- Deck centering confirmed by measurement: gap above the first card equals gap below at 1512×945, 1920×1080, 1280×800 and 1440×1200.
+- `npx tsc --noEmit` and scoped `eslint` clean on every commit.
+- **Method warning — do not trust `scrollHeight` for slide overflow.** It reported "all slides fit" for slides that visibly clipped, because clipping happens at the *card's* `overflow-hidden` edge, well above the canvas floor. Catching it needs each text leaf compared against every clipping ancestor. Screenshots caught what the numbers missed, twice.
+- Two rounds were spent fixing the wrong thing (geometry measured fine while the owner still saw a broken layout) because the deployed preview being checked was building from a branch that didn't have the commits. Confirm what a preview is built from before diagnosing further.
+
+**Open follow-ups**
+- **`SlideStrategicInsight` clips at maximum AI copy — pre-existing, on 720 and 640 alike, and live in production now.** `AiInsightsPayloadSchema` allows `slide_insight.body` up to 3 paragraphs while the prompt asks for exactly 2; at 3 the BOTTOM LINE block is cut off. Fix is either `.max(2)` on the schema or letting the panel scroll. Not touched this session — it isn't a regression from the canvas change.
+- **Expanded Paid Social drill-down unverified at 640.** `SlideChannels` had another agent's uncommitted work in the tree, so it was left alone. Its bottom row already sits close to the canvas floor at the new height — check the expanded state once that work lands.
+- **The "1152×484 channel area" figure in the 2026-08-01 entry below is now stale** — it was derived from a 720-tall canvas. The channel area lost 80px of height. Re-measure before raising `MAX_CHANNELS` or adding a 7th layout.
+- Commits `4fd3634` and later are **unpushed** as of this writing; owner is merging manually.
+
+**Process note**
+- A second coding agent was editing this repo concurrently throughout. All three commits were made with `git commit --only <paths>` to avoid sweeping in its work, and at one point a `git stash -u` from that session wiped the shared working tree mid-task (recovered from `stash@{0}`). `30b7136` "fix(dashboard): center the hero insight card in its container" on this branch is that agent's, not this session's.
+
+---
+
 ## Previously — Open priorities (2026-08-01)
 
 ### Done this session (2026-08-01) — report polish: faster counters, custom date range, info tooltips, smooth-cursor removal
@@ -126,7 +240,8 @@
 > **⚠️ Do not add `sessionSource` to `buildGa4ChannelRequest`.** It looks like the cheaper option and it silently corrupts the report. That query is the basis for every channel total, every `share` percentage, and the organic/paid/direct/referral KPI tiles. Adding a source dimension turns ~8 rows into one row per (channel × source) pair; `sessionSource` is high-cardinality (Referral alone routinely exceeds 100 sources), so any row cap truncates the response and understates the totals — and because GA4 orders by dimension when `orderBys` is absent, "Paid Social" is among the first rows dropped. This was tried, shipped, and reverted. Keep the split in its own filtered query.
 
 **⚠️ Channel ceiling: 6**
-- `SlideChannels` draws **at most 6 channels**, set by `MAX_CHANNELS` in `slide-data.tsx`. Beyond that the long tail rolls into a single "Övriga kanaler" row (so 5 real + 1 rollup). The cap is a hard layout constraint, not a preference: the slide canvas is a fixed 1280×720 with `overflow: hidden`, leaving exactly **1152×484** for the channel area — anything taller is clipped, not scrolled. Raising the cap means designing a 7th layout that still fits 484px *with a channel expanded*.
+- `SlideChannels` draws **at most 6 channels**, set by `MAX_CHANNELS` in `slide-data.tsx`. Beyond that the long tail rolls into a single "Övriga kanaler" row (so 5 real + 1 rollup). The cap is a hard layout constraint, not a preference: the slide canvas is a fixed `CANVAS_W`×`CANVAS_H` with `overflow: hidden` — anything taller is clipped, not scrolled. Raising the cap means designing a 7th layout that still fits the channel area *with a channel expanded*.
+  - ⚠️ **Superseded (2026-08-21):** this entry originally read "a fixed 1280×720, leaving exactly 1152×484 for the channel area." The canvas is now **1280×640** (see the 2026-08-21 entry), so the channel area is ~80px shorter than that figure. Re-measure against the live canvas rather than trusting either number.
 - Each count gets its own layout rather than one list that overflows at the top end: **1** hero (no bar — a lone channel is always 100%; breakdown sits open), **2** two tall side-by-side cards, **3** full-width bar rows, **4** even 2×2, **5** feature column + 2×2, **6** even 3×2.
 - Row layouts (1, 3) have spare height, so expanding grows in place. Grid layouts (2, 4, 5, 6) do not, so the card body **swaps** to the breakdown at fixed height — this is what keeps expansion from clipping.
 - **Channels carrying `subChannels` are pinned into the visible set** regardless of volume. Paid social is often a small share; without the pin it lands in the "Övriga kanaler" rollup (which drops `subChannels`) and the drill-down silently disappears on exactly the sites that bought the ads.
@@ -1094,7 +1209,7 @@ The cinematic scroll-surface report viewer — previously "Rapport 2", now the s
 - Bottom frosted glass pill: left/right arrows + `↑↓` keyboard hints + `1 / 10` counter. `backdrop-blur-md`, 55% white background, white border
 - Top bar: back link, slide counter, date range picker (center), Present button (fullscreen toggle)
 
-**Date range picker** — dropdown in the top bar. Left column: 2 presets — "Denna månad" and "Sen start" (all-time from 2020-01-01). Right column: flight-booker style two-month calendar — click start date then end date, hover shows range preview, edges rendered as purple pills with soft fill between. Defaults to current calendar month (1st → today). Selecting any range pushes `?from=&to=` to the URL; `useDateRange` reads it and triggers a fresh fetch.
+**Date range picker** — dropdown in the top bar. Left column: 5 presets — "Denna månad", "Senaste 3 månaderna", "Senaste 6 månaderna", "Senaste året" (rolling windows ending on the last completed day) and "Sen start" (all-time from 2020-01-01), separated by a hairline. Each window shows its resolved range as an 11px sub-line; all-time deliberately shows none. Right column: flight-booker style two-month calendar — click start date then end date, hover shows range preview, edges rendered as purple pills with soft fill between. Defaults to current calendar month (1st → today). Selecting any range pushes `?from=&to=` to the URL; `useDateRange` reads it and triggers a fresh fetch.
 
 **Slides (10):**
 1. **Sammanfattning (Hero)** — headline top-center, large inline traffic delta in subtext (green/red/grey depending on data), full-width coral sparkline (from `trafficOverview.timeSeries`) in the middle, AI summary card pinned to bottom. Layout: `justify-between py-12 mt-16`.
@@ -1125,7 +1240,7 @@ The cinematic scroll-surface report viewer — previously "Rapport 2", now the s
 - If no sources connected or API returns empty → "Ingen data för den här perioden" state with link to Integrations
 - Real data only: fetches from `/api/ga4` and `/api/gsc`, merges via `mergeReportData`
 
-**InfoTooltip** — unified API: accepts either `text="..."` (plain) or `title` + `body` + `example` (rich). Tooltip opens downward-right. No animation on the trigger icon (scale removed). Example box uses `oklch(0.90 0.008 270)` background for clear contrast. BorderBeam animation removed — card has a plain `1px solid rgba(0,0,0,0.05)` border.
+**InfoTooltip** — unified API: accepts either `text="..."` (plain) or `title` + `body` + `example` (rich). `side="above" | "below"` picks the preferred direction; the bubble flips to the other side if that one doesn't fit. The bubble is **portaled to `document.body`** as `position: fixed` so card and slide-shell `overflow-hidden` can't clip it, and it scales itself to its host by reading the trigger's painted width (16px at scale 1) — see the 2026-08-25 entry. Scroll and resize dismiss it. No animation on the trigger icon (scale removed). Example box uses `oklch(0.90 0.008 270)` background for clear contrast. BorderBeam animation removed — card has a plain `1px solid rgba(0,0,0,0.05)` border.
 
 ---
 

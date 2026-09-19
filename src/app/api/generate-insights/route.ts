@@ -1,7 +1,6 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createClient } from "@/utils/supabase/server";
+import { requireUser } from "@/lib/auth/server";
 import {
   generateAiInsightsText,
   AiInsightsProviderError,
@@ -348,14 +347,9 @@ export async function POST(req: Request) {
     }
 
     const { period, clientId } = parsed.data;
-    const cookieStore = await cookies();
-    const supabase = createClient(cookieStore);
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-    const user = userData.user;
-
-    if (userError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await requireUser();
+    if (!auth.ok) return auth.response;
+    const { supabase, user } = auth;
 
     let report: Awaited<ReturnType<typeof buildReportDataForUser>>;
     try {
