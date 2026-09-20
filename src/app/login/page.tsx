@@ -22,7 +22,10 @@ function LoginContent() {
 
   // Full failure reason/detail is logged server-side in /auth/callback;
   // only a generic message is shown here to avoid leaking internals.
+  // `auth_unavailable` means Supabase Auth could not be reached — the
+  // person's session was NOT cleared, so the retry link is not offered.
   const oauthError = searchParams.get("error");
+  const authUnavailable = oauthError === "auth_unavailable";
 
   // Identity only. Analytics / Search Console access is a separate grant the
   // user gives from Integrations, so signing in never asks for data scopes and
@@ -77,11 +80,16 @@ function LoginContent() {
       } else {
         setError(t.login.errorGeneric);
       }
-    } else {
-      router.push("/dashboard");
+      setLoading(false);
+      return;
     }
 
-    setLoading(false);
+    // Full same-origin navigation, not a client-side push: the browser sends
+    // the freshly written session cookies on a plain document request, so the
+    // proxy's server check sees exactly what was just set. A soft navigation
+    // can race the cookie write and prefetch and land on a "not signed in"
+    // answer for a session that exists.
+    window.location.assign("/dashboard");
   }
 
   return (
@@ -122,16 +130,18 @@ function LoginContent() {
           {oauthError && (
             <div className="flex flex-col gap-2">
               <p className="text-xs leading-relaxed" style={{ color: "var(--signal-down)" }}>
-                {t.login.errorGeneric}
+                {authUnavailable ? t.login.errorAuthUnavailable : t.login.errorGeneric}
               </p>
-              <button
-                type="button"
-                onClick={handleRetryAfterOAuthError}
-                className="text-xs text-left underline underline-offset-2 transition-opacity hover:opacity-60 cursor-pointer"
-                style={{ color: "var(--signal-down)" }}
-              >
-                {t.login.retryClearSession}
-              </button>
+              {!authUnavailable && (
+                <button
+                  type="button"
+                  onClick={handleRetryAfterOAuthError}
+                  className="text-xs text-left underline underline-offset-2 transition-opacity hover:opacity-60 cursor-pointer"
+                  style={{ color: "var(--signal-down)" }}
+                >
+                  {t.login.retryClearSession}
+                </button>
+              )}
             </div>
           )}
 

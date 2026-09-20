@@ -52,7 +52,7 @@ export default function ClientsPage() {
         const response = await fetch("/api/clients", { cache: "no-store" });
         if (cancelled) return;
         if (response.status === 401) {
-          router.push("/login");
+          window.location.assign("/login");
           return;
         }
         if (!response.ok) throw new Error(copy.loadFailed);

@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { getAuthedContext, logAuthFailure, resolveAppOrigin } from "@/lib/auth/server";
+import { logAuthFailure, resolveAppOrigin, verifySession } from "@/lib/auth/server";
 import {
   getGoogleConnectionStore,
   saveGoogleConnection,
@@ -50,11 +50,17 @@ export async function GET(request: Request) {
     : null;
   const next = sanitizeNextPath(payload?.next);
 
-  const ctx = await getAuthedContext();
-  if (!ctx) {
+  const { verification } = await verifySession();
+  if (verification.state === "error") {
+    // Auth unreachable; the grant can be retried once it is back. Nothing
+    // about the Clarix session is touched.
+    return fail(next, "auth_unavailable", verification.reason);
+  }
+  if (verification.state === "unauthenticated") {
     // Clarix session gone mid-flow. Sign in again; the grant can be retried.
     return clearStateCookie(NextResponse.redirect(`${origin}/login`));
   }
+  const ctx = { user: verification.user };
 
   if (!config) {
     return fail(next, "server_misconfigured", "GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET not configured");

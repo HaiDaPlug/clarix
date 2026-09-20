@@ -1,12 +1,11 @@
 import { createHash, randomBytes } from "crypto";
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { hashAiInsightMetrics } from "@/lib/ai-insights/cache";
 import { AiInsightsPayloadSchema } from "@/lib/ai-insights/types";
+import { requireUser } from "@/lib/auth/server";
 import { ClientNotFoundError } from "@/lib/clients/server";
 import { buildReportDataForUser } from "@/lib/report-data/server";
-import { createClient } from "@/utils/supabase/server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -35,14 +34,9 @@ export async function POST(request: Request) {
     }
 
     const { clientId, period, locale = "sv" } = parsed.data;
-    const cookieStore = await cookies();
-    const supabase = createClient(cookieStore);
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-    const user = userData.user;
-
-    if (userError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await requireUser();
+    if (!auth.ok) return auth.response;
+    const { supabase, user } = auth;
 
     let report: Awaited<ReturnType<typeof buildReportDataForUser>>;
     try {

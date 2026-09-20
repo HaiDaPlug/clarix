@@ -25,7 +25,7 @@ renewed) from **Integrationer → Anslut Google**, never by logging in again.
 | `SUPABASE_SECRET_KEY` | **yes, new** | Supabase → Project Settings → API Keys → *Secret keys* (`sb_secret_…`). The legacy `SUPABASE_SERVICE_ROLE_KEY` is accepted too. Server-only; never `NEXT_PUBLIC_`. |
 | `GOOGLE_CLIENT_ID` | yes | The **Web application** OAuth client in Google Cloud (see §3). |
 | `GOOGLE_CLIENT_SECRET` | yes | Its secret. Also used to sign the OAuth state cookie. |
-| `NEXT_PUBLIC_APP_URL` | **yes in prod** | `https://www.clarix.se` (no trailing slash). Pins the redirect URI so it matches Google byte-for-byte. |
+| `NEXT_PUBLIC_APP_URL` | **yes in prod** | `https://www.clarix.se` (no trailing slash). Used **only** by the Google data grant (`/api/google/oauth/*`) to pin the redirect URI Google matches byte-for-byte; a start on any other host is first sent to this host. Clarix sign-in never uses it — `/auth/callback` always redirects back to the host the request arrived on, so the session cookies it just wrote are the ones the next request sends. |
 
 Why `SUPABASE_SECRET_KEY` is required: `google_connections` has RLS enabled
 and **no** policies, so refresh tokens are unreadable from the browser. Only
@@ -214,7 +214,21 @@ expiry.
 Supabase → Authentication → URL Configuration:
 
 - **Site URL:** `https://www.clarix.se`
-- **Redirect URLs:** `https://www.clarix.se/**` (already set), plus `http://localhost:3000/**` for dev.
+- **Redirect URLs:** one entry per host people can sign in from, because
+  `/login` sends `redirectTo: <current origin>/auth/callback` and the
+  callback keeps the browser on that same origin:
+  - `https://www.clarix.se/**`
+  - `http://localhost:3000/**`
+  - `https://*-<vercel-team>.vercel.app/**` if you sign in on preview deploys
+  - `https://clarix.se/**` only if the apex ever serves the app instead of redirecting to www.
+  A host missing here makes Supabase fall back to the Site URL, which moves
+  the browser to www with no session cookies for it — the exact "I signed
+  in and I'm still signed out" symptom.
+
+**Verify:** sign in on each host you listed and confirm the URL bar stays on
+that host through `/auth/callback` → `/dashboard`. The Vercel function log
+line `[auth/callback] { outcome: "exchange_ok", requestOrigin, redirectOrigin … }`
+must show the same origin in both fields.
 
 Supabase → Authentication → Providers → Google: enabled, client ID/secret as in
 §3. No analytics scopes are configured or requested here any more.
@@ -274,8 +288,11 @@ Run after deploying. Each step names the state the UI must show.
 25. Delete the `sb-*` cookies while on `/dashboard`, click a nav link → one redirect to `/login`, no loop; sign in → `/dashboard`.
 26. Wait for the Supabase access token to expire (1 h) with a tab open, then navigate → still signed in (refresh token used), no re-login.
 27. Sign out → sign in as the other test account → nothing from the first account (workspaces, Google card) is visible.
+28. Sign in with Google on `www.clarix.se`, on a preview host, and on localhost: each time the browser stays on the host it started on all the way to `/dashboard`, and the response header `x-clarix-auth` on the dashboard request reads `authenticated`.
+29. Email/password sign-in → the page does a full navigation to `/dashboard` and the very next request is recognised (no bounce back to `/login`).
+30. Block `https://<project-ref>.supabase.co` in the browser's devtools (network request blocking) and reload `/dashboard` → the page loads without redirecting to `/login`; API calls answer 503 `auth_unavailable`; unblock and reload → signed in, no re-login needed.
 
 **E. Failure honesty**
-28. Temporarily set `GOOGLE_CLIENT_SECRET` to garbage on a preview deploy → `/integrations` says *Kunde inte kontrollera* / server config, **not** *Behöver förnyas*; `google_connections.status` stays `active`. Restore the secret → *Ansluten* without reconnecting.
-29. Vercel logs never contain an access or refresh token value (search for `ya29.` and `1//`).
-30. In the SQL editor as `authenticated` (e.g. `set role authenticated;` in a transaction, then `select * from connected_sources;` / `google_connections`) → permission denied on both.
+31. Temporarily set `GOOGLE_CLIENT_SECRET` to garbage on a preview deploy → `/integrations` says *Kunde inte kontrollera* / server config, **not** *Behöver förnyas*; `google_connections.status` stays `active`. Restore the secret → *Ansluten* without reconnecting.
+32. Vercel logs never contain an access or refresh token value (search for `ya29.` and `1//`).
+33. In the SQL editor as `authenticated` (e.g. `set role authenticated;` in a transaction, then `select * from connected_sources;` / `google_connections`) → permission denied on both.

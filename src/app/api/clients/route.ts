@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getAuthedContext, unauthorizedJson } from "@/lib/auth/server";
+import { requireUser } from "@/lib/auth/server";
 import { createClientWorkspace, fillClientDomainIfEmpty, listClients } from "@/lib/clients/server";
 import { domainFromUrl } from "@/lib/clients/naming";
 import type { ClientsResponse } from "@/lib/clients/types";
@@ -27,8 +27,8 @@ const createSchema = z.object({
 });
 
 export async function GET() {
-  const ctx = await getAuthedContext();
-  if (!ctx) return unauthorizedJson();
+  const ctx = await requireUser();
+  if (!ctx.ok) return ctx.response;
 
   try {
     const [clients, google] = await Promise.all([
@@ -53,8 +53,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: { type: "validation", message: "Invalid workspace payload." } }, { status: 400 });
   }
 
-  const ctx = await getAuthedContext();
-  if (!ctx) return unauthorizedJson();
+  const ctx = await requireUser();
+  if (!ctx.ok) return ctx.response;
 
   try {
     const input = parsed.data;

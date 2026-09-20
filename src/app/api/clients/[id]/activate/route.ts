@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getAuthedContext, unauthorizedJson } from "@/lib/auth/server";
+import { requireUser } from "@/lib/auth/server";
 import { ClientNotFoundError, setActiveClient } from "@/lib/clients/server";
 
 export const dynamic = "force-dynamic";
@@ -15,8 +15,8 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ error: { type: "validation", message: "Invalid workspace id." } }, { status: 400 });
   }
 
-  const ctx = await getAuthedContext();
-  if (!ctx) return unauthorizedJson();
+  const ctx = await requireUser();
+  if (!ctx.ok) return ctx.response;
 
   try {
     await setActiveClient(ctx.supabase, ctx.user.id, id);

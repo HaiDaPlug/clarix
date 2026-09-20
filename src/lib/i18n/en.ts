@@ -242,6 +242,7 @@ const en: Translations = {
     errorInvalidCredentials: "Incorrect email or password.",
     errorEmailNotConfirmed: "Check your inbox to confirm your email before signing in.",
     errorGeneric: "Something went wrong. Try again.",
+    errorAuthUnavailable: "The sign-in service did not respond right now. Your session is unchanged — try again in a moment.",
     retryClearSession: "Clear and try again",
     successSignup: "Account created — check your inbox to confirm your email.",
   },

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAuthedContext, unauthorizedJson } from "@/lib/auth/server";
+import { requireUser } from "@/lib/auth/server";
 import { getGoogleConnectionHealth, getGoogleConnectionStore } from "@/lib/google/connection";
 
 export const dynamic = "force-dynamic";
@@ -9,8 +9,8 @@ export const dynamic = "force-dynamic";
 // thinks of the refresh token right now — used by the Integrations page,
 // which must never show a green badge for a dead grant.
 export async function GET(request: Request) {
-  const ctx = await getAuthedContext();
-  if (!ctx) return unauthorizedJson();
+  const ctx = await requireUser();
+  if (!ctx.ok) return ctx.response;
 
   const verify = new URL(request.url).searchParams.get("verify") === "1";
 
