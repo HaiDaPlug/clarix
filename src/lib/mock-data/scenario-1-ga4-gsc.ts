@@ -74,7 +74,7 @@ export const scenario1: ReportData = {
         previousValue: 11.2,
         unit: "number",
         trend: "up",
-        trendGood: true,
+        trendGood: false,
       },
       {
         label: "CTR",
@@ -90,7 +90,7 @@ export const scenario1: ReportData = {
         previousValue: 47.1,
         unit: "percent",
         trend: "down",
-        trendGood: true,
+        trendGood: false,
       },
     ],
   },
@@ -134,7 +134,7 @@ export const scenario1: ReportData = {
       previousValue: 47.1,
       unit: "percent",
       trend: "down",
-      trendGood: true,
+      trendGood: false,
     },
     avgSessionDuration: {
       label: "Genomsn. sessionslängd",
@@ -190,7 +190,7 @@ export const scenario1: ReportData = {
       previousValue: 11.2,
       unit: "number",
       trend: "up",
-      trendGood: true,
+      trendGood: false,
     },
     avgCtr: {
       label: "Genomsn. CTR",

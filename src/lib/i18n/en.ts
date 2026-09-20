@@ -144,7 +144,7 @@ const en: Translations = {
       engagement: "Engagement",
       paidEfficiency: "Paid efficiency",
       conversions: "Conversions",
-      vsPrior: "vs prior",
+      vsPrior: "Vs previous",
     },
     sessions: {
       eyebrow: "Visits over time",

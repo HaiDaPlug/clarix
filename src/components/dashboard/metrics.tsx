@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { formatChange, formatNumber } from "@/lib/utils/format";
 import { DashboardItemId } from "@/types/dashboard";
 import { Metric } from "@/types/schema";
@@ -73,19 +74,25 @@ export function getRegistryInsight(itemId: DashboardItemId, metric: Metric, data
   }
 }
 
+/** Signed change against the previous period. Green only when the movement
+ *  is good for the business, so a falling cost reads green and a falling
+ *  conversion rate reads red. Flat and unknown render nothing. */
 export function DeltaText({ metric, itemId }: { metric: Metric; itemId?: DashboardItemId }) {
   const state = getChangeState(metric, itemId);
   if (!state || state.change.direction === "flat") return null;
 
   return (
     <span
+      className="inline-flex items-center gap-0.5 tabular-nums"
       style={{
-        fontSize: "10px",
-        fontWeight: 600,
+        fontSize: "12px",
+        fontWeight: 700,
         color: state.isGood ? "var(--signal-up)" : "var(--signal-down)",
       }}
     >
-      {state.change.direction === "up" ? "↑" : "↓"}
+      {state.change.direction === "up"
+        ? <ArrowUpRight className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
+        : <ArrowDownRight className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />}
       {state.change.value}
     </span>
   );
@@ -93,26 +100,22 @@ export function DeltaText({ metric, itemId }: { metric: Metric; itemId?: Dashboa
 
 export function MetricTile({ metric, itemId }: { metric: Metric; itemId?: DashboardItemId }) {
   return (
-    <div>
-      <p className="eyebrow mb-1.5" style={{ color: "var(--slate)" }}>
-        {metric.label}
-      </p>
+    <div className="flex min-w-0 flex-col gap-1.5">
+      <p className="eyebrow truncate">{metric.label}</p>
       <p
+        className="font-stat"
         style={{
-          fontFamily: "var(--font-numeric)",
           fontVariantNumeric: "tabular-nums",
-          fontSize: "1.6rem",
+          fontSize: "1.5rem",
           fontWeight: 600,
           lineHeight: 1,
-          letterSpacing: "-0.03em",
-          color: "var(--charcoal)",
+          letterSpacing: "-0.02em",
+          color: "var(--text-primary)",
         }}
       >
         {formatNumber(metric.value, metric.unit)}
       </p>
-      <div className="mt-1">
-        <DeltaText metric={metric} itemId={itemId} />
-      </div>
+      <DeltaText metric={metric} itemId={itemId} />
     </div>
   );
 }

@@ -155,7 +155,7 @@ const sv = {
       engagement: "Engagemang",
       paidEfficiency: "Betald effektivitet",
       conversions: "Konverteringar",
-      vsPrior: "mot föreg.",
+      vsPrior: "Mot föregående",
     },
     sessions: {
       eyebrow: "Besök över tid",

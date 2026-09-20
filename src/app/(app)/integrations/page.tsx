@@ -1,7 +1,7 @@
 "use client";
 
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AI_GRADIENT, AI_BORDER } from "@/components/report/tokens";
+import { NoiseTexture } from "@/components/ui/noise-texture";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -394,39 +394,44 @@ function IntegrationsPageInner() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: EASING }}
-          className="relative overflow-hidden rounded-3xl px-5 py-8 sm:px-12 sm:py-14"
+          className="relative overflow-hidden px-5 py-8 sm:px-12 sm:py-14"
           style={{
-            background: AI_GRADIENT,
-            border: `1px solid ${AI_BORDER}`,
+            // Same surface as the dashboard's summary panel: the aurora wash,
+            // two glow pools and a little grain, with a real dark variant.
+            background: "var(--insight-gradient)",
+            border: "1px solid var(--insight-border)",
+            borderRadius: "var(--radius-panel)",
           }}
         >
           <div
-            className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full blur-3xl"
-            style={{ background: "oklch(0.62 0.22 295 / 0.08)" }}
+            className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full opacity-60 blur-3xl"
+            style={{ background: "radial-gradient(circle, var(--insight-glow-b), transparent 70%)" }}
+            aria-hidden
           />
           <div
-            className="pointer-events-none absolute -bottom-32 -left-16 h-72 w-72 rounded-full blur-3xl"
-            style={{ background: "oklch(0.62 0.22 295 / 0.05)" }}
+            className="pointer-events-none absolute -bottom-32 -left-16 h-72 w-72 rounded-full opacity-60 blur-3xl"
+            style={{ background: "radial-gradient(circle, var(--insight-glow-a), transparent 70%)" }}
+            aria-hidden
           />
+          <NoiseTexture preset="fine" blendMode="soft-light" opacity={0.3} />
 
           <div className="relative flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-xl">
               <span
                 className="inline-flex items-center gap-2 rounded-full px-3 py-1"
                 style={{
-                  border: "1px solid rgba(139,92,246,0.25)",
-                  background: "rgba(255,255,255,0.6)",
-                  backdropFilter: "blur(8px)",
+                  border: "1px solid var(--insight-border)",
+                  background: "var(--insight-card)",
                   fontSize: "11px",
                   fontWeight: 600,
                   letterSpacing: "0.18em",
                   textTransform: "uppercase",
-                  color: "oklch(0.45 0.18 290)",
+                  color: "var(--insight-accent)",
                 }}
               >
                 <span
                   className="h-1.5 w-1.5 rounded-full"
-                  style={{ background: "oklch(0.62 0.22 295)" }}
+                  style={{ background: "var(--insight-accent)" }}
                 />
                 Anslutningar
               </span>
@@ -438,7 +443,7 @@ function IntegrationsPageInner() {
                   fontSize: "clamp(2rem, 4vw, 2.75rem)",
                   fontWeight: 700,
                   letterSpacing: "-0.025em",
-                  color: "oklch(0.14 0.02 280)",
+                  color: "var(--insight-text)",
                 }}
               >
                 Koppla dina viktigaste kanaler{" "}
@@ -459,7 +464,7 @@ function IntegrationsPageInner() {
                 className="mt-5"
                 style={{
                   fontSize: "15px",
-                  color: "oklch(0.38 0.06 280)",
+                  color: "var(--insight-text)",
                   lineHeight: 1.65,
                   maxWidth: "420px",
                 }}
@@ -477,7 +482,7 @@ function IntegrationsPageInner() {
                 <span
                   style={{
                     fontSize: "13px",
-                    color: "oklch(0.38 0.06 280)",
+                    color: "var(--insight-muted)",
                     fontWeight: 500,
                   }}
                 >
@@ -495,15 +500,15 @@ function IntegrationsPageInner() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.25 + i * 0.08, ease: EASING }}
-                    className="absolute flex items-center justify-center rounded-2xl border bg-white"
+                    className="absolute flex items-center justify-center rounded-2xl border"
                     style={{
                       width: 56,
                       height: 56,
                       left: i * 62,
                       top: i % 2 === 1 ? 20 : 0,
-                      borderColor: "rgba(139,92,246,0.15)",
-                      boxShadow:
-                        "0 8px 32px -8px rgba(139,92,246,0.2), 0 2px 8px rgba(0,0,0,0.06)",
+                      background: "var(--surface-card)",
+                      borderColor: "var(--insight-border)",
+                      boxShadow: "var(--shadow-raised)",
                     }}
                   >
                     <Logo className="h-7 w-7" />

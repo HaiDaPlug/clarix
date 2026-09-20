@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type ComponentPropsWithoutRef } from "react";
-import { useInView, useMotionValue, useSpring } from "motion/react";
+import { useInView, useMotionValue, useReducedMotion, useSpring } from "motion/react";
 
 import { cn } from "@/lib/utils";
 
@@ -29,6 +29,9 @@ export function NumberTicker({
   ...props
 }: NumberTickerProps) {
   const ref = useRef<HTMLSpanElement>(null);
+  // A count-up is motion; people who asked for less of it get the final value.
+  const prefersReduced = useReducedMotion();
+  const shouldAnimate = animate && !prefersReduced;
   const motionValue = useMotionValue(direction === "down" ? value : startValue);
   const springValue = useSpring(motionValue, {
     damping: 40,
@@ -47,7 +50,7 @@ export function NumberTicker({
   };
 
   useEffect(() => {
-    if (!animate) {
+    if (!shouldAnimate) {
       if (ref.current) ref.current.textContent = formatValue(value);
       return;
     }
@@ -66,17 +69,17 @@ export function NumberTicker({
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [motionValue, isInView, delay, value, direction, startValue, animate]);
+  }, [motionValue, isInView, delay, value, direction, startValue, shouldAnimate]);
 
   useEffect(() => {
-    if (!animate) return;
+    if (!shouldAnimate) return;
     return springValue.on("change", (latest) => {
       if (ref.current) {
         ref.current.textContent = formatValue(latest);
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [springValue, decimalPlaces, format, animate]);
+  }, [springValue, decimalPlaces, format, shouldAnimate]);
 
   return (
     <span
@@ -84,7 +87,7 @@ export function NumberTicker({
       className={cn("inline-block tabular-nums", className)}
       {...props}
     >
-      {animate ? formatValue(startValue) : formatValue(value)}
+      {shouldAnimate ? formatValue(startValue) : formatValue(value)}
     </span>
   );
 }

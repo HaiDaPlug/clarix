@@ -40,7 +40,7 @@ export const scenario3: ReportData = {
     metrics: [
       { label: "GSC-klick", value: 3_420, previousValue: 3_080, unit: "number", trend: "up", trendGood: true },
       { label: "GSC-visningar", value: 94_200, previousValue: 88_400, unit: "number", trend: "up", trendGood: true },
-      { label: "Genomsn. position", value: 14.2, previousValue: 16.1, unit: "number", trend: "up", trendGood: true },
+      { label: "Genomsn. position", value: 14.2, previousValue: 16.1, unit: "number", trend: "up", trendGood: false },
     ],
   },
 
@@ -49,7 +49,7 @@ export const scenario3: ReportData = {
   seoOverview: {
     totalClicks: { label: "Totala klick", value: 3_420, previousValue: 3_080, unit: "number", trend: "up", trendGood: true },
     totalImpressions: { label: "Totala visningar", value: 94_200, previousValue: 88_400, unit: "number", trend: "up", trendGood: true },
-    avgPosition: { label: "Genomsn. position", value: 14.2, previousValue: 16.1, unit: "number", trend: "up", trendGood: true },
+    avgPosition: { label: "Genomsn. position", value: 14.2, previousValue: 16.1, unit: "number", trend: "up", trendGood: false },
     avgCtr: { label: "Genomsn. CTR", value: 3.6, previousValue: 3.5, unit: "percent", trend: "up", trendGood: true },
     timeSeries: [
       { date: "2026-03-01", value: 90 },

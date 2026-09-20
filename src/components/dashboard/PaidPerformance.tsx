@@ -1,15 +1,16 @@
 "use client";
 
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import { AssembledDashboardItem } from "@/types/dashboard";
 import { Metric, ReportData } from "@/types/schema";
 import { useLocale } from "@/lib/i18n";
 import { MetricTile } from "@/components/dashboard/metrics";
 
-const EASE_OUT = [0.0, 0.0, 0.2, 1] as const;
+const EASE_OUT = [0.25, 0.1, 0.25, 1] as const;
 
 export function PaidPerformance({ item, data }: { item: AssembledDashboardItem; data: ReportData }) {
   const { t } = useLocale();
+  const prefersReduced = useReducedMotion();
   const paid = data.paidOverview;
   if (!paid) return null;
 
@@ -19,24 +20,26 @@ export function PaidPerformance({ item, data }: { item: AssembledDashboardItem; 
     : [paid.totalSpend, paid.totalClicks];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
+    <motion.section
+      initial={prefersReduced ? false : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.45, ease: EASE_OUT, delay: 0.2 }}
-      className="rounded-2xl p-6"
-      style={{ backgroundColor: "var(--bone)", border: "1px solid var(--rule)" }}
+      transition={{ duration: 0.35, ease: EASE_OUT }}
+      className="surface-card p-5 sm:p-6"
     >
-      <p className="eyebrow mb-1" style={{ color: "var(--slate)" }}>{t.dashboard.paid.eyebrow}</p>
+      <p className="eyebrow">{t.dashboard.paid.eyebrow}</p>
       {isFull && (
-        <p style={{ fontFamily: "var(--font-display)", fontSize: "1.5rem", fontWeight: 700, color: "var(--charcoal)", marginBottom: "20px", letterSpacing: "-0.025em" }}>
+        <h3
+          className="font-display"
+          style={{ fontSize: "1.2rem", fontWeight: 600, letterSpacing: "-0.015em", lineHeight: 1.25, color: "var(--text-primary)", marginTop: "6px" }}
+        >
           {t.registry.paidPerformance.narrative}
-        </p>
+        </h3>
       )}
-      <div className="grid grid-cols-2 gap-x-6 gap-y-6" style={{ marginTop: isFull ? 0 : "16px" }}>
+      <div className="grid grid-cols-2 gap-x-6 gap-y-5" style={{ marginTop: "20px" }}>
         {metrics.map((metric) => (
           <MetricTile key={metric.label} metric={metric} />
         ))}
       </div>
-    </motion.div>
+    </motion.section>
   );
 }

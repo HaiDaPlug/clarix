@@ -91,6 +91,45 @@
   --font-body: 'Satoshi', system-ui, sans-serif;
   --font-numeric: 'Bricolage Grotesque', system-ui, sans-serif;
 
+  /* Semantic roles — app surfaces use these. The brand names above stay for
+     the report deck and older screens; both themes define every role, so a
+     card never has to guess which of --bone / --parchment is "the light one". */
+  --surface-page: #ffffff;
+  --surface-card: #ffffff;
+  --surface-tint: #F5F3EF;
+  --surface-raised: #ffffff;
+  --text-primary: #1A1916;
+  --text-secondary: #6B6760;
+  --text-tertiary: #9B9894;
+  --line: #E2DFDA;
+  --line-soft: #EEECE8;
+
+  /* Interpretation / AI insight — lavender is Clarix's "we read this for you" colour */
+  --insight-surface: oklch(0.965 0.028 295);
+  /* The aurora wash on the summary panel: lavender → periwinkle → blush, with
+     two soft pools of colour. Same values the report's AI_GRADIENT uses. */
+  --insight-gradient: linear-gradient(135deg, oklch(0.97 0.04 300) 0%, oklch(0.96 0.05 260) 50%, oklch(0.97 0.04 350) 100%);
+  --insight-glow-a: oklch(0.85 0.16 300 / 0.55);
+  --insight-glow-b: oklch(0.86 0.14 220 / 0.5);
+  --insight-card: oklch(1 0 0 / 0.72);
+  --insight-border: oklch(0.87 0.055 295);
+  --insight-text: oklch(0.23 0.045 290);
+  --insight-muted: oklch(0.42 0.09 290);
+  --insight-accent: oklch(0.52 0.19 292);
+
+  /* Brand — the aurora trio, for signature moments only */
+  --brand-pink: #FF4D9E;
+  --brand-coral: #FF6B55;
+  --brand-amber: #FFB830;
+  --brand-gradient: linear-gradient(135deg, #FF4D9E 0%, #FF6B55 50%, #FFB830 100%);
+
+  /* Shape & depth: controls 10, cards 16, signature panels 20. Ordinary cards
+     get a border; only floating things (menus, dialogs) get the raised shadow. */
+  --radius-control: 10px;
+  --radius-card: 16px;
+  --radius-panel: 20px;
+  --shadow-raised: 0 1px 2px rgba(20, 18, 16, 0.06), 0 12px 32px -12px rgba(20, 18, 16, 0.18);
+
   /* shadcn tokens */
   --background: #ffffff;
   --foreground: #1A1916;
@@ -149,10 +188,35 @@ html[data-magicui-theme-vt="active"]::view-transition-group(root) {
 }
 
 .dark {
-  /* Brand palette — true dark, high contrast */
-  --bone: #ffffff;
-  --bone-dark: #1e1c1a;
+  /* Brand palette — true dark, high contrast.
+     --bone is the card surface, so it darkens with the page: white here put
+     near-white --charcoal text on a white card across the whole app shell. */
+  --bone: #1c1a18;
+  --bone-dark: #262422;
   --parchment: #131211;
+
+  --surface-page: #131211;
+  --surface-card: #1c1a18;
+  --surface-tint: #262422;
+  --surface-raised: #242220;
+  --text-primary: #f5f3f0;
+  --text-secondary: #a8a4a0;
+  --text-tertiary: #8a867f; /* 4.6:1 on the card surface — axis ticks stay legible */
+  --line: #2e2c2a;
+  --line-soft: #262422;
+
+  --insight-surface: oklch(0.25 0.045 295);
+  --insight-gradient: linear-gradient(135deg, oklch(0.28 0.06 300) 0%, oklch(0.25 0.06 262) 50%, oklch(0.27 0.05 345) 100%);
+  --insight-glow-a: oklch(0.5 0.17 300 / 0.45);
+  --insight-glow-b: oklch(0.48 0.14 225 / 0.4);
+  --insight-card: oklch(0.19 0.03 295 / 0.65);
+  --insight-border: oklch(0.36 0.07 295);
+  --insight-text: oklch(0.95 0.015 295);
+  --insight-muted: oklch(0.8 0.06 295);
+  --insight-accent: oklch(0.8 0.11 292);
+
+  --brand-coral: #FF7A66;
+  --shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 32px -12px rgba(0, 0, 0, 0.6);
   --charcoal: #f5f3f0;
   --charcoal-mid: #d8d5d0;
   --slate: #a8a4a0;
@@ -252,13 +316,21 @@ html[data-magicui-theme-vt="active"]::view-transition-group(root) {
   font-feature-settings: "tnum" 1;
 }
 
+/* Section labels. 12px and modest tracking: readable first, "designed" second. */
 .eyebrow {
   font-family: var(--font-body);
-  font-size: 10.5px;
+  font-size: 12px;
   font-weight: 500;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--slate);
+  color: var(--text-secondary);
+}
+
+/* The ordinary app card: quiet border, no shadow. */
+.surface-card {
+  background: var(--surface-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
 }
 
 .label-xs {
@@ -283,9 +355,9 @@ html[data-magicui-theme-vt="active"]::view-transition-group(root) {
 /* ─── Recharts overrides ──────────────────────────────────────────────────── */
 
 .recharts-tooltip-wrapper { outline: none; }
-.recharts-cartesian-axis-tick-value { font-size: 11px; fill: var(--slate-light); }
+.recharts-cartesian-axis-tick-value { font-size: 11px; fill: var(--text-tertiary); font-variant-numeric: tabular-nums; }
 .recharts-cartesian-grid-horizontal line,
-.recharts-cartesian-grid-vertical line { stroke: var(--rule-light); }
+.recharts-cartesian-grid-vertical line { stroke: var(--line-soft); }
 
 /* ─── Date range picker ───────────────────────────────────────────────────── */
 

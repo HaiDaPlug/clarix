@@ -18,7 +18,7 @@ function KeyBadge({ children, wide }: KeyBadgeProps) {
         // Was 0.95 + backdropFilter blur(8px): the blur only acted on the 5%
         // transmission, so a touch more opacity reads identically without the
         // per-scroll filter cost.
-        backgroundColor: "rgba(245,243,239,0.97)",
+        backgroundColor: "var(--surface-tint)",
         boxShadow: "0 2px 0 var(--rule)",
         fontSize: "16px",
         fontWeight: 500,
