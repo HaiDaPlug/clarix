@@ -119,31 +119,7 @@ export function DashboardHero({
   };
 
   return (
-    <motion.section
-      initial={prefersReduced ? false : { opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.45, ease: EASE_OUT }}
-      aria-busy={loading}
-      className="relative flex flex-1 flex-col overflow-hidden p-5 sm:p-10 lg:p-14"
-      style={{
-        background: "var(--insight-gradient)",
-        border: "1px solid var(--insight-border)",
-        borderRadius: "var(--radius-panel)",
-      }}
-    >
-      {/* The aurora: a gradient wash with two soft pools of colour and a
-          little grain. Both themes define the values, so it holds in dark. */}
-      <div
-        className="pointer-events-none absolute -left-20 -top-32 h-80 w-80 rounded-full opacity-60 blur-3xl"
-        style={{ background: "radial-gradient(circle, var(--insight-glow-a), transparent 70%)" }}
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute -bottom-32 -right-10 h-96 w-96 rounded-full opacity-60 blur-3xl"
-        style={{ background: "radial-gradient(circle, var(--insight-glow-b), transparent 70%)" }}
-        aria-hidden
-      />
-      <NoiseTexture preset="fine" blendMode="soft-light" opacity={0.3} />
+    <AuroraPanel busy={loading}>
 
       <div className="relative z-10 mx-auto grid w-full max-w-[1400px] flex-1 grid-cols-1 content-center items-center gap-8 sm:gap-10 lg:grid-cols-12 lg:gap-14">
         {/* Left: label + the conclusion. The headline is the one place every
@@ -220,6 +196,96 @@ export function DashboardHero({
           </button>
         </div>
       )}
+    </AuroraPanel>
+  );
+}
+
+/** The summary panel's surface: the aurora wash with two soft pools of colour
+ *  and a little grain. Both themes define the values, so it holds in dark.
+ *  Shared by the opening and its blocking-state variant so they can't drift. */
+function AuroraPanel({ busy, children }: { busy?: boolean; children: React.ReactNode }) {
+  const prefersReduced = useReducedMotion();
+  return (
+    <motion.section
+      initial={prefersReduced ? false : { opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.45, ease: EASE_OUT }}
+      aria-busy={busy}
+      className="relative flex flex-1 flex-col overflow-hidden p-5 sm:p-10 lg:p-14"
+      style={{
+        background: "var(--insight-gradient)",
+        border: "1px solid var(--insight-border)",
+        borderRadius: "var(--radius-panel)",
+      }}
+    >
+      <div
+        className="pointer-events-none absolute -left-20 -top-32 h-80 w-80 rounded-full opacity-60 blur-3xl"
+        style={{ background: "radial-gradient(circle, var(--insight-glow-a), transparent 70%)" }}
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute -bottom-32 -right-10 h-96 w-96 rounded-full opacity-60 blur-3xl"
+        style={{ background: "radial-gradient(circle, var(--insight-glow-b), transparent 70%)" }}
+        aria-hidden
+      />
+      <NoiseTexture preset="fine" blendMode="soft-light" opacity={0.3} />
+      {children}
     </motion.section>
+  );
+}
+
+/**
+ * The opening when there are no numbers to interpret: Google needs a new
+ * grant, Google didn't answer, the period is empty, or the fetch failed.
+ * Same surface and rhythm as the summary: the period, one headline with the
+ * coral full stop, one sentence, one action. Nothing else on the page
+ * competes with it.
+ */
+export function DashboardStatePanel({
+  eyebrow,
+  title,
+  body,
+  action,
+}: {
+  eyebrow: string;
+  title: string;
+  body: string;
+  action: { label: string; href: string } | { label: string; onClick: () => void };
+}) {
+  return (
+    <AuroraPanel>
+      <div role="status" className="relative z-10 flex max-w-2xl flex-1 flex-col justify-center gap-4">
+        <p className="eyebrow" style={{ color: "var(--insight-accent)" }}>{eyebrow}</p>
+        <h2
+          className="font-display"
+          style={{
+            fontSize: "clamp(2rem, 1.4rem + 1.8vw, 3rem)",
+            fontWeight: 700,
+            lineHeight: 1.1,
+            letterSpacing: "-0.025em",
+            color: "var(--insight-text)",
+            textWrap: "balance",
+          }}
+        >
+          {title}
+          <span style={{ color: "var(--brand-coral)" }}>.</span>
+        </h2>
+        <p style={{ fontSize: "clamp(1.05rem, 1rem + 0.3vw, 1.25rem)", lineHeight: 1.5, color: "var(--insight-text)", maxWidth: "46ch" }}>
+          {body}
+        </p>
+        <div className="mt-2">
+          {"href" in action ? (
+            <Link href={action.href} className="btn btn-primary">
+              {action.label}
+              <ArrowRight className="h-4 w-4" strokeWidth={2.25} aria-hidden />
+            </Link>
+          ) : (
+            <button type="button" onClick={action.onClick} className="btn btn-primary">
+              {action.label}
+            </button>
+          )}
+        </div>
+      </div>
+    </AuroraPanel>
   );
 }

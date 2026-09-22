@@ -10,7 +10,7 @@ import type { AiInsightsPayload } from "@/lib/hooks/useAiInsights";
 import type { WorkspaceSummary } from "@/lib/report-data/server";
 import type { AssembledDashboard, AssembledDashboardItem } from "@/types/dashboard";
 import type { ReportData } from "@/types/schema";
-import { DashboardHero } from "@/components/dashboard/DashboardHero";
+import { DashboardHero, DashboardStatePanel } from "@/components/dashboard/DashboardHero";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { SessionsChart } from "@/components/dashboard/SessionsChart";
 import { ChannelBreakdown } from "@/components/dashboard/ChannelBreakdown";
@@ -145,26 +145,56 @@ export function DashboardView({
   const chartItems = dashboard.items.filter((item) => item.definition.type === "chart");
   const sectionItems = dashboard.items.filter((item) => item.definition.type === "section");
 
-  const problemText = (() => {
-    if (!problem) return null;
-    if (problem.kind === "reconnect") {
-      return locale === "sv"
-        ? problem.disconnected
-          ? { strong: "Google är inte anslutet.", rest: "Anslut ditt Google-konto för att hämta data.", cta: "Anslut Google →" }
-          : { strong: "Google-åtkomsten behöver förnyas.", rest: "Dina valda egendomar finns kvar — anslut igen så hämtas datan.", cta: "Anslut igen →" }
-        : problem.disconnected
-          ? { strong: "Google is not connected.", rest: "Connect your Google account to fetch data.", cta: "Connect Google →" }
-          : { strong: "Google access needs renewal.", rest: "Your selected properties are kept — reconnect and the data returns.", cta: "Reconnect →" };
-    }
-    if (problem.kind === "unavailable") {
-      return locale === "sv"
-        ? { strong: "Google svarade inte just nu.", rest: "Din anslutning är oförändrad. Försök igen om en stund.", cta: null }
-        : { strong: "Google did not respond right now.", rest: "Your connection is unchanged. Try again in a moment.", cta: null };
-    }
-    return locale === "sv"
-      ? { strong: `${problem.sources.join(" och ")} saknar behörighet till den valda egendomen.`, rest: "Välj en annan egendom under Integrationer.", cta: "Integrationer →" }
-      : { strong: `${problem.sources.join(" and ")} lacks permission to the selected property.`, rest: "Pick another property under Integrations.", cta: "Integrations →" };
-  })();
+  // Only "partial" is a banner; the other problems take over the opening (below).
+  const problemText =
+    problem?.kind !== "partial"
+      ? null
+      : locale === "sv"
+        ? { strong: `${problem.sources.join(" och ")} saknar behörighet till den valda egendomen.`, rest: "Välj en annan egendom under Integrationer.", cta: "Integrationer →" }
+        : { strong: `${problem.sources.join(" and ")} lacks permission to the selected property.`, rest: "Pick another property under Integrations.", cta: "Integrations →" };
+
+  // States with no numbers to show take over the opening panel instead of
+  // stacking banners above an empty page. "partial" keeps its banner: the
+  // other source's numbers are still there.
+  const sv = locale === "sv";
+  const blocking: React.ComponentProps<typeof DashboardStatePanel> | null = isLoadingRealData
+    ? null
+    : problem?.kind === "reconnect"
+      ? problem.disconnected
+        ? {
+            eyebrow: "Google",
+            title: sv ? "Google är inte anslutet" : "Google isn't connected",
+            body: sv ? "Anslut ditt Google-konto så hämtar Clarix siffrorna och skriver periodens sammanfattning." : "Connect your Google account and Clarix fetches the numbers and writes the period's summary.",
+            action: { label: sv ? "Anslut Google" : "Connect Google", href: "/integrations" },
+          }
+        : {
+            eyebrow: sv ? "Google-åtkomst" : "Google access",
+            title: sv ? "Google-åtkomsten behöver förnyas" : "Google access needs renewing",
+            body: sv ? "Dina valda egendomar finns kvar. Anslut igen så hämtas datan." : "Your selected properties are kept. Reconnect and the data returns.",
+            action: { label: sv ? "Anslut Google igen" : "Reconnect Google", href: "/integrations" },
+          }
+      : problem?.kind === "unavailable"
+        ? {
+            eyebrow: activeData.meta.period.label,
+            title: sv ? "Google svarade inte just nu" : "Google didn't respond just now",
+            body: sv ? "Din anslutning är oförändrad. Försök igen om en stund." : "Your connection is unchanged. Try again in a moment.",
+            action: { label: sv ? "Försök igen" : "Try again", onClick: () => window.location.reload() },
+          }
+        : dataError
+          ? {
+              eyebrow: activeData.meta.period.label,
+              title: sv ? "Datan kunde inte hämtas" : "Couldn't load the data",
+              body: dataError,
+              action: { label: sv ? "Försök igen" : "Try again", onClick: () => window.location.reload() },
+            }
+          : noDataForPeriod
+            ? {
+                eyebrow: activeData.meta.period.label,
+                title: sv ? "Ingen data för den här perioden" : "No data for this period",
+                body: sv ? "Google gav inga siffror för perioden, troligen var GA4 inte anslutet då. Välj en annan period uppe till höger, eller kontrollera egendomen." : "Google returned no numbers for this period, likely GA4 wasn't connected then. Pick another period at the top right, or check the property.",
+                action: { label: sv ? "Gå till Integrationer" : "Go to Integrations", href: "/integrations" },
+              }
+            : null;
 
   const busy = isLoadingRealData || aiInsightsLoading;
   const periodLabel = activeData.meta.period.label;
@@ -201,37 +231,25 @@ export function DashboardView({
 
         {problemText && !isLoadingRealData && (
           <Notice
-            tone={problem?.kind === "unavailable" ? "neutral" : "problem"}
-            cta={problemText.cta ? { href: "/integrations", label: problemText.cta } : null}
+            tone="problem"
+            cta={{ href: "/integrations", label: problemText.cta }}
             reduced={reduced}
           >
             <span style={{ fontWeight: 700 }}>{problemText.strong}</span> {problemText.rest}
           </Notice>
         )}
 
-        {noDataForPeriod && !isLoadingRealData && (
-          <Notice tone="neutral" reduced={reduced}>
-            {locale === "sv"
-              ? "Ingen data hittades för den valda perioden. GA4 var troligtvis inte anslutet då."
-              : "No data found for the selected period. GA4 was likely not connected at that time."}
-          </Notice>
-        )}
-
-        {((!hasConnectedSources && !isLoadingRealData) || dataError) && (
+        {!hasConnectedSources && !isLoadingRealData && !dataError && (
           <Notice tone="warn" cta={{ href: "/integrations", label: t.dashboard.sampleBanner.link }} reduced={reduced}>
-            {dataError ?? t.dashboard.sampleBanner.text}{" "}
-            {!hasConnectedSources && !dataError && (
-              <>
-                <span style={{ fontWeight: 700 }}>{t.dashboard.sampleBanner.cta}</span>{" "}
-                {t.dashboard.sampleBanner.suffix}
-              </>
-            )}
+            {t.dashboard.sampleBanner.text}{" "}
+            <span style={{ fontWeight: 700 }}>{t.dashboard.sampleBanner.cta}</span>{" "}
+            {t.dashboard.sampleBanner.suffix}
           </Notice>
         )}
 
         {/* The first screen is the summary alone, on purpose: greeting, then
             the verdict for the period. The KPIs start below the fold. */}
-        {heroItem && (
+        {(heroItem || blocking) && (
           <div className="flex flex-col gap-6 min-h-[calc(100dvh-64px-2rem)] sm:min-h-[calc(100dvh-72px-3rem)]">
             <div>
               <p
@@ -250,16 +268,20 @@ export function DashboardView({
                 )}
               </p>
               <p style={{ marginTop: "6px", fontSize: "15px", color: "var(--text-secondary)", lineHeight: 1.5 }}>
-                {busy ? <TextShimmer width="200px" height="15px" /> : `${periodLabel} · ${ready}`}
+                {busy ? <TextShimmer width="200px" height="15px" /> : blocking ? periodLabel : `${periodLabel} · ${ready}`}
               </p>
             </div>
-            <DashboardHero
-              data={activeData}
-              aiInsights={aiInsights}
-              loading={busy}
-              sample={!hasConnectedSources && !dataError}
-              exploreTargetId={!isLoadingRealData && kpiItems.length > 0 ? METRICS_ID : undefined}
-            />
+            {blocking ? (
+              <DashboardStatePanel {...blocking} />
+            ) : (
+              <DashboardHero
+                data={activeData}
+                aiInsights={aiInsights}
+                loading={busy}
+                sample={!hasConnectedSources && !dataError}
+                exploreTargetId={!isLoadingRealData && kpiItems.length > 0 ? METRICS_ID : undefined}
+              />
+            )}
           </div>
         )}
 
@@ -278,7 +300,7 @@ export function DashboardView({
               <ShimmerCard loading height={260} />
             </div>
           </>
-        ) : (
+        ) : blocking ? null : (
           // The section the opening's cue scrolls to. Its heading answers the
           // cue's promise, so the story continues rather than restarts.
           <div id={METRICS_ID} className="flex flex-col gap-4 sm:gap-6" style={{ scrollMarginTop: "88px" }}>
@@ -316,7 +338,7 @@ export function DashboardView({
           </div>
         )}
 
-        {dashboard.nudge && !isLoadingRealData && (
+        {dashboard.nudge && !isLoadingRealData && !blocking && (
           <Notice tone="neutral" cta={{ href: "/integrations", label: t.dashboard.nudge.link }} reduced={reduced}>
             {dashboard.nudge.message}
           </Notice>
