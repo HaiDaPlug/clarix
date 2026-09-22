@@ -15,9 +15,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="sv" className="h-full antialiased" data-scroll-behavior="smooth">
+    <html lang="sv" className="h-full antialiased" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
-        {/* Apply dark class before first paint to avoid flash */}
+        {/* Apply dark class before first paint to avoid flash. It changes <html>
+            before hydration, hence suppressHydrationWarning on that element. */}
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||(t===null&&window.matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.classList.add('dark')}}catch(e){}})()`,

@@ -299,6 +299,7 @@ function SidebarContent({
                       href={href}
                       onClick={onMobileClose}
                       title={!show ? label : undefined}
+                      aria-current={active ? "page" : undefined}
                       className={cn(
                         "group flex h-9 items-center rounded-md px-2 text-[13.5px] font-medium transition-colors",
                         show ? "gap-2.5" : "justify-center",
@@ -397,7 +398,7 @@ function SidebarContent({
         {/* User row */}
         <div
           className={cn(
-            "flex h-10 items-center gap-2.5 rounded-md px-2 transition-colors hover:bg-[var(--bone-dark)] cursor-default",
+            "flex h-10 items-center gap-2.5 rounded-md px-2",
             !show && "justify-center px-0"
           )}
         >

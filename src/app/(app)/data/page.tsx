@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import { motion } from "motion/react";
+import Link from "next/link";
 import { useDateRange } from "@/lib/google/date-presets";
 import { DateRangePicker } from "@/components/primitives/DateRangePicker";
 import { useLocale } from "@/lib/i18n";
@@ -19,7 +20,7 @@ type CardDef = {
 };
 
 const CARD_DEFS: CardDef[] = [
-  { id: "overview",     label: "Översikt",         accent: "#1A1916", kind: "metrics" },
+  { id: "overview",     label: "Översikt",         accent: "var(--text-primary)", kind: "metrics" },
   { id: "channels",     label: "Kanaler",           accent: "#2D6A4F", kind: "rows", rowValueLabel: "Sessioner" },
   { id: "devices",      label: "Enheter",           accent: "#A05F0A", kind: "rows", rowValueLabel: "Sessioner" },
   { id: "countries",    label: "Länder",            accent: "#1E4A8C", kind: "rows", rowValueLabel: "Sessioner" },
@@ -88,7 +89,7 @@ function MetricsContent({ metrics }: { metrics: Ga4ExplorerMetric[] }) {
               fontSize: "11px",
               letterSpacing: "0.06em",
               textTransform: "uppercase",
-              color: "#1A1916",
+              color: "var(--text-primary)",
               marginBottom: "5px",
               fontFamily: "var(--font-body)",
               fontWeight: 600,
@@ -100,7 +101,7 @@ function MetricsContent({ metrics }: { metrics: Ga4ExplorerMetric[] }) {
                 fontSize: "26px",
                 fontWeight: 700,
                 fontFamily: "var(--font-numeric)",
-                color: m.value === null ? "rgba(26,25,22,0.25)" : "#1A1916",
+                color: m.value === null ? "color-mix(in oklab, var(--text-primary) 25%, transparent)" : "var(--text-primary)",
                 letterSpacing: "-0.03em",
                 lineHeight: 1,
               }}>
@@ -133,7 +134,7 @@ function MetricsContent({ metrics }: { metrics: Ga4ExplorerMetric[] }) {
 function RowsContent({ rows, valueLabel }: { rows: Ga4ExplorerRow[]; valueLabel?: string }) {
   if (rows.length === 0) {
     return (
-      <div style={{ color: "rgba(26,25,22,0.25)", fontSize: "13px", padding: "8px 0" }}>—</div>
+      <div style={{ color: "color-mix(in oklab, var(--text-primary) 25%, transparent)", fontSize: "13px", padding: "8px 0" }}>—</div>
     );
   }
 
@@ -145,12 +146,12 @@ function RowsContent({ rows, valueLabel }: { rows: Ga4ExplorerRow[]; valueLabel?
           justifyContent: "space-between",
           paddingBottom: "6px",
           marginBottom: "4px",
-          borderBottom: "1px solid rgba(26,25,22,0.07)",
+          borderBottom: "1px solid color-mix(in oklab, var(--text-primary) 7%, transparent)",
         }}>
-          <span style={{ fontSize: "11px", letterSpacing: "0.06em", textTransform: "uppercase", color: "#1A1916", fontFamily: "var(--font-body)", fontWeight: 600 }}>
+          <span style={{ fontSize: "11px", letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-primary)", fontFamily: "var(--font-body)", fontWeight: 600 }}>
             Dimension
           </span>
-          <span style={{ fontSize: "11px", letterSpacing: "0.06em", textTransform: "uppercase", color: "#1A1916", fontFamily: "var(--font-body)", fontWeight: 600 }}>
+          <span style={{ fontSize: "11px", letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-primary)", fontFamily: "var(--font-body)", fontWeight: 600 }}>
             {valueLabel}
           </span>
         </div>
@@ -165,13 +166,13 @@ function RowsContent({ rows, valueLabel }: { rows: Ga4ExplorerRow[]; valueLabel?
               alignItems: "center",
               justifyContent: "space-between",
               padding: "7px 0",
-              borderBottom: i < rows.length - 1 ? "1px solid rgba(26,25,22,0.06)" : "none",
+              borderBottom: i < rows.length - 1 ? "1px solid color-mix(in oklab, var(--text-primary) 6%, transparent)" : "none",
               gap: "12px",
             }}
           >
             <span style={{
               fontSize: "14px",
-              color: "#1A1916",
+              color: "var(--text-primary)",
               fontFamily: "var(--font-body)",
               fontWeight: 500,
               overflow: "hidden",
@@ -187,7 +188,7 @@ function RowsContent({ rows, valueLabel }: { rows: Ga4ExplorerRow[]; valueLabel?
                 fontSize: "15px",
                 fontWeight: 700,
                 fontFamily: "var(--font-numeric)",
-                color: r.value === null ? "rgba(26,25,22,0.25)" : "#1A1916",
+                color: r.value === null ? "color-mix(in oklab, var(--text-primary) 25%, transparent)" : "var(--text-primary)",
                 letterSpacing: "-0.02em",
               }}>
                 {r.value !== null ? r.value.toLocaleString("sv-SE") : "—"}
@@ -260,9 +261,9 @@ function DraggableCard({
       style={{
         position: "absolute",
         width: def.kind === "metrics" ? "380px" : "300px",
-        background: "rgba(255, 255, 255, 0.92)",
+        background: "color-mix(in oklab, var(--surface-card) 92%, transparent)",
         backdropFilter: "blur(20px)",
-        border: `1px solid rgba(26,25,22,0.1)`,
+        border: `1px solid color-mix(in oklab, var(--text-primary) 10%, transparent)`,
         borderRadius: "16px",
         boxShadow: "none",
         overflow: "hidden",
@@ -281,9 +282,9 @@ function DraggableCard({
         alignItems: "center",
         gap: "10px",
         padding: "14px 16px 12px",
-        borderBottom: "1px solid rgba(26,25,22,0.07)",
+        borderBottom: "1px solid color-mix(in oklab, var(--text-primary) 7%, transparent)",
       }}>
-        <div style={{ color: "rgba(26,25,22,0.25)", flexShrink: 0, display: "flex" }}>
+        <div style={{ color: "color-mix(in oklab, var(--text-primary) 25%, transparent)", flexShrink: 0, display: "flex" }}>
           <GripIcon />
         </div>
         <div style={{
@@ -300,13 +301,13 @@ function DraggableCard({
           fontFamily: "var(--font-body)",
           letterSpacing: "0.1em",
           textTransform: "uppercase",
-          color: "rgba(26,25,22,0.75)",
+          color: "color-mix(in oklab, var(--text-primary) 75%, transparent)",
           flex: 1,
         }}>
           {def.label}
         </span>
         {isEmpty && (
-          <span style={{ fontSize: "10px", color: "rgba(26,25,22,0.25)", fontFamily: "var(--font-body)" }}>
+          <span style={{ fontSize: "10px", color: "color-mix(in oklab, var(--text-primary) 25%, transparent)", fontFamily: "var(--font-body)" }}>
             Laddar...
           </span>
         )}
@@ -317,7 +318,7 @@ function DraggableCard({
         {isEmpty ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             {[1, 2, 3].map(i => (
-              <div key={i} style={{ height: "12px", borderRadius: "4px", background: "rgba(26,25,22,0.06)", width: `${60 + i * 10}%` }} />
+              <div key={i} style={{ height: "12px", borderRadius: "4px", background: "color-mix(in oklab, var(--text-primary) 6%, transparent)", width: `${60 + i * 10}%` }} />
             ))}
           </div>
         ) : data.kind === "metrics" ? (
@@ -349,11 +350,11 @@ function Toolbar({
       alignItems: "center",
       gap: "6px",
       padding: "6px",
-      background: "rgba(255, 255, 255, 0.92)",
+      background: "color-mix(in oklab, var(--surface-card) 92%, transparent)",
       backdropFilter: "blur(20px)",
-      border: "1px solid rgba(26,25,22,0.1)",
+      border: "1px solid color-mix(in oklab, var(--text-primary) 10%, transparent)",
       borderRadius: "12px",
-      boxShadow: "0 4px 24px rgba(0,0,0,0.4)",
+      boxShadow: "var(--shadow-raised)",
     }}>
       {CARD_DEFS.map(def => (
         <button
@@ -371,32 +372,18 @@ function Toolbar({
             textTransform: "uppercase",
             transition: "all 0.15s ease",
             background: hidden.has(def.id) ? "transparent" : `${def.accent}22`,
-            color: hidden.has(def.id) ? "rgba(26,25,22,0.3)" : def.accent,
+            color: hidden.has(def.id) ? "color-mix(in oklab, var(--text-primary) 30%, transparent)" : def.accent,
             outline: hidden.has(def.id) ? "none" : `1px solid ${def.accent}44`,
           }}
         >
           {def.label}
         </button>
       ))}
-      <div style={{ width: "1px", height: "20px", background: "rgba(26,25,22,0.1)", margin: "0 2px" }} />
+      <div style={{ width: "1px", height: "20px", background: "color-mix(in oklab, var(--text-primary) 10%, transparent)", margin: "0 2px" }} />
       <button
         onClick={onReset}
-        style={{
-          padding: "5px 10px",
-          borderRadius: "7px",
-          border: "none",
-          cursor: "pointer",
-          fontSize: "10px",
-          fontWeight: 700,
-          fontFamily: "var(--font-body)",
-          letterSpacing: "0.06em",
-          textTransform: "uppercase",
-          background: "transparent",
-          color: "rgba(26,25,22,0.35)",
-          transition: "all 0.15s ease",
-        }}
-        onMouseEnter={e => (e.currentTarget.style.color = "rgba(26,25,22,0.75)")}
-        onMouseLeave={e => (e.currentTarget.style.color = "rgba(26,25,22,0.35)")}
+        className="rounded-[7px] px-2.5 py-[5px] text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--text-tertiary)] hover:bg-[var(--hover-surface)] hover:text-[var(--text-primary)]"
+        style={{ fontFamily: "var(--font-body)" }}
       >
         Återställ
       </button>
@@ -449,6 +436,8 @@ function DataPageInner() {
     }
   });
   const [hidden, setHidden] = useState<Set<string>>(new Set());
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   // The GA4 properties assigned to the user's workspaces, active workspace first.
   useEffect(() => {
@@ -483,24 +472,27 @@ function DataPageInner() {
     let cancelled = false;
     async function load() {
       setLoading(true);
+      setFailed(false);
       setExplorerData(null);
 
-      const res = await fetch("/api/ga4-explorer", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ propertyId: activePropertyId, dateRange }),
-      });
-
-      if (cancelled) return;
-      if (res.ok) {
-        const json = await res.json() as Ga4ExplorerData;
-        setExplorerData(json);
+      try {
+        const res = await fetch("/api/ga4-explorer", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ propertyId: activePropertyId, dateRange }),
+        });
+        if (cancelled) return;
+        if (!res.ok) throw new Error(String(res.status));
+        setExplorerData(await res.json() as Ga4ExplorerData);
+      } catch {
+        // Without this the cards would sit on their placeholders forever.
+        if (!cancelled) setFailed(true);
       }
-      setLoading(false);
+      if (!cancelled) setLoading(false);
     }
     load();
     return () => { cancelled = true; };
-  }, [activePropertyId, dateRange.startDate, dateRange.endDate]);
+  }, [activePropertyId, dateRange.startDate, dateRange.endDate, attempt]);
 
   const handleDragEnd = useCallback((id: string, x: number, y: number) => {
     setPositions(prev => {
@@ -533,8 +525,8 @@ function DataPageInner() {
         justifyContent: "space-between",
         padding: "0 32px",
         height: "64px",
-        borderBottom: "1px solid rgba(26,25,22,0.07)",
-        background: "rgba(255,255,255,0.9)",
+        borderBottom: "1px solid color-mix(in oklab, var(--text-primary) 7%, transparent)",
+        background: "color-mix(in oklab, var(--surface-card) 92%, transparent)",
         backdropFilter: "blur(12px)",
         position: "sticky",
         top: 0,
@@ -548,7 +540,7 @@ function DataPageInner() {
             fontFamily: "var(--font-body)",
             letterSpacing: "0.12em",
             textTransform: "uppercase",
-            color: "rgba(26,25,22,0.4)",
+            color: "color-mix(in oklab, var(--text-primary) 40%, transparent)",
           }}>
             GA4 · Explorer
           </span>
@@ -570,8 +562,8 @@ function DataPageInner() {
                     fontFamily: "var(--font-body)",
                     letterSpacing: "0.02em",
                     transition: "all 0.15s ease",
-                    background: activePropertyId === p.property_id ? "#1A1916" : "transparent",
-                    color: activePropertyId === p.property_id ? "#fff" : "rgba(26,25,22,0.5)",
+                    background: activePropertyId === p.property_id ? "var(--text-primary)" : "transparent",
+                    color: activePropertyId === p.property_id ? "var(--surface-page)" : "color-mix(in oklab, var(--text-primary) 50%, transparent)",
                     whiteSpace: "nowrap" as const,
                   }}
                 >
@@ -584,12 +576,12 @@ function DataPageInner() {
           {loading && (
             <div style={{
               width: "5px", height: "5px", borderRadius: "50%",
-              background: "#1A1916",
+              background: "var(--text-primary)",
               animation: "pulse 1.2s ease-in-out infinite",
             }} />
           )}
           {noSource && (
-            <span style={{ fontSize: "12px", color: "rgba(26,25,22,0.4)", fontFamily: "var(--font-body)" }}>
+            <span style={{ fontSize: "12px", color: "color-mix(in oklab, var(--text-primary) 40%, transparent)", fontFamily: "var(--font-body)" }}>
               {locale === "sv" ? "Ingen GA4-källa ansluten" : "No GA4 source connected"}
             </span>
           )}
@@ -611,6 +603,32 @@ function DataPageInner() {
           minHeight: "calc(100dvh - 64px)",
         }}
       >
+        {(noSource || failed) && (
+          <div className="pointer-events-none absolute inset-0 z-[300] flex items-center justify-center p-4">
+            <div className="surface-card pointer-events-auto w-full max-w-sm p-6 text-center" style={{ boxShadow: "var(--shadow-raised)" }} role={failed ? "alert" : "status"}>
+              <p style={{ fontFamily: "var(--font-display)", fontSize: "1.1rem", fontWeight: 600, letterSpacing: "-0.015em", color: "var(--text-primary)" }}>
+                {noSource
+                  ? (locale === "sv" ? "Ingen GA4-källa ännu" : "No GA4 source yet")
+                  : (locale === "sv" ? "Datan kunde inte hämtas" : "Couldn't load the data")}
+              </p>
+              <p className="mx-auto mt-1.5" style={{ fontSize: "13px", lineHeight: 1.55, color: "var(--text-secondary)", maxWidth: "32ch" }}>
+                {noSource
+                  ? (locale === "sv" ? "Välj en Google Analytics-egendom så fylls korten med din trafik." : "Pick a Google Analytics property and these cards fill with your traffic.")
+                  : (locale === "sv" ? "Google svarade inte. Försök igen om en stund." : "Google didn't respond. Try again in a moment.")}
+              </p>
+              {noSource ? (
+                <Link href="/integrations" className="btn btn-primary mt-5">
+                  {locale === "sv" ? "Koppla Google Analytics" : "Connect Google Analytics"}
+                </Link>
+              ) : (
+                <button onClick={() => setAttempt((n) => n + 1)} className="btn btn-primary mt-5">
+                  {locale === "sv" ? "Försök igen" : "Try again"}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Floating toolbar */}
         <div style={{
           position: "absolute",

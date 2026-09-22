@@ -193,7 +193,7 @@ function DonutChart({
         {formatNumber(active ? active.value : totalSessions, "number")}
       </text>
       {active && (
-        <text x={CX} y={CY + 32} textAnchor="middle" style={{ fontFamily: "var(--font-numeric)", fontVariantNumeric: "tabular-nums", fontSize: "12px", fontWeight: 600, fill: active.color, pointerEvents: "none" }}>
+        <text x={CX} y={CY + 32} textAnchor="middle" style={{ fontFamily: "var(--font-numeric)", fontVariantNumeric: "tabular-nums", fontSize: "12px", fontWeight: 600, fill: "var(--text-secondary)", pointerEvents: "none" }}>
           {Math.round(active.share)} %
         </text>
       )}
@@ -275,7 +275,7 @@ export function ChannelBreakdown({ item, data }: { item: AssembledDashboardItem;
                 <div className="flex shrink-0 flex-col items-end gap-0.5">
                   <span
                     className="font-stat tabular-nums"
-                    style={{ fontSize: "1.2rem", fontWeight: 600, letterSpacing: "-0.02em", color: isActive ? color : "var(--text-primary)", lineHeight: 1, transition: "color 0.18s ease" }}
+                    style={{ fontSize: "1.2rem", fontWeight: 600, letterSpacing: "-0.02em", color: "var(--text-primary)", lineHeight: 1 }}
                   >
                     {formatNumber(row.value, "number")}
                   </span>

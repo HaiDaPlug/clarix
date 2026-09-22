@@ -176,14 +176,17 @@ export default function ClientsPage() {
             {copy.heading}
           </h1>
         </div>
-        <button
-          onClick={() => setEditor({ mode: "create" })}
-          className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-opacity hover:opacity-80"
-          style={{ backgroundColor: "var(--charcoal)", color: "var(--parchment)" }}
-        >
-          <Plus className="h-4 w-4" />
-          {copy.newClient}
-        </button>
+        {/* With no clients the empty state carries the one action instead. */}
+        {(loading || clients.length > 0) && (
+          <button
+            onClick={() => setEditor({ mode: "create" })}
+            disabled={loading}
+            className="btn btn-primary shrink-0"
+          >
+            <Plus className="h-4 w-4" />
+            {copy.newClient}
+          </button>
+        )}
       </header>
 
       <main className="flex-1 px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
@@ -192,19 +195,17 @@ export default function ClientsPage() {
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, ease: EASING }}
-            className="mb-5 flex flex-col gap-3 rounded-2xl px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between"
-            style={{ backgroundColor: "var(--bone)", border: "1px solid rgba(201,123,42,0.35)" }}
+            className="notice notice-warn mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
           >
             <div className="flex items-center gap-3">
-              <AlertTriangle className="h-4 w-4 shrink-0" style={{ color: "#C97B2A" }} />
-              <p style={{ fontSize: "13px", color: "var(--charcoal)", lineHeight: 1.45 }}>
+              <AlertTriangle className="h-4 w-4 shrink-0" style={{ color: "var(--warning)" }} aria-hidden />
+              <p style={{ fontSize: "13px", color: "var(--text-primary)", lineHeight: 1.45 }}>
                 {google.status === "reconnect_required" ? copy.googleReconnect : copy.googleDisconnected}
               </p>
             </div>
             <Link
               href="/integrations"
-              className="shrink-0 sm:ml-6"
-              style={{ fontSize: "12px", fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--charcoal)", textDecoration: "none" }}
+              className="btn btn-secondary btn-sm shrink-0 sm:ml-6"
             >
               {copy.googleReconnectCta}
             </Link>
@@ -213,12 +214,11 @@ export default function ClientsPage() {
 
         {error && (
           <div
-            className="mb-5 flex items-start justify-between gap-3 rounded-xl px-4 py-3"
-            style={{ backgroundColor: "rgba(185,28,28,0.06)", border: "1px solid rgba(185,28,28,0.2)" }}
+            className="notice notice-error mb-5 flex items-center justify-between gap-3"
             role="alert"
           >
-            <p style={{ fontSize: "13px", color: "var(--charcoal)" }}>{error}</p>
-            <button onClick={() => setError(null)} aria-label="Stäng" className="rounded-full p-1" style={{ color: "var(--slate)" }}>
+            <p style={{ fontSize: "13px", color: "var(--text-primary)" }}>{error}</p>
+            <button onClick={() => setError(null)} aria-label="Stäng" className="icon-btn -my-1 -mr-1.5">
               <X className="h-3.5 w-3.5" />
             </button>
           </div>
@@ -230,7 +230,7 @@ export default function ClientsPage() {
           transition={{ duration: 0.35, ease: EASING }}
           style={{ fontSize: "13px", color: "var(--slate)", marginBottom: "24px" }}
         >
-          {loading ? "…" : copy.count(clients.length)}
+          {loading ? <span className="skeleton inline-block h-3.5 w-40 align-middle" aria-hidden /> : copy.count(clients.length)}
           {activeClient && !loading && (
             <>
               {" · "}
@@ -244,8 +244,7 @@ export default function ClientsPage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: EASING }}
-            className="mb-6 rounded-2xl p-6 sm:p-8"
-            style={{ backgroundColor: "var(--bone)", border: "1px solid var(--rule)" }}
+            className="surface-card mb-6 p-6 sm:p-8"
           >
             <p style={{ fontFamily: "var(--font-display)", fontSize: "1.2rem", fontWeight: 600, color: "var(--charcoal)", letterSpacing: "-0.02em" }}>
               {copy.emptyTitle}
@@ -255,8 +254,7 @@ export default function ClientsPage() {
             </p>
             <button
               onClick={() => setEditor({ mode: "create" })}
-              className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-opacity hover:opacity-80"
-              style={{ backgroundColor: "var(--charcoal)", color: "var(--parchment)" }}
+              className="btn btn-primary mt-5"
             >
               <Plus className="h-4 w-4" />
               {copy.emptyCta}
@@ -265,6 +263,19 @@ export default function ClientsPage() {
         )}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {/* Placeholders in the shape of a client card while the list loads. */}
+          {loading && [0, 1, 2].map((k) => (
+            <div key={k} className="surface-card p-6" aria-hidden>
+              <div className="skeleton h-12 w-12 rounded-xl" />
+              <div className="skeleton mt-4 h-4 w-2/3" />
+              <div className="skeleton mt-2 h-3 w-1/2" />
+              <div className="mt-4 flex flex-col gap-2 pt-4" style={{ borderTop: "1px solid var(--line)" }}>
+                <div className="skeleton h-3 w-full" />
+                <div className="skeleton h-3 w-5/6" />
+              </div>
+              <div className="skeleton mt-4 h-10 w-full rounded-[var(--radius-control)]" />
+            </div>
+          ))}
           {clients.map((c, i) => {
             const gradient = AVATAR_GRADIENTS[i % AVATAR_GRADIENTS.length];
             const isActivating = activatingId === c.id;
@@ -277,15 +288,9 @@ export default function ClientsPage() {
                 initial={{ opacity: 0, y: 14 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: i * 0.06, ease: EASING }}
-                className="group relative overflow-hidden rounded-2xl p-6"
-                style={{
-                  backgroundColor: "var(--bone)",
-                  border: c.isActive ? "1px solid var(--charcoal)" : "1px solid var(--rule)",
-                  boxShadow: c.isActive ? "0 0 0 3px rgba(20,18,16,0.06)" : undefined,
-                }}
+                className="surface-card relative overflow-hidden p-6"
+                style={c.isActive ? { borderColor: "var(--text-primary)" } : undefined}
               >
-                <div className={`pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-gradient-to-br ${gradient} opacity-20 blur-2xl transition-opacity group-hover:opacity-35`} />
-
                 <div className="relative">
                   <div className="flex items-start justify-between">
                     <div className={`flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${gradient} text-lg font-bold text-white`}>
@@ -296,8 +301,7 @@ export default function ClientsPage() {
                         onClick={() => setEditor({ mode: "edit", client: c })}
                         aria-label={copy.edit}
                         title={copy.edit}
-                        className="inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-[var(--bone-dark)]"
-                        style={{ color: "var(--slate)" }}
+                        className="icon-btn h-11 w-11"
                       >
                         <Pencil className="h-4 w-4" />
                       </button>
@@ -306,8 +310,7 @@ export default function ClientsPage() {
                         disabled={isRemoving}
                         aria-label={copy.remove}
                         title={copy.remove}
-                        className="inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-[var(--bone-dark)] disabled:opacity-40"
-                        style={{ color: "var(--slate)" }}
+                        className="icon-btn h-11 w-11 hover:text-[var(--signal-down)] disabled:opacity-40"
                       >
                         {isRemoving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                       </button>
@@ -342,8 +345,7 @@ export default function ClientsPage() {
                       <button
                         onClick={() => void activate(c)}
                         disabled={isActivating || activatingId !== null}
-                        className="inline-flex min-h-8 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-opacity hover:opacity-80 disabled:opacity-40"
-                        style={{ border: "1px solid var(--rule)", color: "var(--charcoal)", backgroundColor: "transparent" }}
+                        className="btn btn-secondary btn-sm"
                       >
                         {isActivating ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
                         {isActivating ? copy.activating : copy.activate}
@@ -354,8 +356,7 @@ export default function ClientsPage() {
                   <button
                     onClick={() => void activate(c, true)}
                     disabled={activatingId !== null && !isActivating}
-                    className="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-medium transition-colors hover:bg-[var(--bone-dark)] disabled:opacity-40"
-                    style={{ border: "1px solid var(--rule)", color: "var(--charcoal)" }}
+                    className="btn btn-secondary mt-4 w-full"
                   >
                     {copy.open}
                     <ArrowUpRight className="h-3.5 w-3.5" />
@@ -365,14 +366,14 @@ export default function ClientsPage() {
             );
           })}
 
-          {!loading && (
+          {!loading && clients.length > 0 && (
             <motion.button
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: clients.length * 0.06, ease: EASING }}
               onClick={() => setEditor({ mode: "create" })}
-              className="flex min-h-[14rem] items-center justify-center rounded-2xl transition-colors hover:bg-[var(--bone)]"
-              style={{ border: "1px dashed var(--rule)", color: "var(--slate)" }}
+              className="flex min-h-[14rem] items-center justify-center border border-dashed border-[var(--line)] text-[var(--text-secondary)] transition-colors hover:border-[var(--text-tertiary)] hover:bg-[var(--hover-surface)] hover:text-[var(--text-primary)]"
+              style={{ borderRadius: "var(--radius-card)" }}
             >
               <div className="flex flex-col items-center gap-2">
                 <Plus className="h-5 w-5" />

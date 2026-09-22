@@ -130,6 +130,16 @@
   --radius-panel: 20px;
   --shadow-raised: 0 1px 2px rgba(20, 18, 16, 0.06), 0 12px 32px -12px rgba(20, 18, 16, 0.18);
 
+  /* Interaction — one answer for every control. Hover is a surface shift,
+     never a lift; press settles 1px; focus is a coral ring that only shows for
+     keyboard users. The ring is the deeper coral so it clears 3:1 on white. */
+  --hover-surface: #F5F3EF;
+  --press-surface: #ECEAE6;
+  --focus-ring: #E8524A;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 140ms;
+  --duration-base: 220ms;
+
   /* shadcn tokens */
   --background: #ffffff;
   --foreground: #1A1916;
@@ -198,6 +208,9 @@ html[data-magicui-theme-vt="active"]::view-transition-group(root) {
   --surface-page: #131211;
   --surface-card: #1c1a18;
   --surface-tint: #262422;
+  --hover-surface: #262422;
+  --press-surface: #2e2c2a;
+  --focus-ring: #FF7A66;
   --surface-raised: #242220;
   --text-primary: #f5f3f0;
   --text-secondary: #a8a4a0;
@@ -290,6 +303,43 @@ html[data-magicui-theme-vt="active"]::view-transition-group(root) {
   }
 }
 
+/* ─── Interaction baseline ────────────────────────────────────────────────── */
+/* Most controls are hand-built, so the shared behaviour lives here rather than
+   in a component. Everything is wrapped in :where() (zero specificity), so a
+   component's own focus-visible:/hover: utilities still win. */
+
+@layer base {
+  :where(a, button, [role="button"], [role="tab"], [role="menuitem"], [role="option"], summary, input, select, textarea, [tabindex]:not([tabindex="-1"])):focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  /* Press: 1px settle. `translate` is its own property, so it composes with any
+     transform a component (or framer-motion) already sets instead of replacing it. */
+  :where(button, [role="button"]):not(:disabled):not([aria-disabled="true"]) {
+    transition-property: color, background-color, border-color, opacity, box-shadow, translate;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+  }
+  :where(button, [role="button"]):not(:disabled):not([aria-disabled="true"]):not([aria-haspopup]):active {
+    translate: 0 1px;
+  }
+
+  :where(button, [role="button"]):disabled,
+  :where([aria-disabled="true"]) {
+    cursor: not-allowed;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* ─── Slide system ────────────────────────────────────────────────────────── */
 
 .slide {
@@ -339,6 +389,102 @@ html[data-magicui-theme-vt="active"]::view-transition-group(root) {
   letter-spacing: 0.06em;
   color: var(--slate-light);
 }
+
+/* Shared controls live in the components layer so a Tailwind utility on the
+   element (h-11, px-5, rounded-full) can still adjust one instance. */
+@layer components {
+/* Buttons. The dashboard's "Läs rapporten" set the shape: 10px corners,
+   40px tall, charcoal. Pills are for status tags, not actions. Hover shifts
+   the surface (never lifts, never fades to look disabled); press and focus
+   come from the interaction baseline above. One primary per view. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  min-height: 40px;
+  padding: 0 1rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out), translate var(--duration-fast) var(--ease-out);
+}
+.btn:disabled, .btn[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
+.btn-sm { min-height: 32px; padding: 0 0.75rem; font-size: 13px; }
+
+.btn-primary { background-color: var(--text-primary); color: var(--surface-page); }
+.btn-primary:hover:not(:disabled) { background-color: color-mix(in oklab, var(--text-primary) 84%, var(--surface-page)); }
+
+.btn-secondary { background-color: transparent; border-color: var(--line); color: var(--text-primary); }
+.btn-secondary:hover:not(:disabled) { background-color: var(--hover-surface); border-color: var(--text-tertiary); }
+
+.btn-ghost { background-color: transparent; color: var(--text-secondary); font-weight: 500; }
+.btn-ghost:hover:not(:disabled) { background-color: var(--hover-surface); color: var(--text-primary); }
+
+.btn-danger { background-color: transparent; border-color: color-mix(in oklab, var(--signal-down) 35%, transparent); color: var(--signal-down); }
+.btn-danger:hover:not(:disabled) { background-color: var(--signal-down-bg); }
+
+/* The irreversible confirm step only (e.g. "Radera permanent"). */
+.btn-destructive { background-color: var(--signal-down); color: var(--surface-page); }
+.btn-destructive:hover:not(:disabled) { background-color: color-mix(in oklab, var(--signal-down) 86%, var(--text-primary)); }
+
+/* Round icon-only control (close, dismiss). Always pass an aria-label. */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  color: var(--text-secondary);
+  transition: background-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
+}
+.icon-btn:hover { background-color: var(--hover-surface); color: var(--text-primary); }
+
+/* A card the whole of which is a link or button: border darkens on hover,
+   nothing moves. */
+.surface-card-interactive {
+  transition: border-color var(--duration-fast) var(--ease-out), background-color var(--duration-fast) var(--ease-out);
+}
+.surface-card-interactive:hover { border-color: var(--text-tertiary); }
+
+/* Notices: one shape for success, warning and error across the app. */
+.notice { border-radius: 12px; border: 1px solid; padding: 0.875rem 1rem; }
+.notice-ok { background: var(--signal-up-bg); border-color: color-mix(in oklab, var(--signal-up) 28%, transparent); }
+.notice-warn { background: color-mix(in oklab, var(--warning) 10%, var(--surface-card)); border-color: color-mix(in oklab, var(--warning) 32%, transparent); }
+.notice-error { background: var(--signal-down-bg); border-color: color-mix(in oklab, var(--signal-down) 28%, transparent); }
+
+/* Placeholder block for loading states: same box as the content it stands in
+   for, so nothing jumps when data lands. */
+.skeleton {
+  background: var(--surface-tint);
+  border-radius: 6px;
+  animation: skeleton-pulse 1.6s ease-in-out infinite;
+}
+
+/* Text inputs and selects in app forms. Focus darkens the border and adds a
+   soft coral halo — visible for mouse and keyboard alike, as a field should be. */
+.field {
+  border: 1px solid var(--line);
+  background-color: var(--surface-card);
+  color: var(--text-primary);
+  transition: border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
+}
+.field::placeholder { color: var(--text-tertiary); }
+.field:hover:not(:disabled):not(:focus) { border-color: var(--text-tertiary); }
+.field:focus {
+  outline: none;
+  border-color: var(--text-primary);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--focus-ring) 22%, transparent);
+}
+}
+@keyframes skeleton-pulse { 50% { opacity: 0.55; } }
 
 /* ─── Trend badges ────────────────────────────────────────────────────────── */
 

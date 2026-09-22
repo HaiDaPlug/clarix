@@ -5,7 +5,7 @@ import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer } from "recharts";
 import { NumberTicker } from "@/components/ui/number-ticker";
 import { ShimmerOverlay } from "@/components/primitives/ShimmerCard";
-import { formatNumber } from "@/lib/utils/format";
+import { currencyDecimals, formatNumber } from "@/lib/utils/format";
 import { AssembledDashboardItem, DashboardItemId } from "@/types/dashboard";
 import { Metric, ReportData } from "@/types/schema";
 import { useLocale, type Translations } from "@/lib/i18n";
@@ -60,7 +60,8 @@ function resolveDisplay(
   locale: string,
 ): Display {
   const sv = locale === "sv";
-  const decimalsFor = (m: Metric) => (m.unit === "percent" || !Number.isInteger(m.value) ? 1 : 0);
+  const decimalsFor = (m: Metric) =>
+    m.unit === "currency" ? currencyDecimals(m.value) : m.unit === "percent" || !Number.isInteger(m.value) ? 1 : 0;
 
   if (item.itemId === "paid-efficiency-kpi") {
     const paid = data.paidOverview;
@@ -80,7 +81,7 @@ function resolveDisplay(
         label: sv ? "Kostnad per lead" : "Cost per lead",
         metric: paid.costPerConversion,
         format: (n) => formatNumber(n, "currency"),
-        decimals: 0,
+        decimals: currencyDecimals(paid.costPerConversion.value),
         secondary: spend,
         isSpend: false,
       };
@@ -89,7 +90,7 @@ function resolveDisplay(
       label: spend.label,
       metric,
       format: (n) => formatNumber(n, metric.unit),
-      decimals: 0,
+      decimals: decimalsFor(metric),
       isSpend: true,
     };
   }

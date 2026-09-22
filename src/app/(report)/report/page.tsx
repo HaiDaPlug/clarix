@@ -346,11 +346,13 @@ function ReportPageInner() {
       <div ref={scrollRef} className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden" style={{ scrollbarWidth: "none", overscrollBehaviorY: "auto" }}>
         <div ref={containerRef} className="mx-auto w-full">
           {!loading && emptyState && (
-            <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-6 text-center">
-              <p className="font-display text-2xl font-bold">{EMPTY_COPY[emptyState].title}<span style={{ color: "#FF6B55" }}>.</span></p>
-              <p className="max-w-sm text-sm text-foreground/60">{EMPTY_COPY[emptyState].body}</p>
-              {EMPTY_COPY[emptyState].cta && (
-                <Link href="/integrations" className="inline-flex min-h-11 items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-white" style={{ background: "#FF6B55" }}>{EMPTY_COPY[emptyState].cta}</Link>
+            <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 px-6 text-center" role={emptyState === "unavailable" ? "alert" : "status"}>
+              <p className="font-display text-2xl font-bold" style={{ letterSpacing: "-0.02em" }}>{EMPTY_COPY[emptyState].title}<span style={{ color: "var(--brand-coral)" }}>.</span></p>
+              <p className="max-w-sm text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>{EMPTY_COPY[emptyState].body}</p>
+              {EMPTY_COPY[emptyState].action === "reload" ? (
+                <button onClick={() => window.location.reload()} className="btn btn-primary mt-2">{EMPTY_COPY[emptyState].cta}</button>
+              ) : (
+                <Link href="/integrations" className="btn btn-primary mt-2">{EMPTY_COPY[emptyState].cta}</Link>
               )}
             </div>
           )}
@@ -394,26 +396,31 @@ function fmtDateRange(startIso: string, endIso: string): string {
   return sy === ey ? `${start} – ${end}` : `${start} ${sy} – ${end}`;
 }
 
-// Each empty state says exactly what is true. None of them shows sample data.
-const EMPTY_COPY: Record<EmptyState, { title: string; body: string; cta: string | null }> = {
+// Each empty state says exactly what is true and offers one next step. None
+// of them shows sample data.
+const EMPTY_COPY: Record<EmptyState, { title: string; body: string; cta: string; action: "integrations" | "reload" }> = {
   no_sources: {
-    title: "Ingen data för den här perioden",
+    title: "Ingen datakälla kopplad",
     body: "Koppla ihop Google Analytics eller Search Console under Integrationer för att se din rapport.",
     cta: "Gå till Integrationer",
+    action: "integrations",
   },
   reconnect_required: {
     title: "Google-åtkomsten behöver förnyas",
     body: "Dina valda egendomar finns kvar. Anslut Google igen under Integrationer så hämtas rapporten.",
     cta: "Anslut Google igen",
+    action: "integrations",
   },
   unavailable: {
     title: "Google svarade inte just nu",
-    body: "Din anslutning är oförändrad. Ladda om sidan om en stund.",
-    cta: null,
+    body: "Din anslutning är oförändrad. Försök igen om en stund.",
+    cta: "Försök igen",
+    action: "reload",
   },
   no_data: {
     title: "Ingen data för den här perioden",
     body: "Google gav inga siffror för den valda perioden. Prova en annan period, eller kontrollera egendomen under Integrationer.",
     cta: "Gå till Integrationer",
+    action: "integrations",
   },
 };

@@ -15,9 +15,15 @@ export function formatNumber(value: number, unit?: string): string {
   return localized(value, Number.isInteger(value) ? 0 : 1);
 }
 
+// Small amounts (a cost per click) keep their öre; budgets are whole kronor.
+// Exported so an animated counter rounds to the same precision it will print.
+export function currencyDecimals(value: number): number {
+  return Math.abs(value) < 100 ? 2 : 0;
+}
+
 export function formatCurrency(value: number, currency = "kr"): string {
-  // Small amounts (a cost per click) keep their öre; budgets are whole kronor.
-  const amount = Math.abs(value) < 100 ? localized(value, 2) : localized(Math.round(value), 0);
+  const decimals = currencyDecimals(value);
+  const amount = localized(decimals ? value : Math.round(value), decimals);
   return `${amount} ${currency}`;
 }
 

@@ -53,12 +53,12 @@ export function GoogleConnectionCard({
     status === "connected"
       ? { dot: "var(--signal-up)", bg: "var(--signal-up-bg)", label: copy.connected }
       : status === "reconnect_required"
-        ? { dot: "#C97B2A", bg: "rgba(201,123,42,0.12)", label: copy.reconnectRequired }
+        ? { dot: "var(--warning)", bg: "color-mix(in oklab, var(--warning) 12%, var(--surface-card))", label: copy.reconnectRequired }
         : status === "error"
-          ? { dot: "var(--signal-down)", bg: "rgba(185,28,28,0.08)", label: copy.error }
+          ? { dot: "var(--signal-down)", bg: "var(--signal-down-bg)", label: copy.error }
           : status === "checking"
-            ? { dot: "var(--slate-light)", bg: "var(--bone-dark)", label: copy.checking }
-            : { dot: "var(--slate)", bg: "var(--bone-dark)", label: copy.disconnected };
+            ? { dot: "var(--text-tertiary)", bg: "var(--surface-tint)", label: copy.checking }
+            : { dot: "var(--text-secondary)", bg: "var(--surface-tint)", label: copy.disconnected };
 
   const help =
     status === "connected"
@@ -83,8 +83,7 @@ export function GoogleConnectionCard({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 0.05, ease: EASING }}
-      className="rounded-2xl p-5 sm:p-6"
-      style={{ backgroundColor: "var(--bone)", border: "1px solid var(--rule)" }}
+      className="surface-card p-5 sm:p-6"
       aria-live="polite"
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -136,12 +135,7 @@ export function GoogleConnectionCard({
           {(status === "disconnected" || status === "reconnect_required") && (
             <button
               onClick={onConnect}
-              className="inline-flex min-h-10 items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-semibold transition-all hover:-translate-y-0.5 hover:opacity-90"
-              style={{
-                backgroundColor: "var(--charcoal)",
-                color: "var(--parchment)",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-              }}
+              className="btn btn-primary"
             >
               <RefreshCw className="h-3.5 w-3.5" />
               {status === "disconnected" ? copy.connectCta : copy.reconnectCta}
@@ -150,8 +144,7 @@ export function GoogleConnectionCard({
           {status === "error" && health?.reason !== "server_misconfigured" && (
             <button
               onClick={onRetry}
-              className="inline-flex min-h-10 items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-semibold transition-all hover:opacity-90"
-              style={{ backgroundColor: "var(--charcoal)", color: "var(--parchment)" }}
+              className="btn btn-primary"
             >
               <RefreshCw className="h-3.5 w-3.5" />
               {copy.retryCta}
@@ -161,8 +154,7 @@ export function GoogleConnectionCard({
             <button
               onClick={onDisconnect}
               disabled={disconnecting}
-              className="inline-flex min-h-10 items-center gap-1.5 rounded-full px-4 py-2.5 text-sm font-medium transition-all hover:opacity-70 disabled:opacity-40"
-              style={{ border: "1px solid var(--rule)", color: "var(--slate)", backgroundColor: "transparent" }}
+              className="btn btn-ghost"
             >
               {disconnecting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Unplug className="h-3.5 w-3.5" />}
               {disconnecting ? copy.disconnecting : copy.disconnectCta}
