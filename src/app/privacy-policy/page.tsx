@@ -93,7 +93,8 @@ export default function PrivacyPolicyPage() {
               <li>
                 <strong>Delade rapporter</strong> — när du skapar en delningslänk sparas en
                 ögonblicksbild av rapporten (samma sammanställda värden) så att mottagaren
-                kan öppna den. Den finns kvar tills länken tas bort.
+                kan öppna den. Länken slutar fungera automatiskt efter 90 dagar, och du kan
+                återkalla den när som helst under <em>Inställningar → Delade länkar</em>.
               </li>
             </ul>
           </section>
@@ -176,6 +177,13 @@ export default function PrivacyPolicyPage() {
               användare (inget Segment, Mixpanel, Amplitude eller liknande), och inga
               felövervakningsverktyg som skickar data utanför ovanstående tjänster.
             </p>
+            <p>
+              Fullständig lista med uppgifter, plats och syfte finns under{" "}
+              <Link href="/subprocessors" className="underline underline-offset-2">
+                underbiträden
+              </Link>
+              .
+            </p>
           </section>
 
           <section className="flex flex-col gap-3">
@@ -191,9 +199,11 @@ export default function PrivacyPolicyPage() {
             </p>
             <p>
               Vi behåller dina uppgifter så länge ditt konto är aktivt. Kopplar du från Google
-              återkallas åtkomsten hos Google och tokens raderas direkt. Om du begär att
-              ditt konto tas bort raderas alla dina uppgifter, inklusive tokens, arbetsytor,
-              mellanlagrad analysdata och delade rapporter, inom 30 dagar.
+              återkallas åtkomsten hos Google och tokens raderas direkt. Raderar du ditt konto
+              under <em>Inställningar → Profil</em> tas allt bort omedelbart: kontot, tokens,
+              arbetsytor, mellanlagrad analysdata och delade rapporter. Åtkomsten hos Google
+              återkallas samtidigt. Begär du radering via e-post i stället genomför vi den
+              inom 30 dagar.
             </p>
           </section>
 
@@ -203,7 +213,7 @@ export default function PrivacyPolicyPage() {
             <ul className="flex flex-col gap-2 pl-4" style={{ listStyleType: "disc" }}>
               <li>Få tillgång till de uppgifter vi lagrar om dig.</li>
               <li>Rätta felaktiga uppgifter.</li>
-              <li>Begära radering av ditt konto och alla tillhörande uppgifter.</li>
+              <li>Radera ditt konto och alla tillhörande uppgifter direkt under <em>Inställningar → Profil</em>, eller begära radering via e-post.</li>
               <li>Koppla från Google när som helst under Integrationer i Clarix, eller återkalla åtkomsten via ditt Google-konto under <em>Säkerhet → Tredjepartsappar med kontoåtkomst</em>.</li>
               <li>Lämna in ett klagomål till Integritetsskyddsmyndigheten (IMY) om du anser att vi bryter mot GDPR.</li>
             </ul>
@@ -225,6 +235,13 @@ export default function PrivacyPolicyPage() {
               eller reklamcookies. Webbläsarens lokala lagring används för dina egna
               inställningar (t.ex. sidopanel och senast visad rapport) och lämnar aldrig
               din enhet.
+            </p>
+            <p>
+              Detaljerad beskrivning av varje cookie finns under{" "}
+              <Link href="/cookies" className="underline underline-offset-2">
+                cookies
+              </Link>
+              .
             </p>
           </section>
 

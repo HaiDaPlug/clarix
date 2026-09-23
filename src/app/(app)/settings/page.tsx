@@ -3,9 +3,11 @@
 import { motion } from "motion/react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Globe, Palette, Sparkles, User } from "lucide-react";
+import { Globe, Link2, Palette, Sparkles, User } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import type { ClientsResponse } from "@/lib/clients/types";
+import { DeleteAccount } from "@/components/settings/DeleteAccount";
+import { ShareLinks } from "@/components/settings/ShareLinks";
 
 const EASING = [0.16, 1, 0.3, 1] as const;
 
@@ -13,6 +15,7 @@ const EASING = [0.16, 1, 0.3, 1] as const;
 // controls that save nothing or states (a verified domain) that aren't true.
 const sections = [
   { id: "profile", label: "Profil",         icon: User },
+  { id: "sharing", label: "Delade länkar",  icon: Link2 },
   { id: "brand",   label: "White-label",    icon: Palette,  soon: "Din logga och accentfärg på rapporterna du skickar till kunder." },
   { id: "domain",  label: "Eget domännamn", icon: Globe,    soon: "Rapporter på en adress som rapporter.dinbyra.se." },
   { id: "ai",      label: "AI-insikter",    icon: Sparkles, soon: "Välj ton och djup för sammanfattningarna Clarix skriver." },
@@ -152,8 +155,14 @@ export default function SettingsPage() {
                     action={<Link href="/clients" className="btn btn-ghost btn-sm -my-1 -mr-2">Kunder</Link>}
                   />
                 </dl>
+
+                <div className="pt-2">
+                  <DeleteAccount />
+                </div>
               </div>
             )}
+
+            {active === "sharing" && <ShareLinks />}
 
             {"soon" in section && (
               <div>
