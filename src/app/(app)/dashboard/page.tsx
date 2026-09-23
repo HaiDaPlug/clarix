@@ -22,10 +22,18 @@ const SCENARIOS = [
 const MONTH_NAMES_SV = ["Januari","Februari","Mars","April","Maj","Juni","Juli","Augusti","September","Oktober","November","December"];
 const MONTH_NAMES_EN = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
-function formatDateRangeLabel(range: { startDate: string }, locale: string): string {
-  const [year, month] = range.startDate.split("-").map(Number);
+// "September 2026" for one month; a multi-month preset names both ends
+// ("Juni – augusti 2026", "December 2025 – februari 2026") instead of
+// labelling a three-month range with its first month only.
+export function formatDateRangeLabel(range: { startDate: string; endDate: string }, locale: string): string {
+  const [y1, m1] = range.startDate.split("-").map(Number);
+  const [y2, m2] = range.endDate.split("-").map(Number);
   const names = locale === "sv" ? MONTH_NAMES_SV : MONTH_NAMES_EN;
-  return `${names[month - 1] ?? ""} ${year}`;
+  const first = names[m1 - 1] ?? "";
+  if (y1 === y2 && m1 === m2) return `${first} ${y1}`;
+  // Swedish writes months in lower case mid-phrase; the list is capitalised.
+  const second = locale === "sv" ? (names[m2 - 1] ?? "").toLowerCase() : names[m2 - 1] ?? "";
+  return y1 === y2 ? `${first} – ${second} ${y2}` : `${first} ${y1} – ${second} ${y2}`;
 }
 
 export default function DashboardPage() {
@@ -59,7 +67,21 @@ function DashboardPageInner() {
   const [countUpKey, setCountUpKey] = useState<string | null>(null);
 
   const active = useMemo(() => SCENARIOS.find((s) => s.id === activeId)!, [activeId]);
-  const fallbackData = useMemo(() => localizeMockReportData(active.data, locale), [active.data, locale]);
+  // The sample carries its own fixed period ("Mars 2026"). Stamp it with the
+  // range actually selected — the current month on the visitor's clock by
+  // default — labelled the same way as real data, so nothing changes when the
+  // real numbers land.
+  const { startDate: selectedStart, endDate: selectedEnd } = dateRange;
+  const fallbackData = useMemo(() => {
+    const data = localizeMockReportData(active.data, locale);
+    return {
+      ...data,
+      meta: {
+        ...data.meta,
+        period: { label: formatDateRangeLabel({ startDate: selectedStart, endDate: selectedEnd }, locale), startDate: selectedStart, endDate: selectedEnd },
+      },
+    };
+  }, [active.data, locale, selectedStart, selectedEnd]);
   const activeData = reportData ?? fallbackData;
   const dashboard = useMemo(() => assembleDashboard(activeData, t), [activeData, t]);
 
@@ -132,7 +154,7 @@ function DashboardPageInner() {
         return;
       }
 
-      const periodLabel = formatDateRangeLabel({ startDate: rangeStart }, locale);
+      const periodLabel = formatDateRangeLabel({ startDate: rangeStart, endDate: rangeEnd }, locale);
 
       // Numbers that must never be shown as if they were real when the
       // workspace has sources but nothing could be fetched.

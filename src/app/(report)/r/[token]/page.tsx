@@ -67,6 +67,7 @@ export default async function SharedReportPage({
 
   return (
     <SharedReportClient
+      shareToken={token}
       reportData={reportData.data}
       aiInsights={aiInsights?.success ? aiInsights.data : null}
     />

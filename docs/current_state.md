@@ -2,7 +2,31 @@
 
 ---
 
-## NOW - Open priorities (2026-09-14)
+## NOW - Open priorities (2026-09-22)
+
+### Done this session (2026-09-22/23) — AI next steps everywhere, Sammanfattning slide rebuilt
+
+File-level detail is in the commit. What the commit can't tell you:
+
+**Decisions**
+- **Next steps are written by the model, 1–4, its call** (`slide_next_steps`). One source feeds report slide 2 (chips + tooltip), the mobile deck (tap-to-expand) and the dashboard card. The rule-based steps (`lib/dashboard/next-steps.ts`) and the old `next_steps` rationale slot are retired — Hai read them as fake. The schema keeps `next_steps` as always-null so cached rows still parse.
+- **No stand-ins for AI copy.** No steps → no section; shimmer only while loading. Slide/mobile headline is the AI `dashboard_hero.headline`; the lookup table is the failure fallback only.
+- **Figures are never model-written.** The model cites metric keys from `lib/ai-insights/evidence.ts`; values come from the data; unknown keys are dropped server-side.
+- **Length is capped twice:** prompt caps (summary ≤ 35 words, step `why` ≤ 30) and a render-side fit on slide 2 that shrinks the summary 1.4 → 1rem instead of clipping.
+- **No abbreviations** in UI copy or metric labels ("Genomsnittlig", "föregående", "Average"). Longer KPI labels are accepted; revisit only if a layout breaks.
+- `generate-insights/route.ts` is now just HTTP/cache/lease; prompt text lives in `lib/ai-insights/prompt.ts`, parsing in `lib/ai-insights/parse.ts`.
+
+**Gotchas**
+- Cache is at `cache-v4`: every workspace regenerates insights once on next load.
+- Dashboard sample data now takes the selected period's label (default: current month on the visitor's clock) — "Mars 2026" was the mock's baked-in value.
+
+**Not verified**
+- Dashboard label fix and the reworked `NextStepsCard` against a real session (only checked with mock data).
+- KPI card layouts with the longer spelled-out labels.
+
+---
+
+## Previously — Open priorities (2026-09-14)
 
 ### Done this session (2026-09-14) — auth split, Google grant health model, workspaces ("Kunder"), scoped data path
 
