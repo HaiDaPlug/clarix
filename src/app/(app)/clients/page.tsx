@@ -244,12 +244,15 @@ export default function ClientsPage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: EASING }}
-            className="surface-card mb-6 p-6 sm:p-8"
+            // Guidance, so it wears the interpretation surface (lavender):
+            // the populated list stays neutral and lets the avatars carry colour.
+            className="mb-6 p-6 sm:p-8"
+            style={{ background: "var(--insight-surface)", border: "1px solid var(--insight-border)", borderRadius: "var(--radius-card)" }}
           >
-            <p style={{ fontFamily: "var(--font-display)", fontSize: "1.2rem", fontWeight: 600, color: "var(--charcoal)", letterSpacing: "-0.02em" }}>
-              {copy.emptyTitle}
+            <p style={{ fontFamily: "var(--font-display)", fontSize: "1.2rem", fontWeight: 600, color: "var(--insight-text)", letterSpacing: "-0.02em" }}>
+              {copy.emptyTitle}<span style={{ color: "var(--brand-coral)" }}>.</span>
             </p>
-            <p style={{ fontSize: "13px", color: "var(--slate)", marginTop: "6px", maxWidth: "56ch", lineHeight: 1.55 }}>
+            <p style={{ fontSize: "13px", color: "var(--insight-muted)", marginTop: "6px", maxWidth: "56ch", lineHeight: 1.55 }}>
               {copy.emptyBody}
             </p>
             <button

@@ -323,9 +323,12 @@ function Toolbar({
   onReset: () => void;
 }) {
   return (
+    // Below sm the bar scrolls sideways; the right edge fades so it's clear
+    // there is more. Category colour is only a small dot: it identifies, the
+    // on/off state is carried by the chip itself.
     <div
-      className="flex max-w-full items-center gap-1.5 overflow-x-auto"
-      style={{ padding: "6px", background: "var(--surface-raised)", border: "1px solid var(--line)", borderRadius: "12px", boxShadow: "var(--shadow-raised)" }}
+      className="flex max-w-full items-center gap-1 overflow-x-auto [mask-image:linear-gradient(to_right,black_82%,transparent)] [scrollbar-width:none] sm:[mask-image:none] [&::-webkit-scrollbar]:hidden"
+      style={{ padding: "5px", background: "var(--surface-raised)", border: "1px solid var(--line)", borderRadius: "12px", boxShadow: "var(--shadow-raised)" }}
     >
       {CARD_DEFS.map(def => {
         const on = !hidden.has(def.id);
@@ -335,21 +338,25 @@ function Toolbar({
             key={def.id}
             onClick={() => onToggle(def.id)}
             aria-pressed={on}
-            className="shrink-0 rounded-[7px] px-2.5 py-[5px] text-[10px] font-bold uppercase tracking-[0.06em] hover:bg-[var(--hover-surface)]"
-            style={
+            className={`flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] ${
               on
-                ? { color: "var(--text-primary)", background: `color-mix(in oklab, ${accent} 12%, transparent)`, boxShadow: `inset 0 0 0 1px color-mix(in oklab, ${accent} 35%, transparent)` }
-                : { color: "var(--text-tertiary)" }
-            }
+                ? "bg-[var(--surface-tint)] font-semibold text-[var(--text-primary)]"
+                : "font-medium text-[var(--text-tertiary)] hover:bg-[var(--hover-surface)] hover:text-[var(--text-secondary)]"
+            }`}
           >
+            <span
+              className="h-2 w-2 shrink-0 rounded-full"
+              style={on ? { background: accent } : { boxShadow: "inset 0 0 0 1.5px var(--text-tertiary)" }}
+              aria-hidden
+            />
             {def.label}
           </button>
         );
       })}
-      <span className="mx-0.5 h-5 w-px shrink-0" style={{ background: "var(--line)" }} aria-hidden />
+      <span className="mx-1 h-5 w-px shrink-0" style={{ background: "var(--line)" }} aria-hidden />
       <button
         onClick={onReset}
-        className="shrink-0 rounded-[7px] px-2.5 py-[5px] text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--text-tertiary)] hover:bg-[var(--hover-surface)] hover:text-[var(--text-primary)]"
+        className="shrink-0 rounded-lg px-2.5 py-1.5 text-[12px] font-medium text-[var(--text-tertiary)] hover:bg-[var(--hover-surface)] hover:text-[var(--text-primary)]"
       >
         Återställ
       </button>

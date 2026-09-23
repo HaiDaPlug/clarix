@@ -104,6 +104,14 @@
   --line: #E2DFDA;
   --line-soft: #EEECE8;
 
+  /* Colour has a job, never a quota:
+       aurora / lavender (--insight-*)  interpretation, onboarding, guidance
+       jewel hues (channel-colors.ts)    telling data categories apart
+       coral (--brand-coral, focus)      brand punctuation, interaction emphasis
+       neutral surfaces                  forms, controls, lists, account admin
+     A screen doesn't need a "signature moment"; it gets warmth where one of
+     these jobs is happening (e.g. an empty state that guides someone). */
+
   /* Interpretation / AI insight — lavender is Clarix's "we read this for you" colour */
   --insight-surface: oklch(0.965 0.028 295);
   /* The aurora wash on the summary panel: lavender → periwinkle → blush, with
