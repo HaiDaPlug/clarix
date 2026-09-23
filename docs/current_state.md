@@ -7,7 +7,7 @@
 ### To do
 
 - **Recap slide booking card: decide what it does.** "Boka strategigenomgång" is a button with no action, and "Se detaljerad rapport" links to `/report`, the page the reader is already on (`SlideRecap.tsx`, right-hand card). Either give the booking button a real target (booking link or contact) or remove both controls. A customer-facing dead button undermines the report.
-- **Prompt: order next steps by priority.** Slide 2 labels the first step "Börja här" and the phone summary shows only that one, but `slide_next_steps` in `lib/ai-insights/prompt.ts` doesn't ask for an order. Add one sentence to its CONSTRAINT: "Ordna stegen efter prioritet, viktigast först." Bump `AI_INSIGHTS_PROMPT_VERSION`; decide whether it's worth a `cache-v5` bust.
+- ~~**Prompt: order next steps by priority.**~~ Done (prompt v16): `slide_next_steps` now asks for most important first, because the first step is shown as "Börja här". No cache bust: existing cached insights keep their order until they regenerate (period change or the next cache version).
 - **Optional, same file:** `slide_recs` is no longer shown anywhere (the Nästa steg slide renders `slide_next_steps`). Dropping it from the prompt saves tokens; keep the schema field nullable so cached rows still parse.
 
 ### Done this session (2026-09-22/23) — premium consistency pass, report hierarchy, pushed

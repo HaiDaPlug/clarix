@@ -4,7 +4,7 @@ export const AI_INSIGHTS_FALLBACK_TEXT =
   "Inte nog med data för att bedöma din digitala närvaro.";
 
 // Bump when the prompt copy changes (logged only — does not invalidate cache).
-export const AI_INSIGHTS_PROMPT_VERSION = "ai-insights-v15";
+export const AI_INSIGHTS_PROMPT_VERSION = "ai-insights-v16";
 
 // Bump when anything that affects model output changes: prompt logic, classifier
 // rules, derived-insights behavior, schema shape. This is the single lever that
