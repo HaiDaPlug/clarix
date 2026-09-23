@@ -8,7 +8,7 @@ import path from "node:path";
 
 const BASE_URL = process.env.BASE_URL ?? "http://localhost:3000";
 const OUT_DIR = path.resolve(".lab-shots/compare");
-const VARIANTS = ["cards", "rows", "stacked"];
+const VARIANTS = ["columns", "mockup", "rows"];
 const CASES = ["layout-2", "layout-3", "layout-6", "ps-rollup"];
 
 const browser = await chromium.launch();

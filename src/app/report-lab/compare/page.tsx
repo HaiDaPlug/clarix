@@ -19,10 +19,24 @@ import { buildSlideData } from "@/components/report/slide-data";
 import { SlideChannels } from "@/components/report/slides/SlideChannels";
 import { CANVAS_H, CANVAS_W } from "@/components/report/tokens";
 import { ProtoBarRows, ProtoStackedRail } from "../prototypes";
+import { ProtoMockup } from "../prototype-c";
+import { ProtoColumns } from "../prototype-d";
 
 const SCALE = 0.74;
 
 const VARIANTS = [
+  {
+    id: "columns",
+    label: "D — vertical columns",
+    note: "Copy of the reference layout: eyebrow, headline, emphasised subline, full-height tracks, floating value pills, marks above labels. Flat ranking — no drill-down yet.",
+    render: (d: ReturnType<typeof buildSlideData>) => <ProtoColumns d={d} />,
+  },
+  {
+    id: "mockup",
+    label: "C — colleague's mockup",
+    note: "Variant A plus column headers, a tinted panel around the expanded group, brand marks, and per-network bar colours.",
+    render: (d: ReturnType<typeof buildSlideData>) => <ProtoMockup d={d} />,
+  },
   {
     id: "cards",
     label: "Current — cards",
@@ -46,7 +60,10 @@ const VARIANTS = [
 /* The query string is the only state this page has. useSyncExternalStore gives
  * the server (and the hydration pass) a stable "" and the client the real
  * search, so the two renders agree without an effect writing state. */
-const subscribe = () => () => {};
+function subscribe(onChange: () => void) {
+  window.addEventListener("popstate", onChange);
+  return () => window.removeEventListener("popstate", onChange);
+}
 const getSearch = () => window.location.search;
 const getServerSearch = () => "";
 
