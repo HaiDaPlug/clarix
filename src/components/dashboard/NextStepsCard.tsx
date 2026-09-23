@@ -1,27 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { ChevronDown } from "lucide-react";
 import { ReportData } from "@/types/schema";
 import { useLocale } from "@/lib/i18n";
 import { withPeriod } from "@/lib/utils/text";
 import { highlightNumbers } from "@/lib/utils/highlight-numbers";
-import { deriveNextStepsWithEvidence } from "@/lib/dashboard/next-steps";
+import { buildEvidenceRegistry, type Evidence } from "@/lib/ai-insights/evidence";
 import type { AiInsightsPayload } from "@/lib/hooks/useAiInsights";
 import { ShimmerCard } from "@/components/primitives/ShimmerCard";
 
 const EASE_OUT = [0.25, 0.1, 0.25, 1] as const;
 
 const COPY = {
-  sv: { eyebrow: "Prioriterat", title: "Nästa steg", show: "Visa underlag", hide: "Dölj underlag", effort: "Insats", impact: "Effekt", previous: "föreg." },
-  en: { eyebrow: "Prioritised", title: "Next steps", show: "Show evidence", hide: "Hide evidence", effort: "Effort", impact: "Impact", previous: "prev." },
+  sv: { eyebrow: "Prioriterat", title: "Nästa steg", show: "Visa underlag", hide: "Dölj underlag", previous: "föregående" },
+  en: { eyebrow: "Prioritised", title: "Next steps", show: "Show evidence", hide: "Hide evidence", previous: "previous" },
+} as const;
+
+// "grow" builds on what works, "watch" fixes something that slipped — the
+// same split as the report's chips, in the dashboard's own tokens.
+const TONE = {
+  grow: { bg: "var(--signal-up-bg)", fg: "var(--signal-up)" },
+  watch: { bg: "color-mix(in oklch, var(--brand-coral) 14%, transparent)", fg: "var(--brand-coral)" },
 } as const;
 
 /**
- * Each suggestion is structured the same way: the action, the reason, and
- * the figures it rests on behind "Visa underlag". The reason may come from
- * the model; the figures never do — they are read straight from the data.
+ * The model's next steps — the same ones the report's summary slide shows.
+ * Each is the action, the reason, and the figures it rests on behind
+ * "Visa underlag". The model writes the action and reason and names the
+ * figures; their values are read straight from the data. No AI steps, no card.
  */
 export function NextStepsCard({
   data,
@@ -35,8 +43,9 @@ export function NextStepsCard({
   const { locale } = useLocale();
   const prefersReduced = useReducedMotion();
   const [open, setOpen] = useState<Record<number, boolean>>({});
-  const items = deriveNextStepsWithEvidence(data);
-  if (!items.length) return null;
+  const registry = useMemo(() => buildEvidenceRegistry(data), [data]);
+  const steps = aiInsights?.slide_next_steps ?? null;
+  if (!loading && !steps) return null;
 
   const copy = COPY[locale === "sv" ? "sv" : "en"];
 
@@ -58,52 +67,50 @@ export function NextStepsCard({
         </h3>
       </div>
 
-      {/* A divided list, not a stack of cards inside a card: the numbering and
-          alignment already say "these belong together". */}
-      <ol className="flex flex-col">
-        {items.map(({ step, evidence }, i) => {
-          const isOpen = Boolean(open[i]);
-          const panelId = `next-step-evidence-${i}`;
-          return (
-            <li
-              key={i}
-              className="flex items-start gap-3.5 py-3.5"
-              style={{ borderTop: i === 0 ? "none" : "1px solid var(--line-soft)" }}
-            >
-              <span
-                className="font-stat flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
-                style={{ background: "var(--surface-tint)", color: "var(--text-primary)", fontSize: "12px", fontWeight: 700, marginTop: "1px" }}
+      {loading || !steps ? (
+        <div className="flex flex-col gap-4 py-2">
+          {[0, 1].map((i) => (
+            <div key={i} className="flex flex-col gap-2">
+              <ShimmerCard loading height={16} style={{ border: "none", borderRadius: 999, backgroundColor: "var(--surface-tint)", width: "55%" }} />
+              <ShimmerCard loading height={13} style={{ border: "none", borderRadius: 999, backgroundColor: "var(--surface-tint)", width: "85%" }} />
+            </div>
+          ))}
+        </div>
+      ) : (
+        /* A divided list, not a stack of cards inside a card: the numbering
+           and alignment already say "these belong together". */
+        <ol className="flex flex-col">
+          {steps.map((step, i) => {
+            const isOpen = Boolean(open[i]);
+            const panelId = `next-step-evidence-${i}`;
+            const evidence = step.evidence.map((key) => registry[key]).filter((e): e is Evidence => !!e);
+            return (
+              <li
+                key={`${i}-${step.action}`}
+                className="flex items-start gap-3.5 py-3.5"
+                style={{ borderTop: i === 0 ? "none" : "1px solid var(--line-soft)" }}
               >
-                {i + 1}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p style={{ fontSize: "15px", fontWeight: 500, lineHeight: 1.35, color: "var(--text-primary)" }}>
-                  {step.action}
-                </p>
-                {loading ? (
-                  <ShimmerCard
-                    loading
-                    height={14}
-                    style={{ border: "none", borderRadius: 999, backgroundColor: "var(--surface-tint)", marginTop: "6px", width: "80%" }}
-                  />
-                ) : (
-                  <p style={{ fontSize: "13.5px", lineHeight: 1.5, color: "var(--text-primary)", marginTop: "3px" }}>
-                    {highlightNumbers(withPeriod(aiInsights?.next_steps?.[i]?.rationale ?? step.rationale), "light", "signed")}
+                <span
+                  className="font-stat flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
+                  style={{ background: TONE[step.tone].bg, color: TONE[step.tone].fg, fontSize: "12px", fontWeight: 700, marginTop: "1px" }}
+                >
+                  {i + 1}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p style={{ fontSize: "15px", fontWeight: 500, lineHeight: 1.35, color: "var(--text-primary)" }}>
+                    {step.action}
                   </p>
-                )}
+                  <p style={{ fontSize: "13.5px", lineHeight: 1.5, color: "var(--text-primary)", marginTop: "3px" }}>
+                    {highlightNumbers(withPeriod(step.why), "light", "signed")}
+                  </p>
 
-                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                  <span className="flex items-center gap-1.5" aria-label={`${copy.effort}: ${step.effort}. ${copy.impact}: ${step.reward}.`}>
-                    <Tag>{copy.effort}: {step.effort}</Tag>
-                    <Tag>{copy.impact}: {step.reward}</Tag>
-                  </span>
                   {evidence.length > 0 && (
                     <button
                       type="button"
                       aria-expanded={isOpen}
                       aria-controls={panelId}
                       onClick={() => setOpen((o) => ({ ...o, [i]: !isOpen }))}
-                      className="inline-flex items-center gap-1 rounded-md py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)] focus-visible:ring-offset-2"
+                      className="mt-2 inline-flex items-center gap-1 rounded-md py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)] focus-visible:ring-offset-2"
                       style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
                     >
                       {isOpen ? copy.hide : copy.show}
@@ -115,49 +122,39 @@ export function NextStepsCard({
                       />
                     </button>
                   )}
-                </div>
 
-                {isOpen && evidence.length > 0 && (
-                  <dl
-                    id={panelId}
-                    className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 rounded-[10px] p-3 sm:grid-cols-3"
-                    style={{ background: "var(--surface-tint)" }}
-                  >
-                    {evidence.map((e) => (
-                      <div key={e.label} className="min-w-0">
-                        <dt className="truncate" style={{ fontSize: "11.5px", fontWeight: 500, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--text-secondary)" }}>
-                          {e.label}
-                        </dt>
-                        <dd style={{ marginTop: "2px" }}>
-                          <span className="font-stat tabular-nums" style={{ display: "block", fontSize: "15px", fontWeight: 600, color: "var(--text-primary)", whiteSpace: "nowrap" }}>
-                            {e.value}
-                          </span>
-                          {e.previous && (
-                            <span className="tabular-nums" style={{ display: "block", fontSize: "11.5px", color: "var(--text-tertiary)", whiteSpace: "nowrap" }}>
-                              {copy.previous} {e.previous}
+                  {isOpen && evidence.length > 0 && (
+                    <dl
+                      id={panelId}
+                      className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 rounded-[10px] p-3 sm:grid-cols-3"
+                      style={{ background: "var(--surface-tint)" }}
+                    >
+                      {evidence.map((e) => (
+                        <div key={e.label} className="min-w-0">
+                          {/* Wraps rather than truncates: labels are written out in full. */}
+                          <dt className="break-words" style={{ fontSize: "11.5px", fontWeight: 500, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--text-secondary)" }}>
+                            {e.label}
+                          </dt>
+                          <dd style={{ marginTop: "2px" }}>
+                            <span className="font-stat tabular-nums" style={{ display: "block", fontSize: "15px", fontWeight: 600, color: "var(--text-primary)", whiteSpace: "nowrap" }}>
+                              {e.value}
                             </span>
-                          )}
-                        </dd>
-                      </div>
-                    ))}
-                  </dl>
-                )}
-              </div>
-            </li>
-          );
-        })}
-      </ol>
+                            {e.previous && (
+                              <span className="tabular-nums" style={{ display: "block", fontSize: "11.5px", color: "var(--text-tertiary)", whiteSpace: "nowrap" }}>
+                                {copy.previous} {e.previous}
+                              </span>
+                            )}
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      )}
     </motion.section>
-  );
-}
-
-function Tag({ children }: { children: React.ReactNode }) {
-  return (
-    <span
-      className="inline-flex items-center rounded-full px-2 py-0.5"
-      style={{ fontSize: "11.5px", fontWeight: 500, color: "var(--text-secondary)", background: "var(--surface-tint)", whiteSpace: "nowrap" }}
-    >
-      {children}
-    </span>
   );
 }

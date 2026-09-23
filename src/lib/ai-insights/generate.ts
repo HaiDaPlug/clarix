@@ -196,7 +196,7 @@ async function callOpenAI(prompt: string): Promise<string> {
 
   const response = await client.chat.completions.create({
     model,
-    max_completion_tokens: 1600,
+    max_completion_tokens: 2200,
     messages: [
       { role: "system", content: CLARIX_SYSTEM_PROMPT },
       { role: "user", content: prompt },
@@ -218,7 +218,7 @@ async function callAnthropic(prompt: string): Promise<string> {
 
   const message = await client.messages.create({
     model,
-    max_tokens: 1600,
+    max_tokens: 2200,
     system: CLARIX_SYSTEM_PROMPT,
     messages: [{ role: "user", content: prompt }],
   });
