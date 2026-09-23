@@ -26,7 +26,7 @@ const localizedReports: Record<string, Partial<Record<Locale, LocalizedReportCon
         ],
         highlights: [
           { label: "Organic sessions", value: "+18%", sentiment: "positive" },
-          { label: "Avg. position", value: "11.2 -> 9.4", sentiment: "positive" },
+          { label: "Average position", value: "11.2 -> 9.4", sentiment: "positive" },
           { label: "CTR", value: "3.1%", sentiment: "neutral" },
         ],
         aiSummary: {

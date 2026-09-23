@@ -91,6 +91,63 @@
   --font-body: 'Satoshi', system-ui, sans-serif;
   --font-numeric: 'Bricolage Grotesque', system-ui, sans-serif;
 
+  /* Semantic roles — app surfaces use these. The brand names above stay for
+     the report deck and older screens; both themes define every role, so a
+     card never has to guess which of --bone / --parchment is "the light one". */
+  --surface-page: #ffffff;
+  --surface-card: #ffffff;
+  --surface-tint: #F5F3EF;
+  --surface-raised: #ffffff;
+  --text-primary: #1A1916;
+  --text-secondary: #6B6760;
+  --text-tertiary: #9B9894;
+  --line: #E2DFDA;
+  --line-soft: #EEECE8;
+
+  /* Colour has a job, never a quota:
+       aurora / lavender (--insight-*)  interpretation, onboarding, guidance
+       jewel hues (channel-colors.ts)    telling data categories apart
+       coral (--brand-coral, focus)      brand punctuation, interaction emphasis
+       neutral surfaces                  forms, controls, lists, account admin
+     A screen doesn't need a "signature moment"; it gets warmth where one of
+     these jobs is happening (e.g. an empty state that guides someone). */
+
+  /* Interpretation / AI insight — lavender is Clarix's "we read this for you" colour */
+  --insight-surface: oklch(0.965 0.028 295);
+  /* The aurora wash on the summary panel: lavender → periwinkle → blush, with
+     two soft pools of colour. Same values the report's AI_GRADIENT uses. */
+  --insight-gradient: linear-gradient(135deg, oklch(0.97 0.04 300) 0%, oklch(0.96 0.05 260) 50%, oklch(0.97 0.04 350) 100%);
+  --insight-glow-a: oklch(0.85 0.16 300 / 0.55);
+  --insight-glow-b: oklch(0.86 0.14 220 / 0.5);
+  --insight-card: oklch(1 0 0 / 0.72);
+  --insight-border: oklch(0.87 0.055 295);
+  --insight-text: oklch(0.23 0.045 290);
+  --insight-muted: oklch(0.42 0.09 290);
+  --insight-accent: oklch(0.52 0.19 292);
+
+  /* Brand — the aurora trio, for signature moments only */
+  --brand-pink: #FF4D9E;
+  --brand-coral: #FF6B55;
+  --brand-amber: #FFB830;
+  --brand-gradient: linear-gradient(135deg, #FF4D9E 0%, #FF6B55 50%, #FFB830 100%);
+
+  /* Shape & depth: controls 10, cards 16, signature panels 20. Ordinary cards
+     get a border; only floating things (menus, dialogs) get the raised shadow. */
+  --radius-control: 10px;
+  --radius-card: 16px;
+  --radius-panel: 20px;
+  --shadow-raised: 0 1px 2px rgba(20, 18, 16, 0.06), 0 12px 32px -12px rgba(20, 18, 16, 0.18);
+
+  /* Interaction — one answer for every control. Hover is a surface shift,
+     never a lift; press settles 1px; focus is a coral ring that only shows for
+     keyboard users. The ring is the deeper coral so it clears 3:1 on white. */
+  --hover-surface: #F5F3EF;
+  --press-surface: #ECEAE6;
+  --focus-ring: #E8524A;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 140ms;
+  --duration-base: 220ms;
+
   /* shadcn tokens */
   --background: #ffffff;
   --foreground: #1A1916;
@@ -149,10 +206,38 @@ html[data-magicui-theme-vt="active"]::view-transition-group(root) {
 }
 
 .dark {
-  /* Brand palette — true dark, high contrast */
-  --bone: #ffffff;
-  --bone-dark: #1e1c1a;
+  /* Brand palette — true dark, high contrast.
+     --bone is the card surface, so it darkens with the page: white here put
+     near-white --charcoal text on a white card across the whole app shell. */
+  --bone: #1c1a18;
+  --bone-dark: #262422;
   --parchment: #131211;
+
+  --surface-page: #131211;
+  --surface-card: #1c1a18;
+  --surface-tint: #262422;
+  --hover-surface: #262422;
+  --press-surface: #2e2c2a;
+  --focus-ring: #FF7A66;
+  --surface-raised: #242220;
+  --text-primary: #f5f3f0;
+  --text-secondary: #a8a4a0;
+  --text-tertiary: #8a867f; /* 4.6:1 on the card surface — axis ticks stay legible */
+  --line: #2e2c2a;
+  --line-soft: #262422;
+
+  --insight-surface: oklch(0.25 0.045 295);
+  --insight-gradient: linear-gradient(135deg, oklch(0.28 0.06 300) 0%, oklch(0.25 0.06 262) 50%, oklch(0.27 0.05 345) 100%);
+  --insight-glow-a: oklch(0.5 0.17 300 / 0.45);
+  --insight-glow-b: oklch(0.48 0.14 225 / 0.4);
+  --insight-card: oklch(0.19 0.03 295 / 0.65);
+  --insight-border: oklch(0.36 0.07 295);
+  --insight-text: oklch(0.95 0.015 295);
+  --insight-muted: oklch(0.8 0.06 295);
+  --insight-accent: oklch(0.8 0.11 292);
+
+  --brand-coral: #FF7A66;
+  --shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 32px -12px rgba(0, 0, 0, 0.6);
   --charcoal: #f5f3f0;
   --charcoal-mid: #d8d5d0;
   --slate: #a8a4a0;
@@ -226,6 +311,43 @@ html[data-magicui-theme-vt="active"]::view-transition-group(root) {
   }
 }
 
+/* ─── Interaction baseline ────────────────────────────────────────────────── */
+/* Most controls are hand-built, so the shared behaviour lives here rather than
+   in a component. Everything is wrapped in :where() (zero specificity), so a
+   component's own focus-visible:/hover: utilities still win. */
+
+@layer base {
+  :where(a, button, [role="button"], [role="tab"], [role="menuitem"], [role="option"], summary, input, select, textarea, [tabindex]:not([tabindex="-1"])):focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  /* Press: 1px settle. `translate` is its own property, so it composes with any
+     transform a component (or framer-motion) already sets instead of replacing it. */
+  :where(button, [role="button"]):not(:disabled):not([aria-disabled="true"]) {
+    transition-property: color, background-color, border-color, opacity, box-shadow, translate;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+  }
+  :where(button, [role="button"]):not(:disabled):not([aria-disabled="true"]):not([aria-haspopup]):active {
+    translate: 0 1px;
+  }
+
+  :where(button, [role="button"]):disabled,
+  :where([aria-disabled="true"]) {
+    cursor: not-allowed;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* ─── Slide system ────────────────────────────────────────────────────────── */
 
 .slide {
@@ -252,13 +374,21 @@ html[data-magicui-theme-vt="active"]::view-transition-group(root) {
   font-feature-settings: "tnum" 1;
 }
 
+/* Section labels. 12px and modest tracking: readable first, "designed" second. */
 .eyebrow {
   font-family: var(--font-body);
-  font-size: 10.5px;
+  font-size: 12px;
   font-weight: 500;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--slate);
+  color: var(--text-secondary);
+}
+
+/* The ordinary app card: quiet border, no shadow. */
+.surface-card {
+  background: var(--surface-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
 }
 
 .label-xs {
@@ -267,6 +397,102 @@ html[data-magicui-theme-vt="active"]::view-transition-group(root) {
   letter-spacing: 0.06em;
   color: var(--slate-light);
 }
+
+/* Shared controls live in the components layer so a Tailwind utility on the
+   element (h-11, px-5, rounded-full) can still adjust one instance. */
+@layer components {
+/* Buttons. The dashboard's "Läs rapporten" set the shape: 10px corners,
+   40px tall, charcoal. Pills are for status tags, not actions. Hover shifts
+   the surface (never lifts, never fades to look disabled); press and focus
+   come from the interaction baseline above. One primary per view. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  min-height: 40px;
+  padding: 0 1rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out), translate var(--duration-fast) var(--ease-out);
+}
+.btn:disabled, .btn[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
+.btn-sm { min-height: 32px; padding: 0 0.75rem; font-size: 13px; }
+
+.btn-primary { background-color: var(--text-primary); color: var(--surface-page); }
+.btn-primary:hover:not(:disabled) { background-color: color-mix(in oklab, var(--text-primary) 84%, var(--surface-page)); }
+
+.btn-secondary { background-color: transparent; border-color: var(--line); color: var(--text-primary); }
+.btn-secondary:hover:not(:disabled) { background-color: var(--hover-surface); border-color: var(--text-tertiary); }
+
+.btn-ghost { background-color: transparent; color: var(--text-secondary); font-weight: 500; }
+.btn-ghost:hover:not(:disabled) { background-color: var(--hover-surface); color: var(--text-primary); }
+
+.btn-danger { background-color: transparent; border-color: color-mix(in oklab, var(--signal-down) 35%, transparent); color: var(--signal-down); }
+.btn-danger:hover:not(:disabled) { background-color: var(--signal-down-bg); }
+
+/* The irreversible confirm step only (e.g. "Radera permanent"). */
+.btn-destructive { background-color: var(--signal-down); color: var(--surface-page); }
+.btn-destructive:hover:not(:disabled) { background-color: color-mix(in oklab, var(--signal-down) 86%, var(--text-primary)); }
+
+/* Round icon-only control (close, dismiss). Always pass an aria-label. */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  color: var(--text-secondary);
+  transition: background-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
+}
+.icon-btn:hover { background-color: var(--hover-surface); color: var(--text-primary); }
+
+/* A card the whole of which is a link or button: border darkens on hover,
+   nothing moves. */
+.surface-card-interactive {
+  transition: border-color var(--duration-fast) var(--ease-out), background-color var(--duration-fast) var(--ease-out);
+}
+.surface-card-interactive:hover { border-color: var(--text-tertiary); }
+
+/* Notices: one shape for success, warning and error across the app. */
+.notice { border-radius: 12px; border: 1px solid; padding: 0.875rem 1rem; }
+.notice-ok { background: var(--signal-up-bg); border-color: color-mix(in oklab, var(--signal-up) 28%, transparent); }
+.notice-warn { background: color-mix(in oklab, var(--warning) 10%, var(--surface-card)); border-color: color-mix(in oklab, var(--warning) 32%, transparent); }
+.notice-error { background: var(--signal-down-bg); border-color: color-mix(in oklab, var(--signal-down) 28%, transparent); }
+
+/* Placeholder block for loading states: same box as the content it stands in
+   for, so nothing jumps when data lands. */
+.skeleton {
+  background: var(--surface-tint);
+  border-radius: 6px;
+  animation: skeleton-pulse 1.6s ease-in-out infinite;
+}
+
+/* Text inputs and selects in app forms. Focus darkens the border and adds a
+   soft coral halo — visible for mouse and keyboard alike, as a field should be. */
+.field {
+  border: 1px solid var(--line);
+  background-color: var(--surface-card);
+  color: var(--text-primary);
+  transition: border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
+}
+.field::placeholder { color: var(--text-tertiary); }
+.field:hover:not(:disabled):not(:focus) { border-color: var(--text-tertiary); }
+.field:focus {
+  outline: none;
+  border-color: var(--text-primary);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--focus-ring) 22%, transparent);
+}
+}
+@keyframes skeleton-pulse { 50% { opacity: 0.55; } }
 
 /* ─── Trend badges ────────────────────────────────────────────────────────── */
 
@@ -283,9 +509,9 @@ html[data-magicui-theme-vt="active"]::view-transition-group(root) {
 /* ─── Recharts overrides ──────────────────────────────────────────────────── */
 
 .recharts-tooltip-wrapper { outline: none; }
-.recharts-cartesian-axis-tick-value { font-size: 11px; fill: var(--slate-light); }
+.recharts-cartesian-axis-tick-value { font-size: 11px; fill: var(--text-tertiary); font-variant-numeric: tabular-nums; }
 .recharts-cartesian-grid-horizontal line,
-.recharts-cartesian-grid-vertical line { stroke: var(--rule-light); }
+.recharts-cartesian-grid-vertical line { stroke: var(--line-soft); }
 
 /* ─── Date range picker ───────────────────────────────────────────────────── */
 

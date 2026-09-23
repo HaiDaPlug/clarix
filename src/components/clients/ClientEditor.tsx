@@ -8,6 +8,7 @@ import type { ClientSourceRef, ClientWorkspace } from "@/lib/clients/types";
 import type { GoogleConnectionHealth } from "@/lib/google/connection-types";
 import { workspaceNameFromProperty } from "@/lib/clients/naming";
 import type { ClientsCopy } from "./copy";
+import { useDialogKeyboard } from "@/lib/hooks/useDialogKeyboard";
 
 const EASING = [0.16, 1, 0.3, 1] as const;
 
@@ -135,11 +136,7 @@ export function ClientEditor({
     }
   }
 
-  const field: React.CSSProperties = {
-    border: "1px solid var(--rule)",
-    backgroundColor: "var(--parchment)",
-    color: "var(--charcoal)",
-  };
+  const dialogRef = useDialogKeyboard<HTMLFormElement>(onClose, saving);
 
   return (
     <motion.div
@@ -157,17 +154,19 @@ export function ClientEditor({
         transition={{ duration: 0.25, ease: EASING }}
         onClick={(e) => e.stopPropagation()}
         onSubmit={save}
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label={editing ? copy.editorEditTitle : copy.editorCreateTitle}
-        className="relative w-full max-w-md rounded-2xl border p-6"
-        style={{ backgroundColor: "var(--parchment)", borderColor: "var(--rule)", boxShadow: "0 24px 80px -12px rgba(0,0,0,0.35)" }}
+        className="relative w-full max-w-md border p-6 outline-none"
+        style={{ backgroundColor: "var(--surface-raised)", borderColor: "var(--line)", borderRadius: "var(--radius-panel)", boxShadow: "var(--shadow-raised)" }}
       >
         <div className="mb-5 flex items-start justify-between">
           <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1.25rem", fontWeight: 700, color: "var(--charcoal)", letterSpacing: "-0.02em" }}>
             {editing ? copy.editorEditTitle : copy.editorCreateTitle}
           </h2>
-          <button type="button" onClick={onClose} aria-label="Stäng" className="rounded-full p-1 transition-colors hover:bg-[var(--rule)]" style={{ color: "var(--slate)" }}>
+          <button type="button" onClick={onClose} aria-label="Stäng" className="icon-btn -my-1 -mr-1.5">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -181,8 +180,7 @@ export function ClientEditor({
               placeholder={copy.namePlaceholder}
               required
               maxLength={120}
-              className="w-full rounded-xl px-4 py-2.5 text-sm focus:outline-none"
-              style={field}
+              className="field w-full rounded-xl px-4 py-2.5 text-sm"
             />
           </label>
 
@@ -193,8 +191,7 @@ export function ClientEditor({
               onChange={(e) => setDomain(e.target.value)}
               placeholder={copy.domainPlaceholder}
               maxLength={253}
-              className="w-full rounded-xl px-4 py-2.5 text-sm focus:outline-none"
-              style={field}
+              className="field w-full rounded-xl px-4 py-2.5 text-sm"
             />
           </label>
 
@@ -211,7 +208,6 @@ export function ClientEditor({
               disabled={!googleReady}
               loading={loadingProperties}
               copy={copy}
-              fieldStyle={field}
             />
             <div className="h-3" />
             <SourceSelect
@@ -223,10 +219,9 @@ export function ClientEditor({
               disabled={!googleReady}
               loading={loadingProperties}
               copy={copy}
-              fieldStyle={field}
             />
             {googleHealth?.status === "reconnect_required" && (
-              <p className="mt-3" style={{ fontSize: "11.5px", color: "#C97B2A" }}>
+              <p className="mt-3" style={{ fontSize: "11.5px", color: "var(--warning)" }}>
                 {copy.googleReconnect}{" "}
                 <Link href="/integrations" className="underline" style={{ color: "var(--charcoal)", fontWeight: 600 }}>
                   {copy.googleReconnectCta}
@@ -248,16 +243,14 @@ export function ClientEditor({
             type="button"
             onClick={onClose}
             disabled={saving}
-            className="rounded-xl px-4 py-2 text-sm font-medium transition-colors hover:bg-[var(--bone-dark)] disabled:opacity-40"
-            style={{ border: "1px solid var(--rule)", color: "var(--charcoal)" }}
+            className="btn btn-ghost"
           >
             {copy.cancel}
           </button>
           <button
             type="submit"
             disabled={saving || !name.trim()}
-            className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-80 disabled:opacity-40"
-            style={{ backgroundColor: "var(--charcoal)", color: "var(--parchment)" }}
+            className="btn btn-primary"
           >
             {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
             {saving ? copy.saving : copy.save}
@@ -277,7 +270,6 @@ function SourceSelect({
   disabled,
   loading,
   copy,
-  fieldStyle,
 }: {
   label: string;
   value: SourceChoice;
@@ -287,7 +279,6 @@ function SourceSelect({
   disabled: boolean;
   loading: boolean;
   copy: ClientsCopy;
-  fieldStyle: React.CSSProperties;
 }) {
   return (
     <label className="block">
@@ -296,8 +287,7 @@ function SourceSelect({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        className="w-full rounded-xl px-3 py-2.5 text-sm focus:outline-none disabled:opacity-50"
-        style={fieldStyle}
+        className="field w-full rounded-xl px-3 py-2.5 text-sm disabled:opacity-50"
       >
         {current && (
           <option value="keep">

@@ -1,28 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import { AssembledDashboardItem } from "@/types/dashboard";
 import { Metric, ReportData } from "@/types/schema";
 import { useLocale, Translations } from "@/lib/i18n";
 import { formatNumber } from "@/lib/utils/format";
 import { DeltaText } from "@/components/dashboard/metrics";
 import { InfoTooltip } from "@/components/primitives/InfoTooltip";
+import { channelColorByKey } from "@/components/report/channel-colors";
+import { useTheme } from "@/lib/theme";
 
-const EASE_OUT = [0.0, 0.0, 0.2, 1] as const;
+const EASE_OUT = [0.25, 0.1, 0.25, 1] as const;
 
-export const CHANNEL_COLORS = [
-  { stroke: "#E8826A", bg: "rgba(232,130,106,0.12)", label: "#B85A42" }, // coral
-  { stroke: "#F2A07B", bg: "rgba(242,160,123,0.12)", label: "#C07A3A" }, // amber-coral
-  { stroke: "#D98FA8", bg: "rgba(217,143,168,0.12)", label: "#A05878" }, // blush
-  { stroke: "#C4917A", bg: "rgba(196,145,122,0.12)", label: "#8C5B43" }, // terracotta
-  { stroke: "#BFA882", bg: "rgba(191,168,130,0.12)", label: "#8A7050" }, // sand
-  { stroke: "#9BA89E", bg: "rgba(155,168,158,0.12)", label: "#5C726A" }, // sage
-];
-
+// Display names match the report's (see slide-data.tsx) so a customer reads
+// the same channel name on both screens.
 const CHANNEL_INFO: Record<string, { name: string; sub: string; info: string }> = {
   organic: {
-    name: "Google (Obetald söktrafik)",
+    name: "Google (obetalt)",
     sub: "Besök från Googles vanliga sökresultat",
     info: "Det här är personer som hittade företaget via Google utan att man betalat för klicket.",
   },
@@ -35,6 +30,11 @@ const CHANNEL_INFO: Record<string, { name: string; sub: string; info: string }> 
     name: "Sociala medier",
     sub: "Besök från inlägg och delningar i sociala medier",
     info: "Det här är personer som klickat in från exempelvis LinkedIn, Facebook eller Instagram.",
+  },
+  "paid-social": {
+    name: "Betald social",
+    sub: "Köpt trafik från sociala medier",
+    info: "Besökare som kom via en betald annons på Facebook, Instagram, LinkedIn eller TikTok.",
   },
   direct: {
     name: "Direkttrafik",
@@ -52,18 +52,24 @@ const CHANNEL_INFO: Record<string, { name: string; sub: string; info: string }> 
     info: "Besökare som klickat via ett e-postutskick eller nyhetsbrev.",
   },
   unassigned: {
-    name: "Okänd källa",
+    name: "Okänd trafik",
     sub: "Trafik som inte kunnat kopplas tydligt till en källa",
     info: "Ibland saknas tillräcklig information för att systemet ska kunna avgöra exakt var trafiken kom ifrån.",
   },
 };
 
-// Map display labels (from data) back to a canonical channel key
-function inferChannelKey(rawChannel: string): string {
+// Map display labels (from data) back to a canonical channel key. Social is
+// tested first: "Paid Social" contains "paid" and "Organic Social" contains
+// "organic", and both used to be filed under Google — a paid Facebook
+// campaign showed up on the dashboard as Google Ads.
+export function inferChannelKey(rawChannel: string): string {
   const lower = rawChannel.toLowerCase();
-  if (lower.includes("organic") || lower.includes("organisk") || lower.includes("google seo")) return "organic";
+  const social = lower.includes("social") || lower.includes("sociala");
+  if (social) {
+    return lower.includes("paid") || lower.includes("betald") ? "paid-social" : "social";
+  }
+  if (lower.includes("organic") || lower.includes("organisk") || lower.includes("google seo") || lower.includes("obetal")) return "organic";
   if (lower.includes("paid") || lower.includes("betald") || lower.includes("ads")) return "paid";
-  if (lower.includes("social") || lower.includes("sociala")) return "social";
   if (lower.includes("direct") || lower.includes("direkt")) return "direct";
   if (lower.includes("referral") || lower.includes("hänvisning")) return "referral";
   if (lower.includes("email") || lower.includes("e-post") || lower.includes("mail")) return "email";
@@ -113,21 +119,25 @@ export function getChannelRows(data: ReportData, t: Translations) {
     }));
 }
 
+type Segment = { share: number; value: number; label: string; color: string };
+
 function DonutChart({
   segments,
   totalSessions,
   hoveredIndex,
   onHover,
+  reduced,
 }: {
-  segments: { share: number; value: number; label: string }[];
+  segments: Segment[];
   totalSessions: number;
   hoveredIndex: number | null;
   onHover: (i: number | null) => void;
+  reduced: boolean;
 }) {
-  const R = 84, CX = 110, CY = 110, strokeW = 20, gapDeg = 3.5;
+  const R = 84, CX = 110, CY = 110, strokeW = 18, gapDeg = 3;
   const circumference = 2 * Math.PI * R;
 
-  type Arc = { color: string; dashArray: string; dashOffset: string; rotation: number; index: number };
+  type Arc = { color: string; dashArray: string; dashOffset: number; rotation: number; index: number; dashLen: number };
   const arcs: Arc[] = [];
   let cursor = -90;
 
@@ -136,11 +146,12 @@ function DonutChart({
     const usableFrac = Math.max(0, deg - gapDeg) / 360;
     const dashLen = usableFrac * circumference;
     arcs.push({
-      color: CHANNEL_COLORS[i % CHANNEL_COLORS.length].stroke,
+      color: seg.color,
       dashArray: `${dashLen} ${circumference - dashLen}`,
-      dashOffset: `${circumference * 0.25}`,
+      dashOffset: circumference * 0.25,
       rotation: cursor,
       index: i,
+      dashLen,
     });
     cursor += deg;
   });
@@ -148,12 +159,11 @@ function DonutChart({
   const active = hoveredIndex !== null ? segments[hoveredIndex] : null;
 
   return (
-    <svg viewBox="0 0 220 220" width="220" height="220" style={{ display: "block", overflow: "visible" }}>
-      <circle cx={CX} cy={CY} r={R} fill="none" stroke="var(--rule)" strokeWidth={strokeW + 2} />
+    <svg viewBox="0 0 220 220" width="220" height="220" style={{ display: "block", overflow: "visible" }} role="img" aria-label="Fördelning av besök per kanal">
+      <circle cx={CX} cy={CY} r={R} fill="none" stroke="var(--line-soft)" strokeWidth={strokeW} />
       {arcs.map((arc) => {
         const isHovered = hoveredIndex === arc.index;
         const isDimmed = hoveredIndex !== null && !isHovered;
-        const dashLen = parseFloat(arc.dashArray.split(" ")[0]);
         return (
           <motion.circle
             key={arc.index}
@@ -162,31 +172,29 @@ function DonutChart({
             stroke={arc.color}
             strokeWidth={strokeW}
             strokeDasharray={arc.dashArray}
-            strokeDashoffset={arc.dashOffset}
             strokeLinecap="butt"
             transform={`rotate(${arc.rotation}, ${CX}, ${CY})`}
             style={{ cursor: "pointer" }}
-            initial={{ strokeDashoffset: parseFloat(arc.dashOffset) + dashLen, opacity: 0 }}
-            animate={{ strokeDashoffset: parseFloat(arc.dashOffset), opacity: isDimmed ? 0.22 : 1 }}
+            initial={reduced ? false : { strokeDashoffset: arc.dashOffset + arc.dashLen, opacity: 0 }}
+            animate={{ strokeDashoffset: arc.dashOffset, opacity: isDimmed ? 0.25 : 1 }}
             transition={{
-              strokeDashoffset: { duration: 0.75, delay: 0.1 + arc.index * 0.1, ease: [0.16, 1, 0.3, 1] },
-              opacity: { duration: 0.25, delay: 0.08 + arc.index * 0.1 },
-              strokeWidth: { duration: 0.18 },
+              strokeDashoffset: { duration: reduced ? 0 : 0.5, delay: reduced ? 0 : 0.05 * arc.index, ease: EASE_OUT },
+              opacity: { duration: 0.18 },
             }}
             onMouseEnter={() => onHover(arc.index)}
             onMouseLeave={() => onHover(null)}
           />
         );
       })}
-      <text x={CX} y={CY - 12} textAnchor="middle" style={{ fontFamily: "var(--font-display)", fontSize: "9px", fontWeight: 500, fill: "var(--slate)", letterSpacing: "0.1em", textTransform: "uppercase", pointerEvents: "none" }}>
-        {active ? active.label.toUpperCase().slice(0, 10) : "TOTALT"}
+      <text x={CX} y={CY - 12} textAnchor="middle" style={{ fontFamily: "var(--font-body)", fontSize: "10px", fontWeight: 500, fill: "var(--text-secondary)", letterSpacing: "0.06em", textTransform: "uppercase", pointerEvents: "none" }}>
+        {active ? active.label.toUpperCase().slice(0, 14) : "TOTALT"}
       </text>
-      <text x={CX} y={CY + 18} textAnchor="middle" style={{ fontFamily: "var(--font-numeric)", fontVariantNumeric: "tabular-nums", fontSize: active ? "26px" : "30px", fontWeight: 700, fill: "var(--charcoal)", letterSpacing: "-0.03em", pointerEvents: "none" }}>
-        {active ? formatNumber(active.value, "number") : totalSessions >= 1000 ? `${(totalSessions / 1000).toFixed(1)}k` : String(totalSessions)}
+      <text x={CX} y={CY + 14} textAnchor="middle" style={{ fontFamily: "var(--font-numeric)", fontVariantNumeric: "tabular-nums", fontSize: active ? "24px" : "26px", fontWeight: 600, fill: "var(--text-primary)", letterSpacing: "-0.02em", pointerEvents: "none" }}>
+        {formatNumber(active ? active.value : totalSessions, "number")}
       </text>
       {active && (
-        <text x={CX} y={CY + 34} textAnchor="middle" style={{ fontFamily: "var(--font-numeric)", fontSize: "12px", fontWeight: 600, fill: CHANNEL_COLORS.find((_, ci) => segments[ci]?.label === active.label)?.stroke ?? "var(--slate)", pointerEvents: "none" }}>
-          {Math.round(active.share)}%
+        <text x={CX} y={CY + 32} textAnchor="middle" style={{ fontFamily: "var(--font-numeric)", fontVariantNumeric: "tabular-nums", fontSize: "12px", fontWeight: 600, fill: "var(--text-secondary)", pointerEvents: "none" }}>
+          {Math.round(active.share)} %
         </text>
       )}
     </svg>
@@ -195,83 +203,94 @@ function DonutChart({
 
 export function ChannelBreakdown({ item, data }: { item: AssembledDashboardItem; data: ReportData }) {
   const { t } = useLocale();
+  const { theme } = useTheme();
+  const prefersReduced = useReducedMotion();
   const rows = getChannelRows(data, t);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   if (!rows.length) return null;
 
   const isFull = item.eligibility.variant === "full";
   const total = data.trafficOverview?.totalSessions.value ?? rows.reduce((s, r) => s + r.value, 0);
-  const segments = rows.map((r) => ({ ...r }));
+  // Dark mode takes its own validated steps, not a dimmed copy of the light ones.
+  const segments: Segment[] = rows.map((r) => ({
+    share: r.share,
+    value: r.value,
+    label: CHANNEL_INFO[r.channelKey]?.name ?? r.label,
+    color: channelColorByKey(r.channelKey, theme),
+  }));
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
+    <motion.section
+      initial={prefersReduced ? false : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.45, ease: EASE_OUT, delay: 0.2 }}
-      className="rounded-2xl p-4 sm:p-6"
-      style={{ backgroundColor: "var(--bone)", border: "1px solid var(--rule)" }}
+      transition={{ duration: 0.35, ease: EASE_OUT }}
+      className="surface-card p-5 sm:p-6"
     >
-      <p className="eyebrow mb-4" style={{ color: "var(--slate)" }}>{t.dashboard.channels.eyebrow}</p>
-      <div className="flex flex-col items-center gap-5 sm:flex-row">
-        <div className="shrink-0">
-          <DonutChart segments={segments} totalSessions={total} hoveredIndex={hoveredIndex} onHover={setHoveredIndex} />
+      <p className="eyebrow mb-4">{t.dashboard.channels.eyebrow}</p>
+      <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-start">
+        <div className="shrink-0 sm:pt-2">
+          <DonutChart segments={segments} totalSessions={total} hoveredIndex={hoveredIndex} onHover={setHoveredIndex} reduced={!!prefersReduced} />
         </div>
-        <div className="flex min-w-0 w-full flex-1 flex-col gap-2">
+        <ul className="flex w-full min-w-0 flex-1 flex-col gap-0.5">
           {rows.map((row, i) => {
-            const color = CHANNEL_COLORS[i % CHANNEL_COLORS.length];
+            const color = segments[i].color;
             const pct = Math.round(row.share);
             const isActive = hoveredIndex === i;
             const isDimmed = hoveredIndex !== null && !isActive;
             const info = CHANNEL_INFO[row.channelKey];
             return (
-              <div
-                key={row.label}
-                className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 cursor-default"
+              <li
+                key={`${row.channelKey}-${row.label}`}
+                className="flex cursor-default items-center gap-3 rounded-[10px] px-2.5 py-2"
                 style={{
-                  background: isActive ? color.bg : "transparent",
-                  border: `1px solid ${isActive ? color.stroke + "35" : "transparent"}`,
-                  opacity: isDimmed ? 0.35 : 1,
-                  transition: "background 0.18s ease, opacity 0.18s ease, border-color 0.18s ease",
+                  background: isActive ? `color-mix(in oklab, ${color} 9%, transparent)` : "transparent",
+                  opacity: isDimmed ? 0.4 : 1,
+                  transition: "background 0.18s ease, opacity 0.18s ease",
                 }}
                 onMouseEnter={() => setHoveredIndex(i)}
                 onMouseLeave={() => setHoveredIndex(null)}
               >
-                <span className="shrink-0 rounded-sm" style={{ width: "3px", height: "24px", background: color.stroke, opacity: isDimmed ? 0.5 : 1, borderRadius: "2px" }} />
-                <div className="flex-1 min-w-0">
+                <span className="shrink-0 self-stretch rounded-full" style={{ width: "3px", minHeight: "36px", background: color }} aria-hidden />
+                <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
-                    <p className="truncate" style={{ fontSize: "15px", fontWeight: 600, color: "var(--charcoal)", lineHeight: 1.2 }}>
+                    <p className="truncate" style={{ fontSize: "14px", fontWeight: 500, color: "var(--text-primary)", lineHeight: 1.25 }}>
                       {info?.name ?? row.label}
                     </p>
                     {info?.info && <InfoTooltip text={info.info} />}
                   </div>
                   {info?.sub && (
-                    <p style={{ fontSize: "13px", color: "var(--charcoal)", opacity: 0.5, lineHeight: 1.3, marginTop: "1px" }}>
+                    <p className="truncate" style={{ fontSize: "12.5px", color: "var(--text-secondary)", lineHeight: 1.3, marginTop: "1px" }}>
                       {info.sub}
                     </p>
                   )}
-                  <div className="flex items-baseline gap-1.5 mt-1">
-                    <span style={{ fontFamily: "var(--font-numeric)", fontSize: "1.5rem", fontWeight: 700, letterSpacing: "-0.03em", color: isActive ? color.label : "var(--charcoal)", lineHeight: 1, fontVariantNumeric: "tabular-nums", transition: "color 0.18s ease" }}>
-                      {formatNumber(row.value, "number")}
-                    </span>
-                    {isFull && row.metric && <DeltaText metric={row.metric} />}
-                  </div>
-                  <div className="mt-1.5 h-0.5 w-full rounded-full" style={{ background: "var(--rule)", position: "relative" }}>
+                  <div className="mt-1.5 h-[3px] w-full rounded-full" style={{ background: "var(--line-soft)" }}>
                     <motion.div
-                      initial={{ scaleX: 0 }}
+                      initial={prefersReduced ? false : { scaleX: 0 }}
                       animate={{ scaleX: 1 }}
-                      transition={{ duration: 0.8, delay: 0.3 + i * 0.08, ease: [0.16, 1, 0.3, 1] }}
-                      style={{ height: "100%", width: `${row.share}%`, background: color.stroke, transformOrigin: "50% 50%", borderRadius: "9999px" }}
+                      transition={{ duration: prefersReduced ? 0 : 0.45, delay: prefersReduced ? 0 : 0.15 + i * 0.04, ease: EASE_OUT }}
+                      style={{ height: "100%", width: `${row.share}%`, background: color, transformOrigin: "0 50%", borderRadius: "9999px" }}
                     />
                   </div>
                 </div>
-                <span className="shrink-0 rounded-full px-2 py-1" style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.03em", background: isActive ? color.stroke : "var(--rule)", color: isActive ? "white" : "var(--charcoal)", transition: "background 0.18s ease, color 0.18s ease", minWidth: "36px", textAlign: "center" }}>
-                  {pct}%
-                </span>
-              </div>
+                <div className="flex shrink-0 flex-col items-end gap-0.5">
+                  <span
+                    className="font-stat tabular-nums"
+                    style={{ fontSize: "1.2rem", fontWeight: 600, letterSpacing: "-0.02em", color: "var(--text-primary)", lineHeight: 1 }}
+                  >
+                    {formatNumber(row.value, "number")}
+                  </span>
+                  <span className="flex items-center gap-2">
+                    {isFull && row.metric && <DeltaText metric={row.metric} />}
+                    <span className="tabular-nums" style={{ fontSize: "12px", fontWeight: 500, color: "var(--text-secondary)", minWidth: "32px", textAlign: "right" }}>
+                      {pct} %
+                    </span>
+                  </span>
+                </div>
+              </li>
             );
           })}
-        </div>
+        </ul>
       </div>
-    </motion.div>
+    </motion.section>
   );
 }

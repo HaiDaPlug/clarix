@@ -136,7 +136,7 @@ async function runExplorer(
     metric("screenPageViews", "Sidvisningar", row0, summary, priorRow0, priorSummary, "number", true),
     metric("engagementRate", "Engagemangsgrad", row0, summary, priorRow0, priorSummary, "percent", true),
     metric("bounceRate", "Avvisningsfrekvens", row0, summary, priorRow0, priorSummary, "percent", false),
-    metric("averageSessionDuration", "Genomsn. besökstid", row0, summary, priorRow0, priorSummary, "seconds", true),
+    metric("averageSessionDuration", "Genomsnittlig besökstid", row0, summary, priorRow0, priorSummary, "seconds", true),
     metric("conversions", "Konverteringar", row0, summary, priorRow0, priorSummary, "number", true),
     metric("sessionConversionRate", "Konverteringsgrad", row0, summary, priorRow0, priorSummary, "percent", true),
     metric("userEngagementDuration", "Engagemangstid", row0, summary, priorRow0, priorSummary, "seconds", true),

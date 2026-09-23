@@ -4,7 +4,12 @@ import { useSearchParams } from "next/navigation";
 import { currentCalendarMonthRange, lastCompletedDay } from "./connected-sources";
 import { isIsoDate } from "./date-range";
 
-export type DatePresetId = "this-month" | "all-time";
+export type DatePresetId =
+  | "this-month"
+  | "last-3-months"
+  | "last-6-months"
+  | "last-12-months"
+  | "all-time";
 
 export interface DatePreset {
   id: DatePresetId;
@@ -13,8 +18,11 @@ export interface DatePreset {
 }
 
 export const DATE_PRESETS: DatePreset[] = [
-  { id: "this-month", labelSv: "Denna månad", labelEn: "This month" },
-  { id: "all-time",   labelSv: "Sen start",   labelEn: "Since start" },
+  { id: "this-month",     labelSv: "Denna månad",         labelEn: "This month" },
+  { id: "last-3-months",  labelSv: "Senaste 3 månaderna", labelEn: "Last 3 months" },
+  { id: "last-6-months",  labelSv: "Senaste 6 månaderna", labelEn: "Last 6 months" },
+  { id: "last-12-months", labelSv: "Senaste året",        labelEn: "Last 12 months" },
+  { id: "all-time",       labelSv: "Sen start",           labelEn: "Since start" },
 ];
 
 function toIso(date: Date): string {
@@ -24,6 +32,25 @@ function toIso(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
+// Shift by whole months, clamping the day to the target month's length so
+// e.g. 31 Mar minus one month lands on 28/29 Feb rather than rolling into March.
+function addMonths(date: Date, delta: number): Date {
+  const d = new Date(date.getFullYear(), date.getMonth(), 1);
+  d.setMonth(d.getMonth() + delta);
+  const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  d.setDate(Math.min(date.getDate(), lastDay));
+  return d;
+}
+
+// Rolling window ending on the last completed day. The start is pushed one day
+// forward so the window is inclusive on both ends and spans exactly `months`.
+function rollingMonths(months: number, today: Date): { startDate: string; endDate: string } {
+  const end = lastCompletedDay(today);
+  const start = addMonths(end, -months);
+  start.setDate(start.getDate() + 1);
+  return { startDate: toIso(start), endDate: toIso(end) };
+}
+
 export function presetToRange(
   id: DatePresetId,
   today = new Date(),
@@ -31,6 +58,15 @@ export function presetToRange(
   switch (id) {
     case "this-month":
       return currentCalendarMonthRange(today);
+
+    case "last-3-months":
+      return rollingMonths(3, today);
+
+    case "last-6-months":
+      return rollingMonths(6, today);
+
+    case "last-12-months":
+      return rollingMonths(12, today);
 
     case "all-time":
       return { startDate: "2020-01-01", endDate: toIso(lastCompletedDay(today)) };

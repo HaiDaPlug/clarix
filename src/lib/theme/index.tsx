@@ -16,25 +16,36 @@ const ThemeContext = createContext<ThemeContextValue>({
   toggleTheme: () => {},
 });
 
+/**
+ * The person's preference: what they picked, else the system setting. Same
+ * rule as the inline script in the root layout. Read this rather than the
+ * DOM class, which a light-only route (the report) removes on purpose.
+ */
+export function storedTheme(): Theme {
+  if (typeof window === "undefined") return "light";
+  try {
+    const t = localStorage.getItem("theme");
+    if (t === "dark" || t === "light") return t;
+  } catch {}
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  // Initialise from the DOM — the inline script may have already set .dark
-  const [theme, setThemeState] = useState<Theme>(() => {
-    if (typeof window === "undefined") return "light";
-    return document.documentElement.classList.contains("dark") ? "dark" : "light";
-  });
+  const [theme, setThemeState] = useState<Theme>(storedTheme);
 
   // Keep DOM in sync whenever theme state changes
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
-    localStorage.setItem("theme", theme);
   }, [theme]);
 
+  // Persist only an explicit choice, so "follow the system" stays that way.
   function setTheme(next: Theme) {
     setThemeState(next);
+    try { localStorage.setItem("theme", next); } catch {}
   }
 
   function toggleTheme() {
-    setThemeState((prev) => (prev === "light" ? "dark" : "light"));
+    setTheme(theme === "light" ? "dark" : "light");
   }
 
   return (

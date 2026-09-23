@@ -4,6 +4,7 @@ import React from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Check, Loader2, Lock, ShieldCheck, X } from "lucide-react";
 import type { ClientSourceRef } from "@/lib/clients/types";
+import { useDialogKeyboard } from "@/lib/hooks/useDialogKeyboard";
 
 type PropertyOption = { id: string; displayName: string };
 
@@ -134,6 +135,7 @@ export function ConnectModal({
 }) {
   const [choosing, setChoosing] = React.useState(!selected);
   const isPending = pendingOptionId !== null || removing;
+  const dialogRef = useDialogKeyboard<HTMLDivElement>(onClose, isPending);
 
   return (
     <motion.div
@@ -150,14 +152,17 @@ export function ConnectModal({
         exit={{ opacity: 0, scale: 0.96, y: 8 }}
         transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
         onClick={(e) => e.stopPropagation()}
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label={integration.name}
-        className="relative w-full max-w-md overflow-hidden rounded-2xl border"
+        className="relative w-full max-w-md overflow-hidden border outline-none"
         style={{
-          backgroundColor: "var(--parchment)",
-          borderColor: "var(--rule)",
-          boxShadow: "0 24px 80px -12px rgba(0,0,0,0.35)",
+          backgroundColor: "var(--surface-raised)",
+          borderColor: "var(--line)",
+          borderRadius: "var(--radius-panel)",
+          boxShadow: "var(--shadow-raised)",
         }}
       >
         {/* Browser-chrome header */}
@@ -173,8 +178,7 @@ export function ConnectModal({
           </div>
           <button
             onClick={onClose}
-            className="rounded-full p-1 transition-colors hover:bg-[var(--rule)]"
-            style={{ color: "var(--slate)" }}
+            className="icon-btn -my-1 -mr-1.5 h-7 w-7"
             aria-label="Stäng"
           >
             <X className="h-4 w-4" />
@@ -317,24 +321,21 @@ function SelectedState({
           <button
             onClick={onRemove}
             disabled={isPending}
-            className="rounded-full px-4 py-2 text-sm font-medium transition-opacity hover:opacity-80 disabled:opacity-40"
-            style={{ border: "1px solid var(--rule)", color: "var(--signal-down)", backgroundColor: "transparent" }}
+            className="btn btn-danger"
           >
             {removing ? copy.disconnecting : copy.removeProperty}
           </button>
           <button
             onClick={onChange}
             disabled={isPending || !googleReady}
-            className="rounded-full px-4 py-2 text-sm font-medium transition-opacity hover:opacity-80 disabled:opacity-40"
-            style={{ border: "1px solid var(--rule)", color: "var(--charcoal)", backgroundColor: "transparent" }}
+            className="btn btn-secondary"
           >
             {copy.changeProperty}
           </button>
         </div>
         <button
           onClick={onClose}
-          className="rounded-full px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-90"
-          style={{ backgroundColor: "var(--charcoal)", color: "var(--parchment)" }}
+          className="btn btn-primary"
         >
           {copy.done}
         </button>
@@ -449,14 +450,13 @@ function ChooseState({
                   transition={{ duration: 0.2, delay: i * 0.04 }}
                   onClick={() => onSelect(option)}
                   disabled={anyPending || isCurrent}
-                  className="w-full text-left rounded-2xl px-4 py-3.5 transition-all group"
+                  className={`w-full rounded-xl border px-4 py-3.5 text-left transition-colors ${
+                    isThisPending || isCurrent
+                      ? "border-[var(--charcoal)]"
+                      : "border-[var(--line)] hover:border-[var(--text-tertiary)] hover:bg-[var(--hover-surface)]"
+                  }`}
                   style={{
-                    backgroundColor: isThisPending ? "var(--charcoal)" : "var(--bone)",
-                    border: isThisPending
-                      ? "1px solid var(--charcoal)"
-                      : isCurrent
-                        ? "1px solid var(--charcoal)"
-                        : "1px solid var(--rule)",
+                    backgroundColor: isThisPending ? "var(--charcoal)" : undefined,
                     opacity: isDimmed ? 0.4 : 1,
                     cursor: anyPending || isCurrent ? "default" : "pointer",
                   }}
@@ -553,8 +553,7 @@ function ChooseState({
         <button
           onClick={onCancel}
           disabled={anyPending}
-          className="rounded-full px-4 py-2 text-sm font-medium transition-all disabled:opacity-40"
-          style={{ border: "1px solid var(--rule)", color: "var(--slate)", backgroundColor: "transparent" }}
+          className="btn btn-ghost"
         >
           {copy.cancel}
         </button>

@@ -1,32 +1,62 @@
 "use client";
 
 import { motion } from "motion/react";
-import { useState } from "react";
-import { Check, Globe, Palette, Sparkles, Upload, User } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { Globe, Link2, Palette, Sparkles, User } from "lucide-react";
+import { createClient } from "@/utils/supabase/client";
+import type { ClientsResponse } from "@/lib/clients/types";
+import { DeleteAccount } from "@/components/settings/DeleteAccount";
+import { ShareLinks } from "@/components/settings/ShareLinks";
 
 const EASING = [0.16, 1, 0.3, 1] as const;
 
+// `soon` sections are not built yet. They say so plainly instead of showing
+// controls that save nothing or states (a verified domain) that aren't true.
 const sections = [
   { id: "profile", label: "Profil",         icon: User },
-  { id: "brand",   label: "White-label",    icon: Palette },
-  { id: "domain",  label: "Eget domännamn", icon: Globe },
-  { id: "ai",      label: "AI-insikter",    icon: Sparkles },
+  { id: "sharing", label: "Delade länkar",  icon: Link2 },
+  { id: "brand",   label: "White-label",    icon: Palette,  soon: "Din logga och accentfärg på rapporterna du skickar till kunder." },
+  { id: "domain",  label: "Eget domännamn", icon: Globe,    soon: "Rapporter på en adress som rapporter.dinbyra.se." },
+  { id: "ai",      label: "AI-insikter",    icon: Sparkles, soon: "Välj ton och djup för sammanfattningarna Clarix skriver." },
 ] as const;
 
 type SectionId = (typeof sections)[number]["id"];
 
-const accentColors = [
-  "#E8524A",
-  "#8B5CF6",
-  "#F5A623",
-  "#2D6A4F",
-  "#0EA5E9",
-  "#1A1916",
-];
+type Profile = { name: string | null; email: string | null; workspace: string | null };
 
 export default function SettingsPage() {
   const [active, setActive] = useState<SectionId>("profile");
-  const [accent, setAccent] = useState(accentColors[0]);
+  const [profile, setProfile] = useState<Profile | null>(null);
+
+  // Name and email come from the sign-in account (same source as the sidebar);
+  // the workspace is the active client from /api/clients.
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      const [{ data }, clients] = await Promise.all([
+        createClient().auth.getUser(),
+        fetch("/api/clients", { cache: "no-store" })
+          .then((r) => (r.ok ? (r.json() as Promise<ClientsResponse>) : null))
+          .catch(() => null),
+      ]);
+      if (cancelled) return;
+      const user = data?.user;
+      const meta = user?.user_metadata ?? {};
+      setProfile({
+        name:
+          (typeof meta.full_name === "string" && meta.full_name) ||
+          (typeof meta.name === "string" && meta.name) ||
+          null,
+        email: user?.email ?? null,
+        workspace: clients?.clients.find((c) => c.isActive)?.name ?? null,
+      });
+    }
+    void load();
+    return () => { cancelled = true; };
+  }, []);
+
+  const section = sections.find((s) => s.id === active)!;
 
   return (
     <div className="flex-1 flex flex-col min-h-dvh">
@@ -62,14 +92,16 @@ export default function SettingsPage() {
                 <button
                   key={s.id}
                   onClick={() => setActive(s.id)}
-                  className="flex min-h-11 w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors"
-                  style={{
-                    backgroundColor: isActive ? "var(--bone-dark)" : "transparent",
-                    color: isActive ? "var(--charcoal)" : "var(--slate)",
-                  }}
+                  aria-current={isActive ? "page" : undefined}
+                  className={`flex min-h-11 w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${
+                    isActive
+                      ? "bg-[var(--surface-tint)] text-[var(--text-primary)]"
+                      : "text-[var(--text-secondary)] hover:bg-[var(--hover-surface)] hover:text-[var(--text-primary)]"
+                  }`}
                 >
                   <Icon className="h-4 w-4 shrink-0" />
-                  {s.label}
+                  <span className="flex-1">{s.label}</span>
+                  {"soon" in s && <SoonTag />}
                 </button>
               );
             })}
@@ -81,146 +113,70 @@ export default function SettingsPage() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: EASING }}
-            className="rounded-2xl p-5 sm:p-6 lg:p-8"
-            style={{ backgroundColor: "var(--bone)", border: "1px solid var(--rule)" }}
+            className="surface-card p-5 sm:p-6 lg:p-8"
           >
             {active === "profile" && (
               <div className="space-y-6">
-                <div>
-                  <p style={{ fontFamily: "var(--font-display)", fontSize: "1.2rem", fontWeight: 600, color: "var(--charcoal)", letterSpacing: "-0.02em" }}>Profil</p>
-                  <p style={{ fontSize: "13px", color: "var(--slate)", marginTop: "3px" }}>Så här visas ditt konto.</p>
-                </div>
+                <SectionTitle title="Profil" help="Namn och e-post kommer från kontot du loggar in med." />
+
                 <div className="flex items-center gap-4">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full text-xl font-semibold text-white" style={{ background: "linear-gradient(135deg, #8B5CF6, #E8524A)" }}>
-                    A
-                  </div>
-                  <button
-                    className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium transition-colors hover:bg-[var(--bone-dark)]"
-                    style={{ border: "1px solid var(--rule)", color: "var(--charcoal)" }}
-                  >
-                    <Upload className="h-3.5 w-3.5" />
-                    Ladda upp foto
-                  </button>
-                </div>
-                <SettingsField label="Fullständigt namn" defaultValue="Alex Lindqvist" />
-                <SettingsField label="E-post" defaultValue="alex@aurora.studio" type="email" />
-                <SettingsField label="Arbetsyta" defaultValue="Aurora Byrå" />
-              </div>
-            )}
-
-            {active === "brand" && (
-              <div className="space-y-6">
-                <div>
-                  <p style={{ fontFamily: "var(--font-display)", fontSize: "1.2rem", fontWeight: 600, color: "var(--charcoal)", letterSpacing: "-0.02em" }}>White-label</p>
-                  <p style={{ fontSize: "13px", color: "var(--slate)", marginTop: "3px" }}>Logo och färger. Rapporter ärver dem automatiskt.</p>
-                </div>
-                <div>
-                  <p style={{ fontSize: "13px", fontWeight: 500, color: "var(--charcoal)", marginBottom: "8px" }}>Logo</p>
                   <div
-                    className="flex items-center gap-4 rounded-xl p-6"
-                    style={{ border: "1px dashed var(--rule)", backgroundColor: "var(--parchment)" }}
+                    className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-xl font-semibold text-white"
+                    style={{ background: "var(--brand-gradient)" }}
+                    aria-hidden
                   >
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl" style={{ background: "linear-gradient(135deg, oklch(0.62 0.22 295), oklch(0.65 0.19 265))" }}>
-                      <Sparkles className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <p style={{ fontSize: "13px", fontWeight: 500, color: "var(--charcoal)" }}>Dra och släpp eller klicka</p>
-                      <p style={{ fontSize: "11.5px", color: "var(--slate)", marginTop: "2px" }}>SVG, PNG · max 2 MB</p>
-                    </div>
+                    {profile ? (profile.name ?? profile.email ?? "?").charAt(0).toUpperCase() : ""}
+                  </div>
+                  <div className="min-w-0">
+                    {profile ? (
+                      <>
+                        <p className="truncate" style={{ fontSize: "15px", fontWeight: 600, color: "var(--text-primary)" }}>
+                          {profile.name ?? profile.email ?? "Ditt konto"}
+                        </p>
+                        {profile.name && profile.email && (
+                          <p className="truncate" style={{ fontSize: "13px", color: "var(--text-secondary)" }}>{profile.email}</p>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <div className="skeleton h-4 w-36" />
+                        <div className="skeleton mt-2 h-3 w-48" />
+                      </>
+                    )}
                   </div>
                 </div>
-                <div>
-                  <p style={{ fontSize: "13px", fontWeight: 500, color: "var(--charcoal)", marginBottom: "10px" }}>Accentfärg</p>
-                  <div className="flex flex-wrap gap-2">
-                    {accentColors.map((color) => (
-                      <button
-                        key={color}
-                        onClick={() => setAccent(color)}
-                        className="relative flex h-9 w-9 items-center justify-center rounded-full transition-transform hover:scale-105"
-                        style={{
-                          background: color,
-                          boxShadow: accent === color ? `0 0 0 2px var(--parchment), 0 0 0 4px ${color}` : "none",
-                        }}
-                      >
-                        {accent === color && <Check className="h-3.5 w-3.5 text-white" />}
-                      </button>
-                    ))}
-                  </div>
+
+                <dl className="divide-y rounded-xl border" style={{ borderColor: "var(--line)" }}>
+                  <ProfileRow label="Namn" value={profile ? profile.name : undefined} />
+                  <ProfileRow label="E-post" value={profile ? profile.email : undefined} />
+                  <ProfileRow
+                    label="Aktiv arbetsyta"
+                    value={profile ? profile.workspace : undefined}
+                    action={<Link href="/clients" className="btn btn-ghost btn-sm -my-1 -mr-2">Kunder</Link>}
+                  />
+                </dl>
+
+                <div className="pt-2">
+                  <DeleteAccount />
                 </div>
-                <SettingsField label="Varumärkesnamn på rapporter" defaultValue="Aurora Studios Rapporter" />
               </div>
             )}
 
-            {active === "domain" && (
-              <div className="space-y-6">
-                <div>
-                  <p style={{ fontFamily: "var(--font-display)", fontSize: "1.2rem", fontWeight: 600, color: "var(--charcoal)", letterSpacing: "-0.02em" }}>Eget domännamn</p>
-                  <p style={{ fontSize: "13px", color: "var(--slate)", marginTop: "3px" }}>Visa kundernas dashboards på din egen domän.</p>
-                </div>
-                <SettingsField label="Domän" defaultValue="rapporter.aurora.studio" placeholder="rapporter.dinbyra.se" />
-                <div className="rounded-xl p-4" style={{ border: "1px solid var(--rule)", backgroundColor: "var(--parchment)" }}>
-                  <p style={{ fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--slate-light)" }}>DNS-konfiguration</p>
-                  <div className="mt-3 space-y-2 font-mono">
-                    <div className="flex items-center justify-between rounded-lg px-3 py-2" style={{ backgroundColor: "var(--bone-dark)" }}>
-                      <span style={{ fontSize: "12px", color: "var(--charcoal)" }}>CNAME · rapporter</span>
-                      <span style={{ fontSize: "12px", color: "var(--slate)" }}>cname.clarix.se</span>
-                    </div>
-                  </div>
-                  <p className="mt-3 inline-flex items-center gap-1.5" style={{ fontSize: "12px", color: "var(--signal-up)" }}>
-                    <Check className="h-3 w-3" />
-                    Verifierad · SSL aktivt
+            {active === "sharing" && <ShareLinks />}
+
+            {"soon" in section && (
+              <div>
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <p style={{ fontFamily: "var(--font-display)", fontSize: "1.2rem", fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>
+                    {section.label}
                   </p>
+                  <SoonTag />
                 </div>
+                <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "6px", maxWidth: "48ch", lineHeight: 1.55 }}>
+                  {section.soon}
+                </p>
               </div>
             )}
-
-            {active === "ai" && (
-              <div className="space-y-6">
-                <div>
-                  <p style={{ fontFamily: "var(--font-display)", fontSize: "1.2rem", fontWeight: 600, color: "var(--charcoal)", letterSpacing: "-0.02em" }}>AI-insikter</p>
-                  <p style={{ fontSize: "13px", color: "var(--slate)", marginTop: "3px" }}>Justera ton och djup på genererade sammanfattningar.</p>
-                </div>
-                <SettingsToggle label="Generera slide-sammanfattningar automatiskt" defaultChecked />
-                <SettingsToggle label="Visa rekommendationer på dashboarden" defaultChecked />
-                <SettingsToggle label="Mejla veckosammanfattning av möjligheter" />
-                <div>
-                  <p style={{ fontSize: "13px", fontWeight: 500, color: "var(--charcoal)", marginBottom: "8px" }}>Tonläge</p>
-                  <div className="flex flex-wrap gap-2">
-                    {["Kortfattat", "Personligt", "Ledningsgrupp", "Tekniskt"].map((tone, i) => (
-                      <button
-                        key={tone}
-                        className="rounded-xl px-3.5 py-1.5 text-sm font-medium transition-colors"
-                        style={
-                          i === 0
-                            ? { backgroundColor: "var(--charcoal)", color: "var(--parchment)" }
-                            : { border: "1px solid var(--rule)", color: "var(--slate)", backgroundColor: "transparent" }
-                        }
-                      >
-                        {tone}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div
-              className="mt-8 flex justify-end gap-2 pt-6"
-              style={{ borderTop: "1px solid var(--rule)" }}
-            >
-              <button
-                className="rounded-xl px-4 py-2 text-sm font-medium transition-colors hover:bg-[var(--bone-dark)]"
-                style={{ border: "1px solid var(--rule)", color: "var(--charcoal)" }}
-              >
-                Avbryt
-              </button>
-              <button
-                className="rounded-xl px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-80"
-                style={{ backgroundColor: "var(--charcoal)", color: "var(--parchment)" }}
-              >
-                Spara ändringar
-              </button>
-            </div>
           </motion.div>
         </div>
       </main>
@@ -228,42 +184,41 @@ export default function SettingsPage() {
   );
 }
 
-function SettingsField({ label, defaultValue, placeholder, type = "text" }: {
-  label: string; defaultValue?: string; placeholder?: string; type?: string;
-}) {
+function SectionTitle({ title, help }: { title: string; help: string }) {
   return (
     <div>
-      <label style={{ display: "block", fontSize: "13px", fontWeight: 500, color: "var(--charcoal)", marginBottom: "6px" }}>{label}</label>
-      <input
-        type={type}
-        defaultValue={defaultValue}
-        placeholder={placeholder}
-        className="w-full rounded-xl px-4 py-2.5 text-sm focus:outline-none"
-        style={{ border: "1px solid var(--rule)", backgroundColor: "var(--parchment)", color: "var(--charcoal)" }}
-      />
+      <p style={{ fontFamily: "var(--font-display)", fontSize: "1.2rem", fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>{title}</p>
+      <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "3px" }}>{help}</p>
     </div>
   );
 }
 
-function SettingsToggle({ label, defaultChecked }: { label: string; defaultChecked?: boolean }) {
-  const [on, setOn] = useState(!!defaultChecked);
+// value: undefined while loading, null when the account has none.
+function ProfileRow({ label, value, action }: { label: string; value: string | null | undefined; action?: React.ReactNode }) {
   return (
-    <button
-      type="button"
-      onClick={() => setOn(!on)}
-      className="flex w-full items-center justify-between rounded-xl px-4 py-3 text-left transition-colors hover:bg-[var(--bone-dark)]"
-      style={{ border: "1px solid var(--rule)" }}
+    <div className="flex items-center justify-between gap-4 px-4 py-3" style={{ borderColor: "var(--line)" }}>
+      <dt style={{ fontSize: "13px", color: "var(--text-secondary)" }}>{label}</dt>
+      <dd className="flex min-w-0 items-center gap-3">
+        {value === undefined ? (
+          <span className="skeleton inline-block h-3.5 w-32" aria-hidden />
+        ) : (
+          <span className="truncate" style={{ fontSize: "13px", fontWeight: 500, color: value ? "var(--text-primary)" : "var(--text-tertiary)" }}>
+            {value ?? "Inte angivet"}
+          </span>
+        )}
+        {action}
+      </dd>
+    </div>
+  );
+}
+
+function SoonTag() {
+  return (
+    <span
+      className="shrink-0 rounded-full px-2 py-0.5"
+      style={{ fontSize: "10px", fontWeight: 600, letterSpacing: "0.04em", backgroundColor: "var(--insight-surface)", color: "var(--insight-accent)" }}
     >
-      <span style={{ fontSize: "13px", fontWeight: 500, color: "var(--charcoal)" }}>{label}</span>
-      <span
-        className="relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors"
-        style={{ background: on ? "var(--charcoal)" : "var(--rule)" }}
-      >
-        <span
-          className="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
-          style={{ transform: on ? "translateX(1rem)" : "translateX(0.125rem)" }}
-        />
-      </span>
-    </button>
+      Snart
+    </span>
   );
 }

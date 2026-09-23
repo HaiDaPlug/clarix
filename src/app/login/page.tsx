@@ -214,7 +214,14 @@ function LoginContent() {
           </button>
 
           <p className="text-[10px] leading-relaxed" style={{ color: "var(--slate-light)" }}>
-            Genom att logga in godkänner du vår{" "}
+            Genom att logga in godkänner du våra{" "}
+            <a
+              href="/terms"
+              className="underline underline-offset-2 transition-opacity hover:opacity-60"
+            >
+              användarvillkor
+            </a>{" "}
+            och vår{" "}
             <a
               href="/privacy-policy"
               className="underline underline-offset-2 transition-opacity hover:opacity-60"

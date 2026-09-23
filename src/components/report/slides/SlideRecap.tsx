@@ -1,13 +1,13 @@
 "use client";
 
 import { motion } from "motion/react";
-import { Compass, Lightbulb, TrendingUp } from "lucide-react";
+import { Lightbulb } from "lucide-react";
 import Link from "next/link";
 import { NoiseTile } from "@/components/ui/noise-tile";
 import { type AiInsightsPayload } from "@/lib/ai-insights/types";
 import { withPeriod } from "@/lib/utils/text";
 import { highlightNumbers } from "@/lib/utils/highlight-numbers";
-import { TREND_POS, TREND_POS_BG, ACCENT, AI_GRADIENT, AI_TEXT_PRIMARY, AI_TEXT_SECONDARY, AI_BORDER } from "../tokens";
+import { ACCENT, AI_GRADIENT, AI_TEXT_PRIMARY, AI_BORDER } from "../tokens";
 import { SlideHeading } from "../primitives/SlideHeading";
 import { useSlideReveal, fadeUp } from "../primitives/reveal";
 
@@ -17,67 +17,37 @@ export function SlideRecap({
   aiInsights: AiInsightsPayload | null;
 }) {
   const { ref, active, reduced } = useSlideReveal();
-  const aiRecap = aiInsights?.slide_recap;
-  const bullets = [
-    {
-      t: "Trafiken växer",
-      b: "Google fortsätter driva tillväxten — håll publiceringstempot.",
-      positive: true,
-    },
-    {
-      t: "Engagemanget behöver omsorg",
-      b: "Besökstiden sjunker. Innehåll och layout är värt att se över.",
-      positive: false,
-    },
-    {
-      t: "AI-synligheten är omätt",
-      b: "Aktivera spårning för att inte missa nästa söktrend.",
-      positive: false,
-    },
-  ].map((bullet, index) => ({
-    ...bullet,
-    b: aiInsights === null ? null : aiRecap?.[index]?.body ?? bullet.b,
-  }));
+  // The model's three lines, as written. No titles over them: a fixed title
+  // ("Trafiken växer") would claim something this client's data may not say.
+  // Left out of the deck when there is nothing to show (see slide-list).
+  const lines = aiInsights === null ? null : (aiInsights.slide_recap ?? []).map((r) => r.body);
 
   return (
     <div ref={ref} className="grid h-full content-center gap-10 lg:grid-cols-[1.05fr_1fr]">
       <div className="space-y-6">
         <motion.div {...fadeUp(active, reduced)}>
-          <SlideHeading sub="Tre rader att ta med sig från perioden.">
-            Tre saker att komma ihåg
+          <SlideHeading sub="Det viktigaste att ta med sig från perioden.">
+            Kort summerat
           </SlideHeading>
         </motion.div>
-        <ul className="space-y-4">
-          {bullets.map((b, i) => (
-            <motion.li
-              key={b.t}
-              className="flex items-start gap-4 rounded-2xl border border-border bg-background/80 p-4 sm:p-5"
-              {...fadeUp(active, reduced, { y: 10, delay: 0.15 + i * 0.08 })}
-            >
-              <span
-                className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-                style={{
-                  background: b.positive
-                    ? TREND_POS_BG
-                    : "oklch(0.94 0.04 60 / 0.6)",
-                  color: b.positive ? TREND_POS : "oklch(0.55 0.14 60)",
-                }}
-              >
-                {b.positive ? (
-                  <TrendingUp className="h-4 w-4" />
-                ) : (
-                  <Compass className="h-4 w-4" />
-                )}
-              </span>
-              <div>
-                <p className="font-semibold">{b.t}</p>
-                {b.b === null
-                  ? <div className="mt-1 flex flex-col gap-1.5"><div className="h-4 w-[85%] rounded-full animate-pulse bg-muted" /><div className="h-4 w-[55%] rounded-full animate-pulse bg-muted" /></div>
-                  : <p className="mt-1 text-[20px] text-foreground">{highlightNumbers(withPeriod(b.b), "light")}</p>
-                }
-              </div>
-            </motion.li>
-          ))}
+        <ul className="space-y-3">
+          {lines === null
+            ? [85, 70, 78].map((w, i) => (
+                <li key={i} className="flex items-center gap-4 rounded-2xl border border-border bg-background/80 p-5" aria-hidden>
+                  <span className="h-2 w-2 shrink-0 rounded-full bg-muted" />
+                  <div className="h-5 rounded-full animate-pulse bg-muted" style={{ width: `${w}%` }} />
+                </li>
+              ))
+            : lines.map((line, i) => (
+                <motion.li
+                  key={line}
+                  className="flex items-start gap-4 rounded-2xl border border-border bg-background/80 px-5 py-4"
+                  {...fadeUp(active, reduced, { y: 10, delay: 0.15 + i * 0.08 })}
+                >
+                  <span className="mt-3 h-2 w-2 shrink-0 rounded-full" style={{ background: "#FF6B55" }} aria-hidden />
+                  <p className="text-[21px] font-medium leading-snug">{highlightNumbers(withPeriod(line), "light")}</p>
+                </motion.li>
+              ))}
         </ul>
       </div>
       <motion.div

@@ -6,6 +6,7 @@ import { AiInsightsPayloadSchema } from "@/lib/ai-insights/types";
 import { requireUser } from "@/lib/auth/server";
 import { ClientNotFoundError } from "@/lib/clients/server";
 import { buildReportDataForUser } from "@/lib/report-data/server";
+import { shareLinkExpiryFrom } from "@/lib/reports/share-links";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -83,6 +84,9 @@ export async function POST(request: Request) {
 
     const token = randomBytes(32).toString("base64url");
     const tokenHash = hashShareToken(token);
+    // Every link gets a finite lifetime. A snapshot served without sign-in to
+    // anyone holding the URL must not live forever.
+    const expiresAt = shareLinkExpiryFrom();
     const { error: insertError } = await supabase
       .from("shared_reports")
       .insert({
@@ -92,6 +96,8 @@ export async function POST(request: Request) {
         period_end: period.end,
         report_data: report.data,
         ai_insights: aiInsights,
+        expires_at: expiresAt.toISOString(),
+        workspace_label: report.workspace.name,
       });
 
     if (insertError) {
@@ -101,7 +107,7 @@ export async function POST(request: Request) {
 
     const url = `/r/${token}`;
     const absoluteUrl = new URL(url, request.url).toString();
-    return NextResponse.json({ url, absoluteUrl });
+    return NextResponse.json({ url, absoluteUrl, expiresAt: expiresAt.toISOString() });
   } catch (error) {
     console.error("[reports/share]", error);
     return NextResponse.json({ error: "Could not create share link" }, { status: 500 });

@@ -12,7 +12,7 @@ const COPY = {
   en: {
     sessions: "Sessions",
     organicClicks: "Organic clicks",
-    avgPosition: "Avg. position",
+    avgPosition: "Average position",
     conversions: "Conversions",
     trafficGrowing: "Traffic is growing this period.",
     trafficDipped: "Traffic dipped this period.",

@@ -1,12 +1,13 @@
 "use client";
 
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AI_GRADIENT, AI_BORDER } from "@/components/report/tokens";
+import { NoiseTexture } from "@/components/ui/noise-texture";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLocale } from "@/lib/i18n";
 import {
+  AlertCircle,
   ArrowRight,
   Plus,
   ShieldCheck,
@@ -76,7 +77,7 @@ const VISUAL_INTEGRATIONS: VisualIntegration[] = [
     purpose:
       "Hämtar klick, visningar, CTR och genomsnittlig position för organiska sökresultat.",
     available: true,
-    unlocks: ["Klick", "Visningar", "CTR", "Genomsn. position", "Toppsökord"],
+    unlocks: ["Klick", "Visningar", "CTR", "Genomsnittlig position", "Toppsökord"],
     color: "#4285F4",
     Logo: GoogleSearchConsoleLogo,
   },
@@ -380,8 +381,7 @@ function IntegrationsPageInner() {
         </div>
         <Link
           href="/dashboard"
-          className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-full px-3 py-2.5 text-sm font-semibold transition-all hover:opacity-80 sm:px-5"
-          style={{ backgroundColor: "var(--charcoal)", color: "var(--parchment)" }}
+          className="btn btn-secondary shrink-0"
         >
           <span className="hidden min-[380px]:inline">Gå till dashboard</span>
           <ArrowRight className="h-3.5 w-3.5" />
@@ -394,39 +394,44 @@ function IntegrationsPageInner() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: EASING }}
-          className="relative overflow-hidden rounded-3xl px-5 py-8 sm:px-12 sm:py-14"
+          className="relative overflow-hidden px-5 py-8 sm:px-12 sm:py-14"
           style={{
-            background: AI_GRADIENT,
-            border: `1px solid ${AI_BORDER}`,
+            // Same surface as the dashboard's summary panel: the aurora wash,
+            // two glow pools and a little grain, with a real dark variant.
+            background: "var(--insight-gradient)",
+            border: "1px solid var(--insight-border)",
+            borderRadius: "var(--radius-panel)",
           }}
         >
           <div
-            className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full blur-3xl"
-            style={{ background: "oklch(0.62 0.22 295 / 0.08)" }}
+            className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full opacity-60 blur-3xl"
+            style={{ background: "radial-gradient(circle, var(--insight-glow-b), transparent 70%)" }}
+            aria-hidden
           />
           <div
-            className="pointer-events-none absolute -bottom-32 -left-16 h-72 w-72 rounded-full blur-3xl"
-            style={{ background: "oklch(0.62 0.22 295 / 0.05)" }}
+            className="pointer-events-none absolute -bottom-32 -left-16 h-72 w-72 rounded-full opacity-60 blur-3xl"
+            style={{ background: "radial-gradient(circle, var(--insight-glow-a), transparent 70%)" }}
+            aria-hidden
           />
+          <NoiseTexture preset="fine" blendMode="soft-light" opacity={0.3} />
 
           <div className="relative flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-xl">
               <span
                 className="inline-flex items-center gap-2 rounded-full px-3 py-1"
                 style={{
-                  border: "1px solid rgba(139,92,246,0.25)",
-                  background: "rgba(255,255,255,0.6)",
-                  backdropFilter: "blur(8px)",
+                  border: "1px solid var(--insight-border)",
+                  background: "var(--insight-card)",
                   fontSize: "11px",
                   fontWeight: 600,
                   letterSpacing: "0.18em",
                   textTransform: "uppercase",
-                  color: "oklch(0.45 0.18 290)",
+                  color: "var(--insight-accent)",
                 }}
               >
                 <span
                   className="h-1.5 w-1.5 rounded-full"
-                  style={{ background: "oklch(0.62 0.22 295)" }}
+                  style={{ background: "var(--insight-accent)" }}
                 />
                 Anslutningar
               </span>
@@ -438,7 +443,7 @@ function IntegrationsPageInner() {
                   fontSize: "clamp(2rem, 4vw, 2.75rem)",
                   fontWeight: 700,
                   letterSpacing: "-0.025em",
-                  color: "oklch(0.14 0.02 280)",
+                  color: "var(--insight-text)",
                 }}
               >
                 Koppla dina viktigaste kanaler{" "}
@@ -459,7 +464,7 @@ function IntegrationsPageInner() {
                 className="mt-5"
                 style={{
                   fontSize: "15px",
-                  color: "oklch(0.38 0.06 280)",
+                  color: "var(--insight-text)",
                   lineHeight: 1.65,
                   maxWidth: "420px",
                 }}
@@ -477,7 +482,7 @@ function IntegrationsPageInner() {
                 <span
                   style={{
                     fontSize: "13px",
-                    color: "oklch(0.38 0.06 280)",
+                    color: "var(--insight-muted)",
                     fontWeight: 500,
                   }}
                 >
@@ -495,15 +500,15 @@ function IntegrationsPageInner() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.25 + i * 0.08, ease: EASING }}
-                    className="absolute flex items-center justify-center rounded-2xl border bg-white"
+                    className="absolute flex items-center justify-center rounded-2xl border"
                     style={{
                       width: 56,
                       height: 56,
                       left: i * 62,
                       top: i % 2 === 1 ? 20 : 0,
-                      borderColor: "rgba(139,92,246,0.15)",
-                      boxShadow:
-                        "0 8px 32px -8px rgba(139,92,246,0.2), 0 2px 8px rgba(0,0,0,0.06)",
+                      background: "var(--surface-card)",
+                      borderColor: "var(--insight-border)",
+                      boxShadow: "var(--shadow-raised)",
                     }}
                   >
                     <Logo className="h-7 w-7" />
@@ -523,26 +528,14 @@ function IntegrationsPageInner() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3, ease: EASING }}
-              className="flex items-start justify-between gap-3 rounded-xl px-4 py-3.5"
-              style={{
-                backgroundColor:
-                  notice.tone === "ok" ? "var(--signal-up-bg)" :
-                  notice.tone === "warn" ? "rgba(201,123,42,0.10)" :
-                  "rgba(185,28,28,0.06)",
-                border: `1px solid ${
-                  notice.tone === "ok" ? "rgba(45,106,79,0.25)" :
-                  notice.tone === "warn" ? "rgba(201,123,42,0.3)" :
-                  "rgba(185,28,28,0.2)"
-                }`,
-              }}
+              className={`notice ${notice.tone === "ok" ? "notice-ok" : notice.tone === "warn" ? "notice-warn" : "notice-error"} flex items-center justify-between gap-3`}
               role="status"
             >
-              <p style={{ fontSize: "13px", color: "var(--charcoal)", lineHeight: 1.5 }}>{notice.text}</p>
+              <p style={{ fontSize: "13px", color: "var(--text-primary)", lineHeight: 1.5 }}>{notice.text}</p>
               <button
                 onClick={() => setNotice(null)}
                 aria-label="Stäng"
-                className="shrink-0 rounded-full p-1 transition-colors hover:bg-black/5"
-                style={{ color: "var(--slate)" }}
+                className="icon-btn -my-1 -mr-1.5"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -561,14 +554,22 @@ function IntegrationsPageInner() {
           onDisconnect={() => void disconnectGoogle()}
         />
 
-        {/* Progress bar */}
-        {!loadingConnections && (
+        {/* Progress bar. While connections load, a placeholder of the same
+            height holds its place so the cards below don't jump. */}
+        {loadingConnections ? (
+          <div className="surface-card p-5" role="status" aria-label={copy.loadingConnections}>
+            <div className="mb-3 flex items-center justify-between">
+              <div className="skeleton h-4 w-48" />
+              <div className="skeleton h-4 w-8" />
+            </div>
+            <div className="skeleton h-1.5 w-full rounded-full" />
+          </div>
+        ) : (
           <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.1, ease: EASING }}
-            className="rounded-2xl p-5"
-            style={{ backgroundColor: "var(--bone)", border: "1px solid var(--rule)" }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3, ease: EASING }}
+            className="surface-card p-5"
           >
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
@@ -620,35 +621,21 @@ function IntegrationsPageInner() {
           </motion.div>
         )}
 
-        {/* Error / loading banner */}
-        {(loadingConnections || error) && (
-          <div
-            className="rounded-xl px-4 py-4"
-            style={{
-              backgroundColor: error ? "rgba(185,28,28,0.06)" : "var(--bone)",
-              border: error ? "1px solid rgba(185,28,28,0.2)" : "1px solid var(--rule)",
-            }}
-          >
-            {error ? (
-              <div className="flex items-start gap-3">
-                <div
-                  className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
-                  style={{ backgroundColor: "rgba(185,28,28,0.1)" }}
-                >
-                  <X className="h-3.5 w-3.5" style={{ color: "var(--signal-down)" }} />
-                </div>
-                <div>
-                  <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--charcoal)", marginBottom: "2px" }}>
-                    Något gick fel
-                  </p>
-                  <p style={{ fontSize: "13px", color: "var(--slate)", lineHeight: "1.5" }}>
-                    {error}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <p style={{ fontSize: "13px", color: "var(--slate)" }}>{copy.loadingConnections}</p>
-            )}
+        {/* Error banner */}
+        {error && (
+          <div className="notice notice-error flex items-start gap-3" role="alert">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" style={{ color: "var(--signal-down)" }} aria-hidden />
+            <div className="min-w-0 flex-1">
+              <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)", marginBottom: "2px" }}>
+                Något gick fel
+              </p>
+              <p style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: "1.5" }}>
+                {error}
+              </p>
+            </div>
+            <button onClick={() => setError(null)} aria-label="Stäng" className="icon-btn -my-1 -mr-1.5">
+              <X className="h-3.5 w-3.5" />
+            </button>
           </div>
         )}
 
@@ -667,22 +654,9 @@ function IntegrationsPageInner() {
                 initial={{ opacity: 0, y: 14 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.15 + i * 0.07, ease: EASING }}
-                className="group relative flex flex-col overflow-hidden rounded-2xl p-7 transition-all hover:-translate-y-0.5"
-                style={{
-                  backgroundColor: "var(--bone)",
-                  border: "1px solid var(--rule)",
-                  opacity: integ.available ? 1 : 0.55,
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-                }}
+                className="surface-card relative flex flex-col overflow-hidden p-5 sm:p-7"
+                style={{ opacity: integ.available ? 1 : 0.6 }}
               >
-                {/* top shine on hover */}
-                <div
-                  className="pointer-events-none absolute inset-x-0 top-0 h-px opacity-0 transition-opacity group-hover:opacity-100"
-                  style={{
-                    background:
-                      "linear-gradient(to right, transparent, oklch(0.62 0.22 295 / 0.4), transparent)",
-                  }}
-                />
 
                 <div className="flex items-start gap-5">
                   <BrandMark integ={integ} size={56} />
@@ -813,12 +787,7 @@ function IntegrationsPageInner() {
                         onClick={() => setActiveModal(integ)}
                         disabled={loadingConnections || !googleReady}
                         title={!googleReady ? copy.needsGoogle : undefined}
-                        className="inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-semibold transition-all hover:-translate-y-0.5 hover:opacity-90 disabled:opacity-40 disabled:hover:translate-y-0"
-                        style={{
-                          backgroundColor: "var(--charcoal)",
-                          color: "var(--parchment)",
-                          boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                        }}
+                        className="btn btn-primary"
                       >
                         <Plus className="h-3.5 w-3.5" />
                         {t.integrations.actions.connect}
@@ -828,12 +797,7 @@ function IntegrationsPageInner() {
                       <button
                         onClick={() => setActiveModal(integ)}
                         disabled={isPending}
-                        className="inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-medium transition-all hover:opacity-70 disabled:opacity-40"
-                        style={{
-                          border: "1px solid var(--rule)",
-                          color: "var(--slate)",
-                          backgroundColor: "transparent",
-                        }}
+                        className="btn btn-secondary"
                       >
                         <ArrowRight className="h-3.5 w-3.5" />
                         {copy.manage}

@@ -3,16 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
+import { PageThumb } from "./slides/SlidePages";
 import {
   CheckCircle2,
   ChevronDown,
-  Compass,
   Lightbulb,
-  PenSquare,
   Plug,
-  Target,
-  TrendingUp,
-  Zap,
 } from "lucide-react";
 import type { AiInsightsPayload } from "@/lib/ai-insights/types";
 import { deriveInsights } from "@/lib/engine/derive-insights";
@@ -23,6 +19,9 @@ import { withPeriod } from "@/lib/utils/text";
 import type { ReportData } from "@/types/schema";
 import type { SlideData } from "./slide-data";
 import { channelColor } from "./channel-colors";
+import { MobileNextSteps } from "./MobileNextSteps";
+import { STEP_TONE, stepEvidence } from "./next-step-parts";
+import { buildEvidenceRegistry } from "@/lib/ai-insights/evidence";
 import {
   ACCENT,
   AI_BORDER,
@@ -32,7 +31,6 @@ import {
   AI_TEXT_SECONDARY,
   TREND_NEG,
   TREND_POS,
-  TREND_POS_BG,
 } from "./tokens";
 
 const SECTION_LINKS = [
@@ -42,7 +40,7 @@ const SECTION_LINKS = [
   ["Affär", "mobile-conversion"],
   ["Sidor", "mobile-pages"],
   ["Bedömning", "mobile-insight"],
-  ["Fokus", "mobile-recommendations"],
+  ["Nästa steg", "mobile-recommendations"],
   ["Summering", "mobile-recap"],
 ] as const;
 
@@ -51,11 +49,11 @@ function fmt(value: number | null) {
   return value == null ? "—" : value.toLocaleString("sv-SE");
 }
 
-function fmtDuration(seconds: number | null) {
-  if (seconds == null || seconds <= 0) return "—";
-  const minutes = Math.floor(seconds / 60);
-  const remainder = Math.round(seconds % 60);
-  return minutes > 0 ? `${minutes} min ${remainder} s` : `${remainder} s`;
+const MOBILE_STAT = "font-stat mt-auto pt-4 text-[1.7rem] font-bold leading-none tracking-tight tabular-nums";
+
+/** Long, thin stand-in for a value that does not exist yet — see SlideKpis. */
+function Dash() {
+  return <span className="block h-[0.175rem] w-[2.75rem] rounded-full bg-foreground" />;
 }
 
 function Delta({ value }: { value: number | null }) {
@@ -147,23 +145,28 @@ export function MobileReportDeck({
   aiLoading?: boolean;
 }) {
   const insights = deriveInsights(reportData);
-  const headline = deriveSlideHeadline(insights);
+  // The AI verdict the dashboard and desktop slide lead with; the lookup
+  // table only when generation failed. Section adds its own coral full stop.
+  const headline = aiInsights?.dashboard_hero?.headline.trim().replace(/[.!?…]+$/, "") || deriveSlideHeadline(insights);
   const signals = deriveSignalCards(insights);
   const aiInsight = aiInsights?.slide_insight;
   const domain = data.clientDomain ?? "example.com";
   const [expandedChannel, setExpandedChannel] = useState<string | null>(null);
+  // topChannels is already sorted by visits upstream, so the first one is the biggest.
+  const topChannel = data.topChannels[0] ?? null;
+  const TopIcon = topChannel?.icon;
+  // No leads means tracking is off, not a real zero — the card says so instead.
+  const noLeads = !data.leads;
 
-  const recommendations = [
-    ["Skala", "Dubbla det som fungerar", "SEO-guiden drar flest besök. Bygg vidare på det innehåll som redan fungerar.", Zap],
-    ["Fixa", "Täta läckan vid kontakt", "Gör nästa steg tydligare och korta vägen från intresse till kontakt.", Target],
-    ["Bygg", "Bygg momentum", "Publicera regelbundet och följ vilka ämnen som fortsätter skapa efterfrågan.", PenSquare],
-  ] as const;
-
-  const recap = [
-    ["Trafiken utvecklas", "Fortsätt investera i de kanaler som visar stabil efterfrågan.", true],
-    ["Engagemanget kräver fokus", "Se över innehåll och flöden där besökare tappar fart.", false],
-    ["Nästa steg ska vara tydligt", "Knyt kommande insatser till mätbara affärshändelser.", false],
-  ] as const;
+  // AI-only sections are left out when generation returned nothing for them;
+  // while it runs they stay and show placeholders. Nothing here is a stand-in.
+  const steps = aiInsights?.slide_next_steps ?? null;
+  const recapLines = aiInsights?.slide_recap?.map((r) => r.body) ?? null;
+  const showSteps = aiLoading || !!steps?.length;
+  const showRecap = aiLoading || !!recapLines?.length;
+  const registry = buildEvidenceRegistry(reportData);
+  const conclusion = (aiInsight?.bottom_line ?? deriveSlideHeadline(insights)).trim().replace(/[.!?…]+$/, "");
+  const sectionLinks = SECTION_LINKS.filter(([, id]) => (id !== "mobile-recommendations" || showSteps) && (id !== "mobile-recap" || showRecap));
 
   return (
     <article className="mx-auto w-full max-w-xl px-4 pb-[calc(2rem+env(safe-area-inset-bottom))] text-foreground">
@@ -171,7 +174,7 @@ export function MobileReportDeck({
         aria-label="Rapportens avsnitt"
         className="sticky top-0 z-10 -mx-4 flex gap-2 overflow-x-auto border-y border-border/60 bg-[oklch(0.965_0.005_270/0.94)] px-4 py-3 backdrop-blur-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
-        {SECTION_LINKS.map(([label, id]) => (
+        {sectionLinks.map(([label, id]) => (
           <a key={id} href={`#${id}`} className="inline-flex min-h-10 shrink-0 items-center rounded-full border border-border/70 bg-background/80 px-4 text-xs font-semibold text-foreground">
             {label}
           </a>
@@ -204,8 +207,9 @@ export function MobileReportDeck({
           </div>
         </div>
         <div className="mt-3">
-          <InsightCard label="Varför det kan ha hänt">
-            {aiLoading ? <LoadingLines /> : aiInsights?.slide_hero ? <p>{highlightNumbers(withPeriod(aiInsights.slide_hero), "light")}</p> : <p>Rapporten visar vad som förändrats och vilka delar som är viktigast att följa nästa period.</p>}
+          <InsightCard label="Därför">
+            {aiLoading ? <LoadingLines /> : aiInsights?.slide_hero ? <p>{highlightNumbers(withPeriod(aiInsights.slide_hero), "light")}</p> : null}
+            <MobileNextSteps reportData={reportData} aiInsights={aiInsights} aiLoading={aiLoading} moreHref="#mobile-recommendations" />
           </InsightCard>
         </div>
       </Section>
@@ -213,15 +217,52 @@ export function MobileReportDeck({
       <Section id="mobile-kpis" number="02 — Nyckeltal" title="Snabb överblick" sub="Periodens viktigaste siffror jämfört med föregående period.">
         <div className="grid grid-cols-2 gap-3">
           {[
-            ["Besök", fmt(data.visits), data.trafficDelta],
-            ["Personer", fmt(data.people), data.peopleDelta],
-            ["Tid på sidan", fmtDuration(data.avgDuration), data.timeDelta],
-            ["Leads", fmt(data.leads), data.leadsDelta],
-          ].map(([label, value, delta]) => (
-            <div key={String(label)} className="flex min-h-36 flex-col rounded-2xl border border-border bg-background/90 p-4 shadow-sm">
-              <p className="text-sm font-semibold text-foreground/60">{label}</p>
-              <p className="font-stat mt-auto pt-4 text-[1.7rem] font-bold leading-none tracking-tight tabular-nums">{value}</p>
-              <div className="mt-2"><Delta value={delta as number | null} /></div>
+            { label: "Besök", delta: data.trafficDelta, span: false, body: <p className={MOBILE_STAT}>{fmt(data.visits)}</p> },
+            { label: "Personer", delta: data.peopleDelta, span: false, body: <p className={MOBILE_STAT}>{fmt(data.people)}</p> },
+            {
+              label: "Din populäraste kanal",
+              delta: topChannel?.delta ?? null,
+              span: false,
+              body: topChannel && TopIcon ? (
+                <div className="mt-auto flex items-center gap-3 pt-4">
+                  <div
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+                    style={{ background: `${channelColor(topChannel.name)}20` }}
+                  >
+                    <TopIcon className="h-[18px] w-[18px]" style={{ color: channelColor(topChannel.name) }} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[15px] font-bold leading-tight">{topChannel.name}</p>
+                    <p className="mt-0.5 text-xs font-medium text-foreground/55">{topChannel.pct}% av alla besök</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-auto flex h-10 items-center pt-4"><Dash /></div>
+              ),
+            },
+            {
+              label: "Leads",
+              delta: data.leadsDelta,
+              span: noLeads,
+              body: noLeads ? (
+                <div className="mt-auto flex flex-col gap-3 pt-5">
+                  <Dash />
+                  <p className="text-[13px] font-medium leading-[1.5] text-foreground/60">
+                    Du har inte konverteringsspårning på. Sätt på det för att mäta hur många affärer som konverteras.
+                  </p>
+                </div>
+              ) : (
+                <p className={MOBILE_STAT}>{fmt(data.leads)}</p>
+              ),
+            },
+          ].map((k) => (
+            <div
+              key={k.label}
+              className={`flex min-h-36 flex-col rounded-2xl border border-border bg-background/90 p-4 shadow-sm${k.span ? " col-span-2" : ""}`}
+            >
+              <p className="text-sm font-semibold text-foreground/60">{k.label}</p>
+              {k.body}
+              <div className="mt-2"><Delta value={k.delta} /></div>
             </div>
           ))}
         </div>
@@ -316,27 +357,73 @@ export function MobileReportDeck({
         <div className="divide-y divide-border overflow-hidden rounded-3xl border border-border bg-background/90">
           {data.topPages.map((page) => {
             const href = `https://${domain}${page.p}`;
-            return <a key={page.p} href={href} target="_blank" rel="noopener noreferrer" className="flex min-h-20 items-center gap-3 px-4 py-3 text-foreground transition-colors hover:bg-muted/50"><div className="min-w-0 flex-1"><p className="truncate font-semibold">{page.title ?? page.p}</p><p className="mt-1 truncate text-xs text-foreground/45">{page.p}</p></div><div className="text-right"><p className="font-stat text-xl font-bold tabular-nums">{fmt(page.v)}</p><Delta value={page.d} /></div></a>;
+            const letter = domain.replace("www.", "").slice(0, 1).toUpperCase();
+            return <a key={page.p} href={href} target="_blank" rel="noopener noreferrer" className="flex min-h-20 items-center gap-3 px-4 py-3 text-foreground transition-colors hover:bg-muted/50"><PageThumb domain={domain} path={page.p} fallbackLetter={letter} /><div className="min-w-0 flex-1"><p className="truncate font-semibold">{page.title ?? page.p}</p><p className="mt-1 truncate text-xs text-foreground/45">{page.p}</p></div><div className="text-right"><p className="font-stat text-xl font-bold tabular-nums">{fmt(page.v)}</p><Delta value={page.d} /></div></a>;
           })}
         </div>
       </Section>
 
-      <Section id="mobile-insight" number="06 — Bedömning" title="Vad siffrorna betyder" sub="Bedömningen bakom dashboarden.">
+      <Section id="mobile-insight" number="06 — Bedömning" title={conclusion} sub="Slutsatsen, och vad den vilar på.">
         {signals.length > 0 && <ul className="mb-3 space-y-3">{signals.map((signal) => <li key={signal.label} className="flex items-start gap-3 rounded-2xl border border-border bg-background/90 p-4"><span className="mt-2 h-2 w-2 shrink-0 rounded-full" style={{ background: signal.positive ? TREND_POS : TREND_NEG }} /><div><p className="font-semibold">{signal.label}</p><p className="mt-1 text-sm leading-relaxed text-foreground/60">{signal.body}</p></div></li>)}</ul>}
-        <InsightCard label="Det vi ser just nu">
-          {aiLoading ? <LoadingLines /> : aiInsight ? aiInsight.body.map((paragraph) => <p key={paragraph}>{highlightNumbers(withPeriod(paragraph), "light")}</p>) : <p>Fokusera på skillnaden mellan ökad synlighet och de affärshändelser som trafiken faktiskt leder till.</p>}
-          {!aiLoading && <div className="mt-4 border-t pt-4" style={{ borderColor: AI_BORDER }}><p className="text-xs font-bold uppercase tracking-[0.18em]" style={{ color: AI_TEXT_SECONDARY }}>Bottom line</p><p className="mt-2 font-semibold">{highlightNumbers(withPeriod(aiInsight?.bottom_line ?? "Fortsätt följa vad som skapar kvalitativa besök och gör nästa affärssteg tydligare."), "light")}</p></div>}
-        </InsightCard>
+        {(aiLoading || aiInsight) && (
+          <InsightCard label="Därför">
+            {aiLoading || !aiInsight ? <LoadingLines /> : aiInsight.body.map((paragraph) => <p key={paragraph}>{highlightNumbers(withPeriod(paragraph), "light")}</p>)}
+          </InsightCard>
+        )}
       </Section>
 
-      <Section id="mobile-recommendations" number="07 — Fokus" title="Rekommenderade fokusområden" sub="Tre prioriteringar för nästa period.">
-        <div className="space-y-3">{recommendations.map(([tag, title, fallback, Icon], index) => { const body = aiLoading ? null : aiInsights?.slide_recs?.[index]?.body ?? fallback; return <div key={title} className="rounded-3xl border border-border bg-background/95 p-5 shadow-sm"><div className="flex items-center justify-between"><span className="flex h-11 w-11 items-center justify-center rounded-2xl text-white" style={{ background: "linear-gradient(135deg, #FF4D9E, #FF6B55, #FFB830)" }}><Icon className="h-5 w-5" /></span><span className="rounded-full border border-border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em]">{tag}</span></div><h3 className="font-display mt-5 text-2xl font-bold">{title}</h3><div className="mt-3 text-[15px] leading-relaxed text-foreground/65">{body === null ? <LoadingLines /> : <p>{highlightNumbers(withPeriod(body), "light")}</p>}</div></div>; })}</div>
-      </Section>
+      {showSteps && (
+        <Section id="mobile-recommendations" number="07 — Nästa steg" title="Nästa steg" sub="Vad som gör störst skillnad just nu, och varför.">
+          <div className="space-y-3">
+            {aiLoading || !steps
+              ? [0, 1].map((i) => <div key={i} className="rounded-3xl border border-border bg-background/95 p-5"><LoadingLines /></div>)
+              : steps.map((step, index) => {
+                  const tone = STEP_TONE[step.tone];
+                  const evidence = stepEvidence(step, registry);
+                  return (
+                    <article key={index + step.action} className="rounded-3xl border bg-background/95 p-5 shadow-sm" style={{ borderColor: tone.border }}>
+                      <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-foreground/60">
+                        <span className="h-2 w-2 rounded-full" style={{ background: tone.dot }} aria-hidden />
+                        {tone.label}
+                      </p>
+                      <h3 className="font-display mt-3 text-[22px] font-bold leading-tight">{step.action}</h3>
+                      <p className="mt-2 text-[15px] leading-relaxed text-foreground/75">{highlightNumbers(withPeriod(step.why), "light", "signed")}</p>
+                      {evidence.length > 0 && (
+                        <dl className="mt-4 space-y-1.5 border-t border-border pt-3">
+                          {evidence.map((e) => (
+                            <div key={e.label} className="flex items-baseline justify-between gap-3">
+                              <dt className="text-[13px] text-foreground/60">{e.label}</dt>
+                              <dd className="shrink-0 text-right tabular-nums">
+                                <span className="font-stat text-[15px] font-semibold">{e.value}</span>
+                                {e.previous && <span className="ml-1.5 text-[11.5px] text-foreground/50">föreg. {e.previous}</span>}
+                              </dd>
+                            </div>
+                          ))}
+                        </dl>
+                      )}
+                    </article>
+                  );
+                })}
+          </div>
+        </Section>
+      )}
 
-      <Section id="mobile-recap" number="08 — Summering" title="Tre saker att komma ihåg" sub="Det kortaste sättet att ta rapporten vidare.">
-        <ul className="space-y-3">{recap.map(([title, fallback, positive], index) => { const body = aiLoading ? null : aiInsights?.slide_recap?.[index]?.body ?? fallback; return <li key={title} className="flex items-start gap-3 rounded-2xl border border-border bg-background/90 p-4"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full" style={{ background: positive ? TREND_POS_BG : "oklch(0.94 0.04 60 / 0.6)", color: positive ? TREND_POS : "oklch(0.55 0.14 60)" }}>{positive ? <TrendingUp className="h-4 w-4" /> : <Compass className="h-4 w-4" />}</span><div><p className="font-semibold">{title}</p><div className="mt-1 text-sm leading-relaxed text-foreground/60">{body === null ? <LoadingLines /> : <p>{highlightNumbers(withPeriod(body), "light")}</p>}</div></div></li>; })}</ul>
-        <div className="mt-4"><InsightCard><Lightbulb className="h-5 w-5" style={{ color: ACCENT }} /><p className="font-display text-2xl font-bold">Vill du gå igenom rapporten tillsammans?</p><p className="text-sm font-normal">Ta med rapporten till nästa möte eller öppna den i landskap för presentationsvyn.</p><Link href="/dashboard" className="mt-2 inline-flex min-h-11 items-center rounded-full px-5 text-sm font-bold text-white" style={{ background: ACCENT }}>Till dashboarden</Link></InsightCard></div>
-      </Section>
+      {showRecap && (
+        <Section id="mobile-recap" number={showSteps ? "08 — Summering" : "07 — Summering"} title="Kort summerat" sub="Det viktigaste att ta med sig från perioden.">
+          <ul className="space-y-3">
+            {aiLoading || !recapLines
+              ? [0, 1, 2].map((i) => <li key={i} className="rounded-2xl border border-border bg-background/90 p-4"><LoadingLines /></li>)
+              : recapLines.map((line) => (
+                  <li key={line} className="flex items-start gap-3 rounded-2xl border border-border bg-background/90 p-4">
+                    <span className="mt-2 h-2 w-2 shrink-0 rounded-full" style={{ background: "#FF6B55" }} aria-hidden />
+                    <p className="text-[16px] font-medium leading-snug">{highlightNumbers(withPeriod(line), "light")}</p>
+                  </li>
+                ))}
+          </ul>
+        </Section>
+      )}
+
+      <div className="mt-10"><InsightCard><Lightbulb className="h-5 w-5" style={{ color: ACCENT }} /><p className="font-display text-2xl font-bold">Vill du gå igenom rapporten tillsammans?</p><p className="text-sm font-normal">Ta med rapporten till nästa möte eller öppna den i landskap för presentationsvyn.</p><Link href="/dashboard" className="mt-2 inline-flex min-h-11 items-center rounded-full px-5 text-sm font-bold text-white" style={{ background: ACCENT }}>Till dashboarden</Link></InsightCard></div>
     </article>
   );
 }

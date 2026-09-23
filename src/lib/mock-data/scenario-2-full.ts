@@ -51,19 +51,19 @@ export const scenario2: ReportData = {
       { label: "Totala sessioner", value: 31_420, previousValue: 29_840, unit: "number", trend: "up", trendGood: true },
       { label: "Betalda sessioner", value: 11_200, previousValue: 9_100, unit: "number", trend: "up", trendGood: true },
       { label: "Totala konverteringar", value: 340, previousValue: 274, unit: "number", trend: "up", trendGood: true },
-      { label: "Annonskostnad", value: 48_500, previousValue: 51_200, unit: "currency", trend: "down", trendGood: true },
-      { label: "Kostnad per lead", value: 142, previousValue: 162, unit: "currency", trend: "down", trendGood: true },
-      { label: "Genomsn. position (SEO)", value: 10.8, previousValue: 10.4, unit: "number", trend: "down", trendGood: false },
+      { label: "Annonskostnad", value: 48_500, previousValue: 51_200, unit: "currency", trend: "down", trendGood: false },
+      { label: "Kostnad per lead", value: 142, previousValue: 162, unit: "currency", trend: "down", trendGood: false },
+      { label: "Genomsnittlig position (SEO)", value: 10.8, previousValue: 10.4, unit: "number", trend: "down", trendGood: false },
     ],
   },
 
   trafficOverview: {
     totalSessions: { label: "Totala sessioner", value: 31_420, previousValue: 29_840, unit: "number", trend: "up", trendGood: true },
-    organicSessions: { label: "Organisk trafik", value: 14_800, previousValue: 15_260, unit: "number", trend: "down", trendGood: false },
+    organicSessions: { label: "Organisk trafik", value: 14_800, previousValue: 15_260, unit: "number", trend: "down", trendGood: true },
     directSessions: { label: "Direkt", value: 3_620, previousValue: 3_480, unit: "number", trend: "up", trendGood: true },
     paidSessions: { label: "Betald trafik", value: 9_400, previousValue: 8_100, unit: "number", trend: "up", trendGood: true },
-    bounceRate: { label: "Avvisningsfrekvens", value: 44.8, previousValue: 46.1, unit: "percent", trend: "down", trendGood: true },
-    avgSessionDuration: { label: "Genomsn. sessionslängd", value: 138, previousValue: 132, unit: "seconds", trend: "up", trendGood: true },
+    bounceRate: { label: "Avvisningsfrekvens", value: 44.8, previousValue: 46.1, unit: "percent", trend: "down", trendGood: false },
+    avgSessionDuration: { label: "Genomsnittlig sessionslängd", value: 138, previousValue: 132, unit: "seconds", trend: "up", trendGood: true },
     timeSeries: [
       { date: "2026-03-01", value: 820, secondaryValue: 280 },
       { date: "2026-03-03", value: 1040, secondaryValue: 380 },
@@ -109,10 +109,10 @@ export const scenario2: ReportData = {
   },
 
   seoOverview: {
-    totalClicks: { label: "Totala klick", value: 7_820, previousValue: 8_140, unit: "number", trend: "down", trendGood: false },
+    totalClicks: { label: "Totala klick", value: 7_820, previousValue: 8_140, unit: "number", trend: "down", trendGood: true },
     totalImpressions: { label: "Totala visningar", value: 241_000, previousValue: 238_000, unit: "number", trend: "up", trendGood: true },
-    avgPosition: { label: "Genomsn. position", value: 10.8, previousValue: 10.4, unit: "number", trend: "down", trendGood: false },
-    avgCtr: { label: "Genomsn. CTR", value: 3.2, previousValue: 3.4, unit: "percent", trend: "down", trendGood: false },
+    avgPosition: { label: "Genomsnittlig position", value: 10.8, previousValue: 10.4, unit: "number", trend: "down", trendGood: false },
+    avgCtr: { label: "Genomsnittlig CTR", value: 3.2, previousValue: 3.4, unit: "percent", trend: "down", trendGood: true },
     timeSeries: [
       { date: "2026-03-01", value: 210, secondaryValue: 7200 },
       { date: "2026-03-03", value: 290, secondaryValue: 8800 },
@@ -132,13 +132,13 @@ export const scenario2: ReportData = {
   },
 
   paidOverview: {
-    totalSpend: { label: "Total kostnad", value: 48_500, previousValue: 51_200, unit: "currency", trend: "down", trendGood: true },
+    totalSpend: { label: "Total kostnad", value: 48_500, previousValue: 51_200, unit: "currency", trend: "down", trendGood: false },
     totalClicks: { label: "Klick", value: 11_200, previousValue: 9_400, unit: "number", trend: "up", trendGood: true },
     totalImpressions: { label: "Visningar", value: 184_000, previousValue: 161_000, unit: "number", trend: "up", trendGood: true },
-    avgCpc: { label: "Genomsn. CPC", value: 4.33, previousValue: 5.45, unit: "currency", trend: "down", trendGood: true },
+    avgCpc: { label: "Genomsnittlig CPC", value: 4.33, previousValue: 5.45, unit: "currency", trend: "down", trendGood: false },
     avgCtr: { label: "CTR", value: 6.1, previousValue: 5.8, unit: "percent", trend: "up", trendGood: true },
     conversions: { label: "Konverteringar", value: 340, previousValue: 274, unit: "number", trend: "up", trendGood: true },
-    costPerConversion: { label: "Kostnad/lead", value: 142, previousValue: 162, unit: "currency", trend: "down", trendGood: true },
+    costPerConversion: { label: "Kostnad/lead", value: 142, previousValue: 162, unit: "currency", trend: "down", trendGood: false },
     roas: { label: "ROAS", value: 4.2, previousValue: 3.8, unit: "number", trend: "up", trendGood: true },
     timeSeries: [
       { date: "2026-03-01", value: 1400, secondaryValue: 9 },

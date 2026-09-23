@@ -33,9 +33,30 @@ function parseIso(s: string): Date {
   return new Date(y, m - 1, d);
 }
 
+// Swedish month names are lowercase in running text — only the standalone
+// calendar title is capitalised.
+function shortMonth(monthIndex: number): string {
+  return MONTH_SV[monthIndex].slice(0, 3).toLowerCase();
+}
+
 function formatDisplay(iso: string): string {
   const d = parseIso(iso);
-  return `${d.getDate()} ${MONTH_SV[d.getMonth()].slice(0, 3)} ${d.getFullYear()}`;
+  return `${d.getDate()} ${shortMonth(d.getMonth())} ${d.getFullYear()}`;
+}
+
+// Compact range for the preset sub-labels: drops the year while the range sits
+// in the current year, and collapses to "1–20 aug" within a single month.
+function formatPresetRange(from: string, to: string, today: Date): string {
+  const a = parseIso(from);
+  const b = parseIso(to);
+  const crossYear = a.getFullYear() !== b.getFullYear();
+  const year = (d: Date) =>
+    crossYear || d.getFullYear() !== today.getFullYear() ? ` ${d.getFullYear()}` : "";
+
+  if (!crossYear && a.getMonth() === b.getMonth()) {
+    return `${a.getDate()}–${b.getDate()} ${shortMonth(b.getMonth())}${year(b)}`;
+  }
+  return `${a.getDate()} ${shortMonth(a.getMonth())}${year(a)} – ${b.getDate()} ${shortMonth(b.getMonth())}${year(b)}`;
 }
 
 function daysInMonth(year: number, month: number): number {
@@ -324,32 +345,52 @@ export function DateRangePicker({ locale = "sv", loading = false }: DateRangePic
             }}
           >
           {/* Preset list */}
-          <div className="flex flex-col gap-0.5 border-b pb-3 sm:border-b-0 sm:border-r sm:pb-0 sm:pr-3" style={{ borderColor: "var(--rule)", justifyContent: "center" }}>
+          <div className="flex flex-col gap-1.5 border-b pb-3 sm:border-b-0 sm:border-r sm:pb-0 sm:pr-3" style={{ borderColor: "var(--rule)", justifyContent: "center" }}>
             {DATE_PRESETS.map((preset) => {
               const isActive = activePresetId === preset.id;
               const label = locale === "sv" ? preset.labelSv : preset.labelEn;
+              // All-time's floor is an arbitrary sentinel year, not a real data
+              // start, so spelling it out would promise more than it means.
+              const r = preset.id === "all-time" ? null : presetToRange(preset.id, now);
               return (
-                <button
-                  key={preset.id}
-                  onClick={() => selectPreset(preset.id)}
-                  className="w-full flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B55] focus-visible:ring-offset-1"
-                  style={{
-                    fontWeight: isActive ? 600 : 400,
-                    color: isActive ? CORAL : "var(--slate)",
-                    backgroundColor: isActive ? CORAL_SOFT_BG : "transparent",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isActive) (e.currentTarget as HTMLElement).style.backgroundColor = "var(--bone)";
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isActive) (e.currentTarget as HTMLElement).style.backgroundColor = "transparent";
-                  }}
-                >
-                  {label}
-                  {isActive && (
-                    <Check className="h-3.5 w-3.5 shrink-0" style={{ color: CORAL }} />
+                <div key={preset.id} className="contents">
+                  {/* Hairline before the tail item: everything above is a
+                      rolling window, all-time is a different kind of answer. */}
+                  {preset.id === "all-time" && (
+                    <div aria-hidden style={{ height: 1, margin: "5px 10px", background: "var(--rule)" }} />
                   )}
-                </button>
+                  <button
+                    onClick={() => selectPreset(preset.id)}
+                    className={`w-full flex items-center justify-between gap-4 whitespace-nowrap rounded-lg px-3 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B55] focus-visible:ring-offset-1 ${isActive ? "" : "hover:bg-[var(--bone)]"}`}
+                    style={{ backgroundColor: isActive ? CORAL_SOFT_BG : "transparent" }}
+                  >
+                    <span style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                      <span style={{
+                        fontSize: 13.5,
+                        fontWeight: isActive ? 600 : 500,
+                        letterSpacing: "-0.005em",
+                        color: isActive ? CORAL : "var(--charcoal)",
+                      }}>
+                        {label}
+                      </span>
+                      {r && (
+                        // Stays slate on the active row too: coral at 11px over
+                        // the coral wash falls under AA contrast.
+                        <span style={{
+                          fontSize: 11,
+                          fontWeight: 400,
+                          fontVariantNumeric: "tabular-nums",
+                          color: "var(--slate)",
+                        }}>
+                          {formatPresetRange(r.startDate, r.endDate, now)}
+                        </span>
+                      )}
+                    </span>
+                    {isActive && (
+                      <Check className="h-3.5 w-3.5 shrink-0" style={{ color: CORAL }} />
+                    )}
+                  </button>
+                </div>
               );
             })}
           </div>

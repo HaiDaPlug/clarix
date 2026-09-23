@@ -268,14 +268,7 @@ function SidebarContent({
               className="overflow-hidden min-w-0"
             >
               <Link href="/dashboard" onClick={onMobileClose} aria-label="Clarix">
-                <Image
-                  src="/clarix-logga-transparent.png"
-                  alt="Clarix"
-                  width={200}
-                  height={65}
-                  className="h-16 w-auto dark:invert"
-                  priority
-                />
+                <BrandLogo />
               </Link>
             </motion.div>
           )}
@@ -306,6 +299,7 @@ function SidebarContent({
                       href={href}
                       onClick={onMobileClose}
                       title={!show ? label : undefined}
+                      aria-current={active ? "page" : undefined}
                       className={cn(
                         "group flex h-9 items-center rounded-md px-2 text-[13.5px] font-medium transition-colors",
                         show ? "gap-2.5" : "justify-center",
@@ -404,7 +398,7 @@ function SidebarContent({
         {/* User row */}
         <div
           className={cn(
-            "flex h-10 items-center gap-2.5 rounded-md px-2 transition-colors hover:bg-[var(--bone-dark)] cursor-default",
+            "flex h-10 items-center gap-2.5 rounded-md px-2",
             !show && "justify-center px-0"
           )}
         >
@@ -450,6 +444,37 @@ function SidebarContent({
       </div>
 
     </div>
+  );
+}
+
+// ── Brand ─────────────────────────────────────────────────────────────────────
+
+/* One square PNG holds both the symbol (left third) and the navy wordmark.
+ * Inverting the whole file for dark mode turned the warm symbol teal, so the
+ * two regions are drawn separately: the symbol keeps its colours, only the
+ * wordmark is inverted to read on a dark surface. */
+function BrandLogo() {
+  return (
+    <span className="relative block h-16 w-16" aria-hidden>
+      <Image
+        src="/clarix-logga-transparent.png"
+        alt=""
+        fill
+        sizes="64px"
+        className="object-contain"
+        style={{ clipPath: "inset(0 66.5% 0 0)" }}
+        priority
+      />
+      <Image
+        src="/clarix-logga-transparent.png"
+        alt=""
+        fill
+        sizes="64px"
+        className="object-contain dark:invert"
+        style={{ clipPath: "inset(0 0 0 33.5%)" }}
+        priority
+      />
+    </span>
   );
 }
 

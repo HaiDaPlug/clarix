@@ -2,7 +2,47 @@
 
 ---
 
-## NOW - Open priorities (2026-09-14)
+## NOW - Open priorities (2026-09-23)
+
+### To do
+
+- **Recap slide booking card: decide what it does.** "Boka strategigenomgång" is a button with no action, and "Se detaljerad rapport" links to `/report`, the page the reader is already on (`SlideRecap.tsx`, right-hand card). Either give the booking button a real target (booking link or contact) or remove both controls. A customer-facing dead button undermines the report.
+- ~~**Prompt: order next steps by priority.**~~ Done (prompt v16): `slide_next_steps` now asks for most important first, because the first step is shown as "Börja här". No cache bust: existing cached insights keep their order until they regenerate (period change or the next cache version).
+- **Optional, same file:** `slide_recs` is no longer shown anywhere (the Nästa steg slide renders `slide_next_steps`). Dropping it from the prompt saves tokens; keep the schema field nullable so cached rows still parse.
+
+### Done this session (2026-09-22/23) — premium consistency pass, report hierarchy, pushed
+
+Pushed `c13b409..3be30a9` on `codex/mobile-responsive-report`. Detail in the commits; what they can't tell you:
+
+- **Colour has a job, not a quota** (recorded in `globals.css`): lavender/aurora = interpretation, onboarding, guidance; jewel hues = data categories; coral = brand punctuation and interaction; neutral = forms, lists, account admin.
+- **Shared controls** live in `globals.css` `@layer components`: `.btn` (primary/secondary/ghost/danger/destructive/sm), `.icon-btn`, `.field`, `.notice-*`, `.skeleton`, plus a zero-specificity focus ring and 1px press. New screens use these rather than inline styles. Modals use `useDialogKeyboard`.
+- **Report reads conclusion → Därför → Nästa steg**, desktop and phone. Removed content every client saw regardless of their data (hardcoded Strategisk bedömning headline, fixed recommendation titles with invented figures, fixed recap titles). AI-only slides drop out when empty.
+- **`/api/og-image` is not public**: signed-in user, or a share-link token and then only for that report's domain; redirects re-checked per hop; `Cache-Control: private`.
+- **Signed-in screenshots:** `node scripts/app-shots.mjs --login` once, then `node scripts/app-shots.mjs <label> [filter]` → `.lab-shots/app/<label>/` (both themes, 3 widths, forced error/loading/empty states).
+
+### Done earlier (2026-09-22/23) — AI next steps everywhere, Sammanfattning slide rebuilt
+
+File-level detail is in the commit. What the commit can't tell you:
+
+**Decisions**
+- **Next steps are written by the model, 1–4, its call** (`slide_next_steps`). One source feeds report slide 2 (chips + tooltip), the mobile deck (tap-to-expand) and the dashboard card. The rule-based steps (`lib/dashboard/next-steps.ts`) and the old `next_steps` rationale slot are retired — Hai read them as fake. The schema keeps `next_steps` as always-null so cached rows still parse.
+- **No stand-ins for AI copy.** No steps → no section; shimmer only while loading. Slide/mobile headline is the AI `dashboard_hero.headline`; the lookup table is the failure fallback only.
+- **Figures are never model-written.** The model cites metric keys from `lib/ai-insights/evidence.ts`; values come from the data; unknown keys are dropped server-side.
+- **Length is capped twice:** prompt caps (summary ≤ 35 words, step `why` ≤ 30) and a render-side fit on slide 2 that shrinks the summary 1.4 → 1rem instead of clipping.
+- **No abbreviations** in UI copy or metric labels ("Genomsnittlig", "föregående", "Average"). Longer KPI labels are accepted; revisit only if a layout breaks.
+- `generate-insights/route.ts` is now just HTTP/cache/lease; prompt text lives in `lib/ai-insights/prompt.ts`, parsing in `lib/ai-insights/parse.ts`.
+
+**Gotchas**
+- Cache is at `cache-v4`: every workspace regenerates insights once on next load.
+- Dashboard sample data now takes the selected period's label (default: current month on the visitor's clock) — "Mars 2026" was the mock's baked-in value.
+
+**Not verified**
+- Dashboard label fix and the reworked `NextStepsCard` against a real session (only checked with mock data).
+- KPI card layouts with the longer spelled-out labels.
+
+---
+
+## Previously — Open priorities (2026-09-14)
 
 ### Done this session (2026-09-14) — auth split, Google grant health model, workspaces ("Kunder"), scoped data path
 
@@ -16,8 +56,15 @@
 - **Verification errors reported as logout.** `getAuthedContext()` and the proxy discarded `getUser()`'s error, so "Supabase Auth unreachable" and "no session" both became 401 / redirect-to-login. New `src/lib/auth/verify.ts` classifies into `authenticated | unauthenticated | error` (`AuthSessionMissingError` and 4xx → unauthenticated; `AuthRetryableFetchError`, 5xx, no status → error). Proxy passes an `error` through without redirecting and stamps `x-clarix-auth` on every response; routes return 503 `auth_unavailable` via `requireUser()`; the callback never clears cookies on an `error`; `/login?error=auth_unavailable` shows a distinct message without the "clear cookies" link.
 - **Post-login soft navigation.** Email/password sign-in now does `window.location.assign("/dashboard")` so the first protected request is a plain document request carrying the just-written cookies. Pages hard-navigate to `/login` on a genuine 401 instead of `router.push`, which could ping-pong with the proxy.
 - Diagnostics: `[auth/callback]` logs host, forwarded host, configured origin, redirect origin, code present, exchange outcome, session returned, verification state. Never tokens, codes or cookies.
-- Tests: `src/lib/auth/verify.test.ts` (12) — classifier for every error shape, origin resolution for www/apex/localhost/preview/forwarded lists. Suite 119/119, typecheck, lint, build green. **Still not proven in a real browser against the deployment** — that is the acceptance run (production doc steps 28–30).
+- Tests: `src/lib/auth/verify.test.ts` (12) — classifier for every error shape, origin resolution for www/apex/localhost/preview/forwarded lists. Suite 119/119, typecheck, lint, build green.
+- **Confirmed in a real browser (2026-09-19, after deploy):** sign-in now lands on `/integrations` past the proxy gate — the host-switch fix took. Full acceptance run (production doc steps 28–33) still pending.
 - Supabase config to check: Authentication → URL Configuration → Redirect URLs must list every host people sign in from (`https://www.clarix.se/**`, `http://localhost:3000/**`, preview hosts). A missing host makes Supabase fall back to the Site URL = the same host-switch symptom from the other side.
+- Shipped as `26e91d9` + `9f1fe47`. The second commit untracks `src/app/api/og-image/route.ts`, which a directory-level `git add src/app/api` had swept into the first commit — it is another agent's uncommitted file and is back to untracked in the tree. Lesson: on this shared tree, `git add` explicit file paths only, never directories.
+
+**Where it stands now (2026-09-19 evening) — one env var away**
+- Integrations shows *Kunde inte kontrollera — Servern saknar konfiguration (Supabase secret key eller Google client)*. That is the designed `server_misconfigured` state, not a bug: `SUPABASE_SECRET_KEY` is unset (only the commented placeholder in `.env.local`; presumably also unset in Vercel), while `GOOGLE_CLIENT_ID`/`SECRET` are present. Without the secret key nothing can read `google_connections` (RLS, no policies), so the grant cannot be checked and no data loads.
+- To finish: Supabase → Project Settings → API Keys → *Secret keys* → set `SUPABASE_SECRET_KEY` in `.env.local` (restart `next dev`) and in Vercel (Production + Preview, redeploy). Also `NEXT_PUBLIC_APP_URL=https://www.clarix.se` in Vercel only (used solely by the Google grant flow; correctly unset locally). Then reload Integrations — both migrated users hold an active grant with a refresh token, so the card should go straight to *Ansluten*; *Behöver förnyas* would mean the legacy tokens came from a different OAuth client than `GOOGLE_CLIENT_ID`, fixed by one *Anslut Google igen* with properties kept.
+- Live DB state after `supabase db push` (2026-09-15, verified via Management API, counts only): 2 `google_connections` (both active, both with refresh token), 2 workspaces (one per user, both active: "Khyte Automations" GA4-only, "JohnsGarage" GA4+GSC with domain `citylaser.se`), 3 `client_sources`, 48 `ai_report_cache` rows all scoped, zero browser grants and zero policies on both token tables. `20260720000000_auth_failures_log.sql` was applied for the first time in that push — the table had never existed in production, so July's login-failure logging was silently failing until then.
 
 **Follow-up pass (2026-09-14) — three production-readiness fixes from review**
 1. **Explicit `clientId` on every customer-data request; active workspace is a preference only.** `POST /api/report-data`, `/api/generate-insights` and `/api/reports/share` now *require* `clientId` (uuid), `buildReportDataForUser()` takes it and throws `ClientNotFoundError` (→ 404) if it is not the user's — nothing is ever substituted. Pages resolve the preference once per mount from the new `GET /api/clients/active`, then name that workspace on every request, so header and numbers always come from the same customer even if another device switches the active one mid-flight. `set_active_client()` is navigation state, not a data-security context. Report snapshots are read by explicit workspace id (`readReportSnapshot(workspaceId, …)`); the old "active marker" is gone.
