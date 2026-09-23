@@ -22,15 +22,20 @@ export function buildSlides(
 ) {
   const insights = reportData ? deriveInsights(reportData) : [];
   const headline = deriveSlideHeadline(insights);
+  // AI-only slides are left out when generation returned nothing for them
+  // (null payload = still loading, so they stay and show their placeholders).
+  const aiReady = aiInsights !== null;
+  const hasSteps = !aiReady || !!aiInsights.slide_next_steps?.length;
+  const hasRecap = !aiReady || !!aiInsights.slide_recap?.length;
   return [
     { id: "intro", title: "Introduktion", render: () => <SlideIntro d={d} /> },
-    { id: "hero", title: "Sammanfattning", render: () => <SlideHero d={d} headline={headline} aiInsights={aiInsights} /> },
+    { id: "hero", title: "Sammanfattning", render: () => <SlideHero d={d} headline={headline} aiInsights={aiInsights} reportData={reportData} /> },
     { id: "kpis", title: "Nyckeltal", render: () => <SlideKpis d={d} /> },
     { id: "channels", title: "Trafikkällor", render: () => <SlideChannels d={d} /> },
     { id: "conv", title: "Konvertering", render: () => <SlideConversion d={d} /> },
     { id: "pages", title: "Bästa sidor", render: () => <SlidePages d={d} /> },
     { id: "insight", title: "Strategisk bedömning", render: () => <SlideStrategicInsight aiInsights={aiInsights} insights={insights} /> },
-    { id: "recs", title: "Rekommendationer", render: () => <SlideRecommendations aiInsights={aiInsights} /> },
-    { id: "recap", title: "Kort summerat", render: () => <SlideRecap aiInsights={aiInsights} /> },
+    ...(hasSteps ? [{ id: "recs", title: "Nästa steg", render: () => <SlideRecommendations aiInsights={aiInsights} reportData={reportData} /> }] : []),
+    ...(hasRecap ? [{ id: "recap", title: "Kort summerat", render: () => <SlideRecap aiInsights={aiInsights} /> }] : []),
   ];
 }
