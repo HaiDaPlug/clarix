@@ -2,9 +2,25 @@
 
 ---
 
-## NOW - Open priorities (2026-09-22)
+## NOW - Open priorities (2026-09-23)
 
-### Done this session (2026-09-22/23) — AI next steps everywhere, Sammanfattning slide rebuilt
+### To do
+
+- **Recap slide booking card: decide what it does.** "Boka strategigenomgång" is a button with no action, and "Se detaljerad rapport" links to `/report`, the page the reader is already on (`SlideRecap.tsx`, right-hand card). Either give the booking button a real target (booking link or contact) or remove both controls. A customer-facing dead button undermines the report.
+- **Prompt: order next steps by priority.** Slide 2 labels the first step "Börja här" and the phone summary shows only that one, but `slide_next_steps` in `lib/ai-insights/prompt.ts` doesn't ask for an order. Add one sentence to its CONSTRAINT: "Ordna stegen efter prioritet, viktigast först." Bump `AI_INSIGHTS_PROMPT_VERSION`; decide whether it's worth a `cache-v5` bust.
+- **Optional, same file:** `slide_recs` is no longer shown anywhere (the Nästa steg slide renders `slide_next_steps`). Dropping it from the prompt saves tokens; keep the schema field nullable so cached rows still parse.
+
+### Done this session (2026-09-22/23) — premium consistency pass, report hierarchy, pushed
+
+Pushed `c13b409..3be30a9` on `codex/mobile-responsive-report`. Detail in the commits; what they can't tell you:
+
+- **Colour has a job, not a quota** (recorded in `globals.css`): lavender/aurora = interpretation, onboarding, guidance; jewel hues = data categories; coral = brand punctuation and interaction; neutral = forms, lists, account admin.
+- **Shared controls** live in `globals.css` `@layer components`: `.btn` (primary/secondary/ghost/danger/destructive/sm), `.icon-btn`, `.field`, `.notice-*`, `.skeleton`, plus a zero-specificity focus ring and 1px press. New screens use these rather than inline styles. Modals use `useDialogKeyboard`.
+- **Report reads conclusion → Därför → Nästa steg**, desktop and phone. Removed content every client saw regardless of their data (hardcoded Strategisk bedömning headline, fixed recommendation titles with invented figures, fixed recap titles). AI-only slides drop out when empty.
+- **`/api/og-image` is not public**: signed-in user, or a share-link token and then only for that report's domain; redirects re-checked per hop; `Cache-Control: private`.
+- **Signed-in screenshots:** `node scripts/app-shots.mjs --login` once, then `node scripts/app-shots.mjs <label> [filter]` → `.lab-shots/app/<label>/` (both themes, 3 widths, forced error/loading/empty states).
+
+### Done earlier (2026-09-22/23) — AI next steps everywhere, Sammanfattning slide rebuilt
 
 File-level detail is in the commit. What the commit can't tell you:
 
