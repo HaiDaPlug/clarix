@@ -49,7 +49,7 @@ const sv = {
   kpiSnapshot: {
     eyebrow: "KPI-översikt",
     headline: "Nyckeltalen som styr besluten.",
-    vsPrior: "mot föreg.",
+    vsPrior: "mot föregående",
   },
 
   // Traffic overview slide

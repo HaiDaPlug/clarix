@@ -78,7 +78,7 @@ function makeReport(id: string, specs: ChannelSpec[]): ReportData {
       },
       bounceRate: { label: "Avvisningsfrekvens", value: 44.8, previousValue: 46.1, unit: "percent" },
       avgSessionDuration: {
-        label: "Genomsn. sessionslängd",
+        label: "Genomsnittlig sessionslängd",
         value: 138,
         previousValue: 132,
         unit: "seconds",

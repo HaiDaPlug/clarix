@@ -77,7 +77,7 @@ const VISUAL_INTEGRATIONS: VisualIntegration[] = [
     purpose:
       "Hämtar klick, visningar, CTR och genomsnittlig position för organiska sökresultat.",
     available: true,
-    unlocks: ["Klick", "Visningar", "CTR", "Genomsn. position", "Toppsökord"],
+    unlocks: ["Klick", "Visningar", "CTR", "Genomsnittlig position", "Toppsökord"],
     color: "#4285F4",
     Logo: GoogleSearchConsoleLogo,
   },

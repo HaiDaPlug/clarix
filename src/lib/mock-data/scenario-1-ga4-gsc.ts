@@ -30,7 +30,7 @@ export const scenario1: ReportData = {
     ],
     highlights: [
       { label: "Organiska sessioner", value: "+18%", sentiment: "positive" },
-      { label: "Genomsn. position", value: "11,2 → 9,4", sentiment: "positive" },
+      { label: "Genomsnittlig position", value: "11,2 → 9,4", sentiment: "positive" },
       { label: "CTR", value: "3,1%", sentiment: "neutral" },
     ],
     aiSummary: {
@@ -69,7 +69,7 @@ export const scenario1: ReportData = {
         trendGood: true,
       },
       {
-        label: "Genomsn. position",
+        label: "Genomsnittlig position",
         value: 9.4,
         previousValue: 11.2,
         unit: "number",
@@ -137,7 +137,7 @@ export const scenario1: ReportData = {
       trendGood: false,
     },
     avgSessionDuration: {
-      label: "Genomsn. sessionslängd",
+      label: "Genomsnittlig sessionslängd",
       value: 142,
       previousValue: 128,
       unit: "seconds",
@@ -185,7 +185,7 @@ export const scenario1: ReportData = {
       trendGood: true,
     },
     avgPosition: {
-      label: "Genomsn. position",
+      label: "Genomsnittlig position",
       value: 9.4,
       previousValue: 11.2,
       unit: "number",
@@ -193,7 +193,7 @@ export const scenario1: ReportData = {
       trendGood: false,
     },
     avgCtr: {
-      label: "Genomsn. CTR",
+      label: "Genomsnittlig CTR",
       value: 3.1,
       previousValue: 2.8,
       unit: "percent",
